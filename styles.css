@@ -1833,3 +1833,44 @@ html[data-theme="dark"] .live-result.is-live .live-scorers{
     font-size:.51rem;
   }
 }
+
+/* Goleadores contenidos en tarjeta v39 */
+.match-result-bar{
+  flex-wrap:wrap;
+  max-width:100%;
+  min-width:0;
+}
+.live-result .result-outcome{
+  white-space:normal;
+  min-width:0;
+  max-width:100%;
+}
+.live-scorers-row{
+  flex:0 0 100%;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  margin-top:7px;
+  padding-top:7px;
+  border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);
+  font-size:.56rem;
+  line-height:1.45;
+  font-weight:800;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+.match-result-bar.correct .live-scorers-row{color:#247a54}
+.match-result-bar.wrong .live-scorers-row{color:#a43a3a}
+.match-result-bar.neutral .live-scorers-row{color:var(--muted)}
+.match-result-bar.pending .live-scorers-row{color:#87661e}
+.live-result.is-live .live-scorers-row{color:#247a54}
+.live-result.is-provisional .live-scorers-row{color:#9b4848}
+html[data-theme="dark"] .live-result.is-live .live-scorers-row{color:#83dfb2}
+html[data-theme="dark"] .live-result.is-provisional .live-scorers-row{color:#f0a0a0}
+@media(max-width:430px){
+  .live-scorers-row{
+    font-size:.52rem;
+    line-height:1.5;
+  }
+}

@@ -1757,6 +1757,7 @@ var __renderMatchesLiveBase=renderMatches;
 renderMatches=function(){
   __renderMatchesLiveBase();
   decorateLiveMatchCards();
+  appendScorersToMatchCards();
   updateLiveFreshness();
 };
 var __renderPlenoLiveBase=renderPleno;
