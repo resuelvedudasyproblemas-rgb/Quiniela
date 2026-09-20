@@ -118,21 +118,20 @@ function journeyStateLabel(j){
 }
 function resultBarHtml(m,p){
   if(matchResolved(m)){
-    const score=`${m.home_score}-${m.away_score}`;
     if(m.number===15){
       const actualHome=normalizedGoalScore(m.home_score), actualAway=normalizedGoalScore(m.away_score);
       const hasPick=Boolean(p?.home_goals&&p?.away_goals);
       const ok=hasPick && p.home_goals===actualHome && p.away_goals===actualAway;
       const outcome=!hasPick?"Sin pronóstico":ok?"✓ Acierto":"✕ Fallo";
       const cls=!hasPick?"neutral":ok?"correct":"wrong";
-      return `<div class="match-result-bar ${cls}"><span>Resultado <strong>${score}</strong></span><span class="result-outcome">${outcome}</span></div>`;
+      return `<div class="match-result-bar ${cls}"><span>Pleno oficial <strong>${actualHome}-${actualAway}</strong></span><span class="result-outcome">${outcome}</span></div>`;
     }
     const actual=resultSignForMatch(m);
     const hasPick=Boolean(p?.pick);
     const ok=hasPick && p.pick===actual;
     const outcome=!hasPick?"Sin pronóstico":ok?"✓ Acierto":"✕ Fallo";
     const cls=!hasPick?"neutral":ok?"correct":"wrong";
-    return `<div class="match-result-bar ${cls}"><span>Resultado <strong>${score}</strong> · signo <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
+    return `<div class="match-result-bar ${cls}"><span>Signo oficial <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
   }
   if(m?.kickoff && Date.now()>=new Date(m.kickoff).getTime() && journeyDisplayState(journey)==="playing"){
     return `<div class="match-result-bar pending"><span>Partido pendiente de resultado oficial</span></div>`;
@@ -402,10 +401,12 @@ function renderMatches(){
       </div>
       <div class="fixture-teams">
         <div class="fixture-team home-team">${teamCrestHtml(m.home)}<div><small>LOCAL</small><strong>${escapeHtml(m.home)}</strong></div></div>
-        <span class="fixture-vs" aria-hidden="true">VS</span>
+        ${matchResolved(m)
+          ? `<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`
+          : `<span class="fixture-vs" aria-hidden="true">VS</span>`}
         <div class="fixture-team away-team">${teamCrestHtml(m.away)}<div><small>VISITANTE</small><strong>${escapeHtml(m.away)}</strong></div></div>
       </div>
-      ${tvBroadcastHtml(m)}
+      ${matchResolved(m)?"":tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>
       ${resultHtml}
     </article>`;
@@ -423,7 +424,11 @@ function renderPleno(){
   $("#plenoKickoff").textContent=`◷ ${formatKickoff(m.kickoff)}`;
   $("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
   const plenoTv=$("#plenoTv");
-  if(plenoTv) plenoTv.innerHTML=tvBroadcastHtml(m);
+  if(plenoTv){
+    plenoTv.innerHTML=matchResolved(m)
+      ? `<div class="pleno-final-score"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></div>`
+      : tvBroadcastHtml(m);
+  }
   const mp=myPickFor(15);
   const locked=journey.status!=="open";
   $$(".goal-options").forEach(row=>{
