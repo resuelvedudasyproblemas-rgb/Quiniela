@@ -278,7 +278,7 @@ function renderPleno(){
   $("#plenoAwayName").textContent=m.away; $("#plenoAwayLabel").textContent=m.away;
   const mp=myPickFor(15);
   const locked=journey.status!=="open";
-  $(".goal-options").forEach(row=>{
+  $$(".goal-options").forEach(row=>{
     const team=row.dataset.team;
     const selected=team==="home"?mp?.home_goals:mp?.away_goals;
     row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("");
