@@ -1614,3 +1614,107 @@ html[data-theme="dark"]{
   background:var(--player-two);
   color:#fff;
 }
+
+/* Resultado real en Comparar v36 */
+.compare-pick-box.result-box{
+  background:var(--surface-2);
+  border-color:var(--border);
+}
+.compare-pick-box.result-box>span{
+  color:var(--muted);
+}
+.result-dot{
+  width:7px;
+  height:7px;
+  min-width:7px;
+  border-radius:50%;
+  background:#9aa6a0;
+}
+.compare-result-status{
+  margin-left:auto;
+  padding:2px 5px;
+  border-radius:999px;
+  font-size:.44rem!important;
+  font-weight:950;
+  white-space:nowrap;
+  background:var(--surface-3);
+  color:var(--muted);
+}
+.result-signs>span.selected{
+  background:#69766f;
+  border-color:#69766f;
+  color:#fff;
+}
+.compare-pick-box.result-box.live{
+  background:#fff8e8;
+  border-color:#ead49a;
+}
+.compare-pick-box.result-box.live>span,
+.compare-pick-box.result-box.live .compare-score-text{
+  color:#8b6512;
+}
+.compare-pick-box.result-box.live .result-dot{
+  background:#d7a234;
+  box-shadow:0 0 0 3px rgba(215,162,52,.12);
+}
+.compare-pick-box.result-box.live .compare-result-status{
+  background:#f5e3ad;
+  color:#79570d;
+}
+.compare-pick-box.result-box.live .result-signs>span.selected{
+  background:#d7a234;
+  border-color:#d7a234;
+  color:#fff;
+}
+.compare-pick-box.result-box.official{
+  background:#edf8f2;
+  border-color:#cfe8d9;
+}
+.compare-pick-box.result-box.official>span,
+.compare-pick-box.result-box.official .compare-score-text{
+  color:#20734f;
+}
+.compare-pick-box.result-box.official .result-dot{
+  background:#2c9b69;
+  box-shadow:0 0 0 3px rgba(44,155,105,.12);
+}
+.compare-pick-box.result-box.official .compare-result-status{
+  background:#d9f0e3;
+  color:#176a48;
+}
+.compare-pick-box.result-box.official .result-signs>span.selected{
+  background:#2c9b69;
+  border-color:#2c9b69;
+  color:#fff;
+}
+.compare-score-text{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  margin-left:4px;
+  font-size:.6rem;
+  font-weight:950;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.compare-real-score{
+  font-size:1rem;
+  font-variant-numeric:tabular-nums;
+}
+html[data-theme="dark"] .compare-pick-box.result-box.live{
+  background:#322917;
+  border-color:#655123;
+}
+html[data-theme="dark"] .compare-pick-box.result-box.live>span,
+html[data-theme="dark"] .compare-pick-box.result-box.live .compare-score-text{
+  color:#e8c66d;
+}
+html[data-theme="dark"] .compare-pick-box.result-box.official{
+  background:#142b20;
+  border-color:#29503d;
+}
+html[data-theme="dark"] .compare-pick-box.result-box.official>span,
+html[data-theme="dark"] .compare-pick-box.result-box.official .compare-score-text{
+  color:#83dfb2;
+}
