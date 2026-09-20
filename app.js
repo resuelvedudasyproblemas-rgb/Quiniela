@@ -1102,3 +1102,160 @@ if ("serviceWorker" in navigator) {
     }
   });
 }
+
+
+/* Live scores from SofaScore. Official scoring remains SELAE. */
+function hasLiveMatch(m){
+  return !matchResolved(m)
+    && m && m.live_home_score!=null
+    && m.live_away_score!=null
+    && (m.live_status==="inprogress" || m.live_status==="finished");
+}
+function liveMatchLabel(m){
+  if(!m) return "";
+  if(m.live_status==="inprogress") return m.live_status_text || "En directo";
+  if(m.live_status==="finished") return "Final · pendiente SELAE";
+  return m.live_status_text || "";
+}
+function buildLiveScoreNode(m){
+  var score=document.createElement("span");
+  score.className="fixture-score live-fixture-score "+(m.live_status==="inprogress"?"is-live":"is-provisional");
+  var small=document.createElement("small");
+  if(m.live_status==="inprogress"){
+    var dot=document.createElement("i");
+    dot.className="live-dot";
+    small.appendChild(dot);
+  }
+  small.appendChild(document.createTextNode(liveMatchLabel(m)));
+  var strong=document.createElement("strong");
+  strong.appendChild(document.createTextNode(String(m.live_home_score)));
+  var sep=document.createElement("b");
+  sep.textContent="–";
+  strong.appendChild(sep);
+  strong.appendChild(document.createTextNode(String(m.live_away_score)));
+  score.appendChild(small);
+  score.appendChild(strong);
+  return score;
+}
+function decorateLiveMatchCards(){
+  var normal=matches.filter(function(m){return m.number<=14;});
+  var cards=$$(".match-card");
+  normal.forEach(function(m,i){
+    if(!hasLiveMatch(m) || !cards[i]) return;
+    var card=cards[i];
+    var vs=card.querySelector(".fixture-vs");
+    if(vs) vs.replaceWith(buildLiveScoreNode(m));
+    var bar=card.querySelector(".match-result-bar");
+    if(!bar){
+      bar=document.createElement("div");
+      card.appendChild(bar);
+    }
+    bar.className="match-result-bar live-result "+(m.live_status==="inprogress"?"is-live":"is-provisional");
+    bar.innerHTML="";
+    var left=document.createElement("span");
+    if(m.live_status==="inprogress"){
+      var dot=document.createElement("i");
+      dot.className="live-dot";
+      left.appendChild(dot);
+    }
+    left.appendChild(document.createTextNode(liveMatchLabel(m)));
+    var right=document.createElement("span");
+    right.className="result-outcome";
+    var strong=document.createElement("strong");
+    strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
+    right.appendChild(strong);
+    right.appendChild(document.createTextNode(" · SofaScore"));
+    bar.appendChild(left);
+    bar.appendChild(right);
+  });
+}
+function decorateLivePleno(){
+  var m=matches.find(function(x){return x.number===15;});
+  if(!hasLiveMatch(m)) return;
+  var el=$("#plenoTv");
+  if(!el) return;
+  el.innerHTML="";
+  var box=document.createElement("div");
+  box.className="pleno-live-score "+(m.live_status==="inprogress"?"is-live":"is-provisional");
+  var small=document.createElement("small");
+  if(m.live_status==="inprogress"){
+    var dot=document.createElement("i");
+    dot.className="live-dot";
+    small.appendChild(dot);
+  }
+  small.appendChild(document.createTextNode(liveMatchLabel(m)));
+  var score=document.createElement("strong");
+  score.textContent=String(m.live_home_score)+" – "+String(m.live_away_score);
+  var note=document.createElement("em");
+  note.textContent="Resultado provisional · SofaScore";
+  box.appendChild(small);
+  box.appendChild(score);
+  box.appendChild(note);
+  el.appendChild(box);
+}
+function decorateLiveCompare(){
+  var cards=$$(".compare-card");
+  matches.forEach(function(m,i){
+    if(!hasLiveMatch(m) || !cards[i]) return;
+    var card=cards[i];
+    if(card.querySelector(".live-compare")) return;
+    var line=document.createElement("div");
+    line.className="compare-result-line live-compare";
+    var label=document.createElement("span");
+    if(m.live_status==="inprogress"){
+      var dot=document.createElement("i");
+      dot.className="live-dot";
+      label.appendChild(dot);
+    }
+    label.appendChild(document.createTextNode(liveMatchLabel(m)));
+    var score=document.createElement("strong");
+    score.textContent=String(m.live_home_score)+"-"+String(m.live_away_score);
+    var note=document.createElement("small");
+    note.textContent="SofaScore · provisional";
+    line.appendChild(label);
+    line.appendChild(score);
+    line.appendChild(note);
+    var picks=card.querySelector(".compare-picks");
+    if(picks) card.insertBefore(line,picks);
+  });
+}
+function decorateLiveUI(){
+  decorateLiveMatchCards();
+  decorateLivePleno();
+  decorateLiveCompare();
+}
+var __renderMatchesLiveBase=renderMatches;
+renderMatches=function(){
+  __renderMatchesLiveBase();
+  decorateLiveMatchCards();
+};
+var __renderPlenoLiveBase=renderPleno;
+renderPleno=function(){
+  __renderPlenoLiveBase();
+  decorateLivePleno();
+};
+var __renderCompareLiveBase=renderCompare;
+renderCompare=function(){
+  __renderCompareLiveBase();
+  decorateLiveCompare();
+};
+var __openMatchDetailLiveBase=openMatchDetail;
+openMatchDetail=function(n,jid){
+  __openMatchDetailLiveBase(n,jid);
+  var targetJourney=jid==null?(journey&&journey.id):jid;
+  var m=allMatches.find(function(x){return x.journey_id===targetJourney && x.number===n;});
+  if(!hasLiveMatch(m)) return;
+  var score=$("#matchDetailContent .match-detail-score");
+  if(!score) return;
+  score.innerHTML="";
+  var small=document.createElement("small");
+  small.className=m.live_status==="inprogress"?"detail-live":"detail-provisional";
+  small.textContent=(m.live_status==="inprogress"?"● ":"")+liveMatchLabel(m);
+  var strong=document.createElement("strong");
+  strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
+  var note=document.createElement("em");
+  note.textContent="SOFASCORE · PROVISIONAL";
+  score.appendChild(small);
+  score.appendChild(strong);
+  score.appendChild(note);
+};
