@@ -2348,3 +2348,8 @@ html[data-theme="dark"] .history-real-result{
     font-size:.73rem;
   }
 }
+
+/* Sin separador entre equipos en histórico v47 */
+.history-detail-fixture .fixture-mini-sep{
+  display:none;
+}
