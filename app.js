@@ -1668,25 +1668,40 @@ function decorateLiveMatchCards(){
     strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
     right.appendChild(strong);
     right.appendChild(document.createTextNode(" · SofaScore"));
-    var scorersText=liveScorersText(m);
-    if(scorersText){
-      var scorers=document.createElement("span");
-      scorers.className="live-scorers";
-      scorers.textContent="⚽ "+scorersText;
-      right.appendChild(scorers);
-    }
     var pickBadge=document.createElement("span");
     pickBadge.className="live-pick-badge "+pickState;
     pickBadge.textContent=livePickLabel(m);
     bar.appendChild(left);
     bar.appendChild(right);
     bar.appendChild(pickBadge);
+    var scorersText=liveScorersText(m);
+    if(scorersText){
+      var scorers=document.createElement("div");
+      scorers.className="live-scorers-row";
+      scorers.textContent="⚽ "+scorersText;
+      bar.appendChild(scorers);
+    }
     if(m.live_status==="inprogress"){
       var freshness=document.createElement("small");
       freshness.className="live-freshness";
       freshness.dataset.liveUpdated=m.live_updated_at||"";
       bar.appendChild(freshness);
     }
+  });
+}
+function appendScorersToMatchCards(){
+  var normal=matches.filter(function(m){return m.number<=14;});
+  var cards=$$(".match-card");
+  normal.forEach(function(m,i){
+    if(!cards[i]) return;
+    var text=liveScorersText(m);
+    if(!text) return;
+    var bar=cards[i].querySelector(".match-result-bar");
+    if(!bar || bar.querySelector(".live-scorers-row")) return;
+    var scorers=document.createElement("div");
+    scorers.className="live-scorers-row";
+    scorers.textContent="⚽ "+text;
+    bar.appendChild(scorers);
   });
 }
 function decorateLivePleno(){
