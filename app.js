@@ -1071,6 +1071,36 @@ async function refreshData(){
   renderAll();
 }
 
+function journeyCompetitions(j=journey){
+  if(!j) return [];
+  const seen=new Map();
+  matchesForJourney(j.id).forEach(m=>{
+    const id=Number(m.competition_id);
+    const name=String(m.competition_name||"").trim();
+    const logo=String(m.competition_logo_url||"").trim();
+    if(!id||!name||!logo||seen.has(id)) return;
+    seen.set(id,{id,name,logo});
+  });
+  return [...seen.values()];
+}
+function leagueShortLabel(name=""){
+  const n=String(name);
+  if(n==="LaLiga 2") return "L2";
+  if(n==="Primera Federación") return "1ª";
+  if(n==="Segunda Federación") return "2ª";
+  if(n==="Liga F") return "LF";
+  if(n==="Segunda Federación Femenina") return "2F";
+  return n.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()||"L";
+}
+function renderJourneyLeagues(){
+  const el=$("#journeyLeagues");
+  if(!el) return;
+  const comps=journeyCompetitions();
+  if(!comps.length){el.innerHTML="";el.classList.add("hidden");return}
+  el.classList.remove("hidden");
+  const shown=comps.slice(0,3);
+  el.innerHTML=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${escapeHtml(c.name)}" aria-label="${escapeHtml(c.name)}"><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(c.logo)}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${escapeHtml(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
+}
 function renderAll(){
   const roomMembers=$("#roomMembers");if(roomMembers)roomMembers.textContent=roomSummaryText();
   if($("#roomDialogMembers"))$("#roomDialogMembers").textContent=roomSummaryText();
@@ -1089,6 +1119,7 @@ function renderAll(){
   $(".status-text").textContent=statusLabels[state]||"Jornada";
   const kicker=$(".journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
   const journeyCard=$("#journeyCard");if(journeyCard)journeyCard.dataset.status=state;
+  renderJourneyLeagues();
   const opponent=members.find(m=>m.user_id!==user.id);
   if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
   else $("#opponentStatus").textContent="Esperando al segundo jugador";
