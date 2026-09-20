@@ -105,7 +105,7 @@ function toggleTheme(){
 }
 
 function setSync(mode,text) {
-  const el=$("#syncBadge"); el.className="sync-badge "+mode; el.innerHTML=`<span></span> ${text}`;
+  const el=$("#syncBadge"); el.className="sync-badge "+mode; el.innerHTML=`<span></span><b class="sync-label">${escapeHtml(text)}</b>`;
 }
 
 function cleanCode(v){ return v.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6); }

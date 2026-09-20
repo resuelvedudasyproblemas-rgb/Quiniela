@@ -899,3 +899,114 @@ html[data-theme="dark"] .pick-opponent-marker{
   .pick-owner-track{gap:7px;margin-top:6px;min-height:25px}
   .pick-owner-chip{width:22px;height:22px;font-size:.58rem}
 }
+
+
+/* Cabecera y sala compactas en móvil */
+.sync-label{font:inherit;font-weight:900}
+.room-manage-label{white-space:nowrap}
+@media(max-width:620px){
+  .app-shell{padding-top:10px}
+  .app-header{
+    min-height:0;
+    padding:10px 11px;
+    margin-bottom:8px;
+    border-radius:18px;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .header-brand{
+    min-width:0;
+    flex-direction:row;
+    justify-content:flex-start;
+    gap:8px;
+  }
+  .app-mark{
+    width:34px;
+    height:34px;
+    flex:0 0 34px;
+    border-radius:11px;
+    font-size:.9rem;
+    box-shadow:0 5px 12px rgba(7,91,60,.16);
+  }
+  .header-copy{text-align:left;min-width:0}
+  .header-copy .eyebrow,.header-subtitle{display:none}
+  .header-copy h1{
+    margin:0;
+    font-size:1rem;
+    line-height:1.1;
+    white-space:nowrap;
+  }
+  .header-actions{
+    position:static;
+    transform:none;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-end;
+    gap:5px;
+    flex:0 0 auto;
+  }
+  .header-tool-row{gap:5px}
+  .icon-tool-btn,.theme-toggle{
+    width:34px;
+    height:34px;
+    min-width:34px;
+    padding:0;
+  }
+  .theme-label{display:none}
+  .sync-badge{
+    width:34px;
+    height:34px;
+    min-width:34px!important;
+    padding:0!important;
+    display:grid!important;
+    place-items:center;
+    border-radius:50%!important;
+  }
+  .sync-badge>span{margin:0!important}
+  .sync-label{display:none}
+
+  .room-card{
+    min-height:0;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    text-align:left;
+    gap:8px;
+    padding:9px 11px;
+    margin-bottom:8px;
+    border-radius:16px;
+  }
+  .room-main{
+    min-width:0;
+    flex-direction:row;
+    align-items:center;
+    gap:8px;
+  }
+  .room-icon{
+    width:32px;
+    height:32px;
+    flex:0 0 32px;
+    border-radius:10px;
+    font-size:.85rem;
+  }
+  .room-copy{align-items:flex-start;min-width:0}
+  .room-copy .room-label,.room-copy>small{display:none}
+  .room-copy>strong{
+    max-width:220px;
+    font-size:.78rem;
+    line-height:1.15;
+  }
+  .room-manage-btn{
+    width:34px;
+    height:34px;
+    min-width:34px;
+    padding:0;
+    border-radius:10px;
+    display:grid;
+    place-items:center;
+    font-size:.82rem;
+  }
+  .room-manage-label{display:none}
+}
