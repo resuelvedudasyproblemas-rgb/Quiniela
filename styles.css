@@ -97,3 +97,5 @@ dialog#renameDialog::backdrop{background:rgba(7,24,17,.5);backdrop-filter:blur(3
 .rename-dialog-head h2{margin:2px 0 0;font-size:1.2rem}
 .rename-actions{margin-top:4px}
 .rename-actions .primary-btn:disabled{opacity:.6;cursor:wait}
+
+/* auto-sync-test 2026-09-20 */
