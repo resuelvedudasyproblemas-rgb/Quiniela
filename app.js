@@ -43,11 +43,16 @@ function teamCrestHtml(name,size="",logoUrl=""){
   const src=`https://www.google.com/s2/favicons?domain_url=https://${encodeURIComponent(domain)}&sz=128`;
   return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${initials}</span><img class="team-crest-img" src="${src}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`;
 }
-function teamInlineHtml(name,logoUrl=""){
-  return `<span class="team-inline">${teamCrestHtml(name,"sm",logoUrl)}<span>${escapeHtml(name)}</span></span>`;
+function teamPositionHtml(position,compact=false){
+  const n=Number(position);
+  if(!Number.isInteger(n)||n<1)return "";
+  return `<span class="team-position${compact?" compact":""}" title="Posición en Liga antes de esta jornada">${n}.º</span>`;
+}
+function teamInlineHtml(name,logoUrl="",position=null){
+  return `<span class="team-inline">${teamCrestHtml(name,"sm",logoUrl)}${teamPositionHtml(position,true)}<span>${escapeHtml(name)}</span></span>`;
 }
 function fixtureMiniHtml(m){
-  return `<span class="fixture-mini"><span class="fixture-mini-team">${teamCrestHtml(m.home,"xs",m.home_logo_url)}<span>${escapeHtml(m.home)}</span></span><span class="fixture-mini-sep">–</span><span class="fixture-mini-team">${teamCrestHtml(m.away,"xs",m.away_logo_url)}<span>${escapeHtml(m.away)}</span></span></span>`;
+  return `<span class="fixture-mini"><span class="fixture-mini-team">${teamCrestHtml(m.home,"xs",m.home_logo_url)}${teamPositionHtml(m.home_position,true)}<span>${escapeHtml(m.home)}</span></span><span class="fixture-mini-sep">–</span><span class="fixture-mini-team">${teamCrestHtml(m.away,"xs",m.away_logo_url)}${teamPositionHtml(m.away_position,true)}<span>${escapeHtml(m.away)}</span></span></span>`;
 }
 function simplifyTvChannels(channels){
   const clean=(channels||[]).map(ch=>String(ch).replace(/\s*\([^)]*\)\s*$/,"").trim()).filter(Boolean);
@@ -683,7 +688,7 @@ function renderMatches(){
     const opponentHtml=reveal?`<div class="opponent-pick"><span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${oppPick?.pick||"pendiente"}</strong></div>`:"";
     return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"}" data-resolved="${matchResolved(m)}" data-outcome="${outcome}" data-e8="${e8}">
       <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span></div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${matchResolved(m)?`<button class="detail-btn" data-detail-match="${m.number}" type="button">Detalles</button>`:""}<button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div></div>
-      <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small>LOCAL</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small>VISITANTE</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
+      <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>
       ${mp?.pick&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn" data-clear-match="${m.number}" type="button">Borrar selección</button></div>`:""}
