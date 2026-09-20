@@ -3,7 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#0b5d3b" />
+  <meta id="themeColor" name="theme-color" content="#0b5d3b" />
+  <script>
+    try {
+      const savedTheme=localStorage.getItem("quiniela-theme");
+      const theme=savedTheme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme=theme;
+    } catch {}
+  </script>
   <meta name="description" content="Quiniela compartida y sincronizada para dos jugadores" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
@@ -49,17 +56,40 @@
   </section>
 
   <div id="app" class="app-shell hidden">
-    <header class="topbar">
-      <div class="brand-lockup"><span class="app-mark" aria-hidden="true">Q</span><div><p class="eyebrow">QUINIELA COMPARTIDA</p><h1>Nuestra Quiniela</h1></div></div>
-      <div id="syncBadge" class="sync-badge"><span></span> Sincronizando</div>
+    <header class="topbar app-header">
+      <div class="header-brand">
+        <span class="app-mark" aria-hidden="true">Q</span>
+        <div class="header-copy">
+          <p class="eyebrow">QUINIELA COMPARTIDA</p>
+          <h1>Nuestra Quiniela</h1>
+          <p class="header-subtitle">Pronósticos, resultados y comparación en tiempo real</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema">
+          <span class="theme-icon" aria-hidden="true">☾</span>
+          <span class="theme-label">Oscuro</span>
+        </button>
+        <div id="syncBadge" class="sync-badge"><span></span> Sincronizando</div>
+      </div>
     </header>
 
-    <section class="room-strip">
-      <div>
-        <span class="room-label">SALA</span>
-        <strong id="roomCode">------</strong>
+    <section class="room-strip room-card">
+      <div class="room-main">
+        <span class="room-icon" aria-hidden="true">👥</span>
+        <div class="room-copy">
+          <span class="room-label">SALA COMPARTIDA</span>
+          <strong id="roomMembers">Vosotros dos</strong>
+          <small>Esta sala se mantiene para todas las jornadas</small>
+        </div>
       </div>
-      <button id="shareBtn" class="share-btn">Compartir</button>
+      <div class="room-actions">
+        <div class="room-code-block">
+          <span>CÓDIGO</span>
+          <strong id="roomCode">------</strong>
+        </div>
+        <button id="shareBtn" class="share-btn" type="button"><span aria-hidden="true">↗</span> Compartir</button>
+      </div>
     </section>
 
     <section id="journeyCard" class="journey-card">

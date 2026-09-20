@@ -42,6 +42,29 @@ function toast(msg) {
   const t=$("#toast"); t.textContent=msg; t.classList.add("show");
   clearTimeout(window.__toast); window.__toast=setTimeout(()=>t.classList.remove("show"),1800);
 }
+function currentTheme(){
+  return document.documentElement.dataset.theme==="dark"?"dark":"light";
+}
+function applyTheme(theme,persist=true){
+  const next=theme==="dark"?"dark":"light";
+  document.documentElement.dataset.theme=next;
+  if(persist) localStorage.setItem("quiniela-theme",next);
+  const btn=$("#themeToggle");
+  if(btn){
+    const dark=next==="dark";
+    const icon=btn.querySelector(".theme-icon");
+    const label=btn.querySelector(".theme-label");
+    if(icon) icon.textContent=dark?"☀":"☾";
+    if(label) label.textContent=dark?"Claro":"Oscuro";
+    btn.setAttribute("aria-label",dark?"Activar modo claro":"Activar modo oscuro");
+    btn.setAttribute("aria-pressed",dark?"true":"false");
+  }
+  const meta=$("#themeColor");
+  if(meta) meta.setAttribute("content",next==="dark"?"#07150f":"#0b5d3b");
+}
+function toggleTheme(){
+  applyTheme(currentTheme()==="dark"?"light":"dark");
+}
 
 function setSync(mode,text) {
   const el=$("#syncBadge"); el.className="sync-badge "+mode; el.innerHTML=`<span></span> ${text}`;
@@ -325,6 +348,11 @@ async function refreshData(){
 
 function renderAll(){
   $("#roomCode").textContent=roomCode;
+  const roomMembers=$("#roomMembers");
+  if(roomMembers){
+    const ordered=[...members].sort((a,b)=>a.slot-b.slot).map(m=>m.display_name).filter(Boolean);
+    roomMembers.textContent=ordered.length?ordered.join(" · "):"Vosotros dos";
+  }
   $("#myName").textContent=myMember?.display_name||"Tú";
   $("#journeyNumber").textContent=`Jornada ${journey.number}`;
   $("#journeyDate").textContent=formatDate(journey.draw_date);
@@ -373,8 +401,9 @@ function renderMatches(){
         <div class="match-head-actions"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span><button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div>
       </div>
       <div class="fixture-teams">
-        <div class="fixture-team">${teamCrestHtml(m.home)}<div><small>LOCAL</small><strong>${escapeHtml(m.home)}</strong></div></div>
-        <div class="fixture-team">${teamCrestHtml(m.away)}<div><small>VISITANTE</small><strong>${escapeHtml(m.away)}</strong></div></div>
+        <div class="fixture-team home-team">${teamCrestHtml(m.home)}<div><small>LOCAL</small><strong>${escapeHtml(m.home)}</strong></div></div>
+        <span class="fixture-vs" aria-hidden="true">VS</span>
+        <div class="fixture-team away-team">${teamCrestHtml(m.away)}<div><small>VISITANTE</small><strong>${escapeHtml(m.away)}</strong></div></div>
       </div>
       ${tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>
@@ -797,7 +826,10 @@ async function shareRoom(){
   }catch(e){ if(e.name!=="AbortError") toast(`Código: ${roomCode}`); }
 }
 
-$$(".tab").forEach(tab=>tab.addEventListener("click",()=>{
+applyTheme(currentTheme(),false);
+$("#themeToggle")?.addEventListener("click",toggleTheme);
+
+$(".tab").forEach(tab=>tab.addEventListener("click",()=>{
   $$(".tab").forEach(t=>t.classList.toggle("active",t===tab));
   $$(".view").forEach(v=>v.classList.remove("active"));
   $("#"+tab.dataset.view+"View").classList.add("active");
