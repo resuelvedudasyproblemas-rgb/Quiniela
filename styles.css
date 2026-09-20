@@ -2282,3 +2282,30 @@ html[data-theme="dark"] .history-real-result{
     min-height:40px;
   }
 }
+
+/* Marcador exacto histórico v45 */
+.history-real-result{
+  min-width:58px;
+}
+.history-real-result strong{
+  font-size:.94rem;
+  font-variant-numeric:tabular-nums;
+}
+.history-real-result small{
+  display:block;
+  margin-top:1px;
+  font-size:.43rem;
+  line-height:1.1;
+  font-weight:850;
+  color:var(--muted);
+  white-space:nowrap;
+}
+@media(max-width:520px){
+  .history-real-result{
+    min-width:56px;
+    padding:5px 6px;
+  }
+  .history-real-result strong{
+    font-size:.9rem;
+  }
+}

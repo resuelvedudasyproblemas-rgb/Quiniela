@@ -1464,6 +1464,8 @@ function openHistory(jid){
     const a=p1?displayPickForJourney(p1.user_id,j.id,m.number):"—";
     const b=p2?displayPickForJourney(p2.user_id,j.id,m.number):"—";
     const r=actualResultForMatch(m);
+    const exactScore=m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:"—";
+    const resultSign=m.number<=14?r:"";
     const e8a=Boolean(p1&&m.number<=14&&allElige8.some(e=>e.user_id===p1.user_id&&e.journey_id===j.id&&e.match_number===m.number));
     const e8b=Boolean(p2&&m.number<=14&&allElige8.some(e=>e.user_id===p2.user_id&&e.journey_id===j.id&&e.match_number===m.number));
     const e8j=Boolean(m.number<=14&&allJointElige8.some(e=>e.journey_id===j.id&&e.match_number===m.number));
@@ -1475,7 +1477,8 @@ function openHistory(jid){
         <div class="history-detail-fixture">${fixtureMiniHtml(m)}</div>
         <div class="history-real-result">
           <span>Resultado</span>
-          <strong>${r}</strong>
+          <strong>${exactScore}</strong>
+          ${resultSign?`<small>Signo ${resultSign}</small>`:""}
         </div>
       </div>
       <div class="history-detail-picks">
