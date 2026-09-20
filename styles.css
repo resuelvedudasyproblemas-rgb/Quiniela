@@ -2583,3 +2583,134 @@ html[data-theme="dark"] .history-real-result{
     height:38px;
   }
 }
+
+/* Sala compacta optimizada v51 */
+.room-card{
+  padding:10px 12px;
+  gap:9px;
+  min-height:0;
+}
+.room-main{
+  gap:9px;
+  align-items:center;
+}
+.room-icon{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  border-radius:11px;
+  font-size:.9rem;
+}
+.room-copy{
+  gap:0;
+}
+.room-copy .room-label{
+  display:none;
+}
+.room-copy>strong{
+  font-size:.82rem;
+  line-height:1.15;
+  margin:0;
+}
+.room-player-meta{
+  margin-top:4px;
+  gap:5px;
+}
+.room-playing-as,
+.room-rename-btn{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  border-radius:999px;
+}
+.room-playing-as{
+  padding:4px 8px;
+  background:var(--surface-3);
+  color:var(--muted);
+  font-size:.54rem;
+  font-weight:800;
+}
+.room-playing-as b{
+  margin-left:3px;
+  color:var(--text);
+  font-size:.58rem;
+  font-weight:950;
+}
+.room-rename-btn{
+  margin:0;
+  padding:4px 8px;
+  border:0;
+  background:var(--soft);
+  color:var(--brand);
+  font-size:.52rem;
+  font-weight:900;
+  line-height:1;
+}
+.room-opponent-status{
+  margin-top:4px;
+  max-width:100%;
+  font-size:.53rem;
+  line-height:1.2;
+  text-align:left;
+  color:var(--muted);
+}
+.room-manage-btn{
+  width:34px;
+  min-width:34px;
+  height:34px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  font-size:.72rem;
+}
+.room-manage-label{
+  display:none!important;
+}
+@media(max-width:430px){
+  .room-card{
+    padding:9px 10px;
+    gap:8px;
+  }
+  .room-main{
+    gap:8px;
+  }
+  .room-icon{
+    width:32px;
+    height:32px;
+    flex-basis:32px;
+    border-radius:10px;
+    font-size:.85rem;
+  }
+  .room-copy>strong{
+    font-size:.79rem;
+  }
+  .room-player-meta{
+    margin-top:3px;
+    gap:4px;
+  }
+  .room-playing-as,
+  .room-rename-btn{
+    min-height:22px;
+  }
+  .room-playing-as{
+    padding:3px 7px;
+    font-size:.51rem;
+  }
+  .room-playing-as b{
+    font-size:.55rem;
+  }
+  .room-rename-btn{
+    padding:3px 7px;
+    font-size:.49rem;
+  }
+  .room-opponent-status{
+    margin-top:3px;
+    font-size:.5rem;
+  }
+  .room-manage-btn{
+    width:32px;
+    min-width:32px;
+    height:32px;
+  }
+}
