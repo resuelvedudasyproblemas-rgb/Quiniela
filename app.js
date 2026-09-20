@@ -1608,12 +1608,10 @@ $("#notificationBtn").addEventListener("click",openNotificationCenter);
 $("#closeNotificationDialog").addEventListener("click",()=>$("#notificationDialog").close());
 $("#enableNotificationsBtn").addEventListener("click",requestNotifications);
 $("#closeMatchDetailDialog").addEventListener("click",()=>$("#matchDetailDialog").close());
-$("#installBtn").addEventListener("click",installApp);
 $("#renameBtn").addEventListener("click",openRenameDialog);
 $("#closeRenameDialog").addEventListener("click",()=>$("#renameDialog").close());
 $("#renameForm").addEventListener("submit",saveRename);
 
-setupInstallPrompt();
 renderNotifications();
 init();
 
