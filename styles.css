@@ -1233,3 +1233,67 @@ html[data-theme="dark"] .e8-compare-grid>div.joint{
   background:#142b20;
   border-color:#284737;
 }
+
+/* Zona de premio 10-15 */
+.dashboard-stat.prize-zone{
+  background:linear-gradient(145deg,#fff8df,#f7e7ad);
+  border-color:#d8b85f;
+  box-shadow:0 8px 20px rgba(176,132,27,.14);
+}
+.dashboard-stat.prize-zone>span,
+.dashboard-stat.prize-zone>small{
+  color:#7a5a12;
+}
+.dashboard-stat.prize-zone>strong{
+  color:#6e4d06;
+}
+.dashboard-common.prize-zone{
+  padding:4px 7px;
+  border-radius:999px;
+  background:#f5df95;
+  color:#6e4d06;
+  border:1px solid #d5b34f;
+}
+.projected-pair{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  font-variant-numeric:tabular-nums;
+}
+.projected-pair b{
+  min-width:20px;
+  padding:2px 5px;
+  border-radius:7px;
+}
+.projected-pair i{
+  font-style:normal;
+  color:var(--muted);
+}
+.projected-pair .prize-score{
+  background:#f3d87d;
+  color:#6b4b07;
+  box-shadow:inset 0 0 0 1px #d5b34f;
+}
+html[data-theme="dark"] .dashboard-stat.prize-zone{
+  background:linear-gradient(145deg,#3a3014,#4a3a13);
+  border-color:#8f7227;
+  box-shadow:0 8px 20px rgba(0,0,0,.22);
+}
+html[data-theme="dark"] .dashboard-stat.prize-zone>span,
+html[data-theme="dark"] .dashboard-stat.prize-zone>small{
+  color:#e2c66f;
+}
+html[data-theme="dark"] .dashboard-stat.prize-zone>strong{
+  color:#ffe79a;
+}
+html[data-theme="dark"] .dashboard-common.prize-zone{
+  background:#4a3a13;
+  color:#ffe79a;
+  border-color:#8f7227;
+}
+html[data-theme="dark"] .projected-pair .prize-score{
+  background:#4a3a13;
+  color:#ffe79a;
+  box-shadow:inset 0 0 0 1px #8f7227;
+}
