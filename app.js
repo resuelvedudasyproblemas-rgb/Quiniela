@@ -545,6 +545,10 @@ async function resetJointSelection(n){
   if(error){console.error(error);toast("No se pudo volver a automático");return}
   allJointPicks=allJointPicks.filter(x=>!(x.journey_id===journey.id&&x.match_number===n));renderJoint();toast("Vuelve al cálculo automático");
 }
+function jointReadonlySignsHtml(selection,playerClass){
+  const value=String(selection||"");
+  return `<div class="joint-readonly-signs ${playerClass}">${JOINT_SIGN_ORDER.map(sign=>`<span class="${value.includes(sign)?"selected":""}">${sign}</span>`).join("")}</div>`;
+}
 function renderJoint(){
   const summary=$("#jointSummary"),list=$("#jointList");if(!summary||!list||!journey)return;
   const p1=memberBySlot(1),p2=memberBySlot(2);let singles=0,doubles=0,triples=0,pending=0;
@@ -555,7 +559,30 @@ function renderJoint(){
   list.innerHTML=normal.map(m=>{
     const sel=effectiveJointSelection(m.number),override=jointOverrideFor(m.number),kind=jointSelectionKind(m.number);
     const p1pick=p1?pickForJourney(p1.user_id,journey.id,m.number)?.pick:null,p2pick=p2?pickForJourney(p2.user_id,journey.id,m.number)?.pick:null;
-    return `<article class="joint-builder-card"><div class="joint-builder-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="joint-builder-fixture">${fixtureMiniHtml(m)}</div><span class="joint-mode ${override?"manual":""}">${kind}</span></div><div class="joint-source"><span>${escapeHtml(p1?.display_name||"J1")}: <b>${p1pick||"—"}</b></span><span>${escapeHtml(p2?.display_name||"J2")}: <b>${p2pick||"—"}</b></span></div><div class="joint-sign-row">${JOINT_SIGN_ORDER.map(sign=>`<button class="joint-sign ${sel.includes(sign)?"selected":""}" data-joint-match="${m.number}" data-joint-sign="${sign}" ${locked?"disabled":""}>${sign}</button>`).join("")}${override?`<button class="joint-reset" data-joint-reset="${m.number}" ${locked?"disabled":""}>Automática</button>`:""}</div></article>`;
+    return `<article class="joint-builder-card">
+      <div class="joint-builder-head">
+        <span class="match-index">${String(m.number).padStart(2,"0")}</span>
+        <div class="joint-builder-fixture">${fixtureMiniHtml(m)}</div>
+        <div class="joint-builder-tools"><span class="joint-mode ${override?"manual":""}">${kind}</span></div>
+      </div>
+      <div class="joint-player-rows">
+        <div class="joint-player-row player-one">
+          <div class="joint-player-name"><i></i><span>${escapeHtml(p1?.display_name||"J1")}</span></div>
+          ${jointReadonlySignsHtml(p1pick,"player-one-signs")}
+        </div>
+        <div class="joint-player-row player-two">
+          <div class="joint-player-name"><i></i><span>${escapeHtml(p2?.display_name||"J2")}</span></div>
+          ${jointReadonlySignsHtml(p2pick,"player-two-signs")}
+        </div>
+        <div class="joint-player-row joint-choice-row">
+          <div class="joint-player-name"><i></i><span>Conjunta</span></div>
+          <div class="joint-edit-wrap">
+            <div class="joint-sign-row">${JOINT_SIGN_ORDER.map(sign=>`<button class="joint-sign ${sel.includes(sign)?"selected":""}" data-joint-match="${m.number}" data-joint-sign="${sign}" ${locked?"disabled":""}>${sign}</button>`).join("")}</div>
+            ${override?`<button class="joint-reset" data-joint-reset="${m.number}" ${locked?"disabled":""}>↺ Automática</button>`:""}
+          </div>
+        </div>
+      </div>
+    </article>`;
   }).join("");
   const p15a=p1?displayPickForJourney(p1.user_id,journey.id,15):"—",p15b=p2?displayPickForJourney(p2.user_id,journey.id,15):"—";
   list.insertAdjacentHTML("beforeend",`<article class="joint-builder-card p15-joint"><div class="joint-builder-head"><span class="match-index">15</span><div><strong>Pleno al 15</strong><small>${escapeHtml(p1?.display_name||"J1")} ${p15a} · ${escapeHtml(p2?.display_name||"J2")} ${p15b}</small></div><span class="joint-mode">${p15a!=="—"&&p15a===p15b?"Coincidís":"Comparar"}</span></div></article>`);
@@ -715,10 +742,13 @@ function decorateJointElige8UI(){
     const head=card.querySelector(".joint-builder-head");
     const mode=head?.querySelector(".joint-mode");
     if(head&&mode){
-      const tools=document.createElement("div");
-      tools.className="joint-builder-tools";
-      mode.replaceWith(tools);
-      tools.appendChild(mode);
+      let tools=head.querySelector(".joint-builder-tools");
+      if(!tools){
+        tools=document.createElement("div");
+        tools.className="joint-builder-tools";
+        mode.replaceWith(tools);
+        tools.appendChild(mode);
+      }
       const btn=document.createElement("button");
       btn.type="button";
       btn.className="joint-e8-toggle"+(selected?" selected":"");
@@ -728,9 +758,10 @@ function decorateJointElige8UI(){
       tools.appendChild(btn);
     }
 
-    const source=card.querySelectorAll(".joint-source > span");
-    if(p1&&source[0]&&isElige8(p1.user_id,n))source[0].insertAdjacentHTML("beforeend",'<i class="joint-personal-e8">★ E8</i>');
-    if(p2&&source[1]&&isElige8(p2.user_id,n))source[1].insertAdjacentHTML("beforeend",'<i class="joint-personal-e8">★ E8</i>');
+    const p1Label=card.querySelector(".joint-player-row.player-one .joint-player-name");
+    const p2Label=card.querySelector(".joint-player-row.player-two .joint-player-name");
+    if(p1&&p1Label&&isElige8(p1.user_id,n))p1Label.insertAdjacentHTML("beforeend",'<b class="joint-personal-e8">★ E8</b>');
+    if(p2&&p2Label&&isElige8(p2.user_id,n))p2Label.insertAdjacentHTML("beforeend",'<b class="joint-personal-e8">★ E8</b>');
   });
 }
 
