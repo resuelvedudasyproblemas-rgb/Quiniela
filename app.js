@@ -193,12 +193,7 @@ function resultBarHtml(m,p){
 function renderJourneySwitcher(){
   const el=$("#journeySwitcher");
   if(!el) return;
-  const ordered=[...journeys].sort((a,b)=>b.number-a.number);
-  const latestFinished=ordered.find(j=>journeyDisplayState(j)==="finished");
-  const available=ordered.filter(j=>{
-    const state=journeyDisplayState(j);
-    return state!=="finished" || j.id===latestFinished?.id || j.id===journey?.id;
-  });
+  const available=[...journeys].sort((a,b)=>b.number-a.number);
   if(!available.length){ el.classList.add("hidden"); el.innerHTML=""; return; }
   el.classList.remove("hidden");
   el.innerHTML=available.map(j=>{
@@ -1010,8 +1005,8 @@ async function loadAllJourneys(){
 }
 
 function selectActiveJourney(){
+  const preferred=journeys.find(j=>j.id===selectedJourneyId);
   const unfinished=journeys.filter(j=>journeyDisplayState(j)!=="finished");
-  const preferred=unfinished.find(j=>j.id===selectedJourneyId);
   const playing=unfinished.find(j=>journeyDisplayState(j)==="playing");
   const open=unfinished.find(j=>journeyDisplayState(j)==="open");
   journey=preferred||playing||open||unfinished[0]||journeys[0];

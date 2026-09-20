@@ -1959,3 +1959,21 @@ html[data-theme="dark"] .live-result.is-provisional .live-scorers-groups{color:#
   border-color:#9eb8aa;
   background:#eef4f1;
 }
+
+/* Historial completo en selector v42 */
+.journey-switcher{
+  scroll-snap-type:x proximity;
+  overscroll-behavior-x:contain;
+}
+.journey-choice{
+  scroll-snap-align:start;
+}
+.journey-choice.state-finished{
+  opacity:.9;
+}
+.journey-choice.state-finished.active{
+  opacity:1;
+  border-color:#7d9f8d;
+  background:#edf4f0;
+  box-shadow:0 5px 14px rgba(7,91,60,.07);
+}
