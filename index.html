@@ -93,7 +93,11 @@
         <div class="room-copy">
           <span class="room-label">VUESTRA SALA</span>
           <strong id="roomMembers">Vosotros dos</strong>
-          <small>Una sola sala para todas las jornadas</small>
+          <div class="room-player-meta">
+            <span class="room-playing-as">Tú: <b id="myName">—</b></span>
+            <button id="renameBtn" class="rename-btn room-rename-btn" type="button">Cambiar nombre</button>
+          </div>
+          <span id="opponentStatus" class="opponent-status room-opponent-status">Esperando al segundo jugador</span>
         </div>
       </div>
       <button id="openRoomBtn" class="room-manage-btn" type="button" aria-label="Sala e invitación"><span aria-hidden="true">⌁</span><span class="room-manage-label">Sala e invitación</span></button>
@@ -118,17 +122,6 @@
     <main>
       <section id="playView" class="view active">
         <section id="journeyDashboard" class="journey-dashboard"></section>
-
-        <div class="player-banner">
-          <div class="player-identity">
-            <span>Estás jugando como</span>
-            <div class="player-name-row">
-              <strong id="myName">—</strong>
-              <button id="renameBtn" class="rename-btn" type="button">Cambiar nombre</button>
-            </div>
-          </div>
-          <span id="opponentStatus" class="opponent-status">Esperando al segundo jugador</span>
-        </div>
 
         <div class="progress-row">
           <span id="progressText">0 de 15 completados</span>
