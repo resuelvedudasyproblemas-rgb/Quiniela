@@ -50,7 +50,7 @@ h1{font-size:1.6rem;line-height:1;margin:0}
 .match-card{background:#fff;border:1px solid var(--border);border-radius:17px;padding:13px;display:grid;grid-template-columns:34px 1fr;gap:10px;box-shadow:0 3px 12px rgba(15,47,33,.035)}
 .match-index{width:31px;height:31px;border-radius:10px;background:#edf2ef;display:grid;place-items:center;font-weight:850;font-size:.82rem;color:var(--muted)}
 .match-main{min-width:0}.match-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.teams{font-weight:800;font-size:.94rem;line-height:1.25}.kickoff{font-size:.67rem;color:var(--muted);white-space:nowrap}
-.pick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}.pick{border:1px solid var(--border);background:#fafcfb;border-radius:11px;padding:9px 0;font-weight:850;color:#415149;transition:.12s}.pick.selected{background:var(--brand);border-color:var(--brand);color:#fff;transform:translateY(-1px)}.pick:disabled,.goal:disabled{opacity:.55;cursor:wait}
+.pick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}.pick{border:1px solid var(--border);background:#fafcfb;border-radius:11px;padding:9px 0;font-weight:850;color:#415149;transition:.12s}.pick.selected{background:var(--brand);border-color:var(--brand);color:#fff;transform:translateY(-1px)}.pick:disabled,.goal:disabled{opacity:.55;cursor:not-allowed}
 .pleno-card{margin-top:10px;background:#fff;border:1px solid var(--border);border-radius:17px;padding:13px;box-shadow:0 3px 12px rgba(15,47,33,.035)}
 .pleno-card>.match-index{float:left;margin-right:10px}.pleno-head{padding-left:41px}.pleno-head h2{font-size:.94rem;margin:4px 0 14px}.pleno-head h2 em{font-style:normal;font-weight:500;color:var(--muted);font-size:.8rem;margin:0 4px}.badge{font-size:.62rem;color:var(--brand);font-weight:900;letter-spacing:.08em}
 .goal-row{display:grid;grid-template-columns:1fr 176px;align-items:center;gap:10px;margin-top:9px}.goal-row>span{font-size:.8rem;font-weight:750}.goal-options{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.goal{border:1px solid var(--border);background:#fafcfb;border-radius:9px;padding:8px 0;font-weight:850;color:#415149}.goal.selected{background:var(--brand);border-color:var(--brand);color:#fff}.hint{font-size:.68rem;color:var(--muted);margin:10px 0 0;text-align:right}
@@ -98,4 +98,3 @@ dialog#renameDialog::backdrop{background:rgba(7,24,17,.5);backdrop-filter:blur(3
 .rename-actions{margin-top:4px}
 .rename-actions .primary-btn:disabled{opacity:.6;cursor:wait}
 
-/* auto-sync-test 2026-09-20 */

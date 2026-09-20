@@ -48,6 +48,31 @@ function memberBySlot(slot){ return members.find(m=>m.slot===slot); }
 function myPickFor(n){ return picks.find(p=>p.user_id===user.id && p.match_number===n); }
 function pickFor(uid,n){ return picks.find(p=>p.user_id===uid && p.match_number===n); }
 
+function completedCountForUser(uid,journeyId=journey?.id){
+  if(!uid || !journeyId) return 0;
+  let total=0;
+  for(let n=1;n<=14;n++){
+    const p=allPicks.find(x=>x.user_id===uid&&x.journey_id===journeyId&&x.match_number===n);
+    if(p?.pick) total++;
+  }
+  const p15=allPicks.find(x=>x.user_id===uid&&x.journey_id===journeyId&&x.match_number===15);
+  if(p15?.home_goals && p15?.away_goals) total++;
+  return total;
+}
+
+function maybeCelebrateBothComplete(){
+  const p1=memberBySlot(1), p2=memberBySlot(2);
+  if(!p1 || !p2 || !journey) return;
+  const c1=completedCountForUser(p1.user_id);
+  const c2=completedCountForUser(p2.user_id);
+  if(c1!==15 || c2!==15) return;
+
+  const key=`quiniela-both-complete-${roomId}-${journey.id}`;
+  if(localStorage.getItem(key)) return;
+  localStorage.setItem(key,"1");
+  toast("✓ Los dos habéis completado la jornada");
+}
+
 async function init(){
   if(!configured){ show("setupMissing"); return; }
   try{
@@ -187,13 +212,24 @@ function renderAll(){
   $("#myName").textContent=myMember?.display_name||"Tú";
   $("#journeyNumber").textContent=`Jornada ${journey.number}`;
   $("#journeyDate").textContent=formatDate(journey.draw_date);
+  const statusLabels={open:"Abierta para pronósticos",closed:"Jornada cerrada",finished:"Jornada finalizada"};
+  $(".status-text").textContent=statusLabels[journey.status]||"Jornada";
   const opponent=members.find(m=>m.user_id!==user.id);
-  $("#opponentStatus").textContent=opponent?`${opponent.display_name} ya está en la sala`:"Esperando al segundo jugador";
+  if(opponent){
+    const completed=completedCountForUser(opponent.user_id);
+    $("#opponentStatus").textContent=completed===15
+      ? `✓ ${opponent.display_name} ha completado la jornada`
+      : `${opponent.display_name}: ${completed}/15`;
+  }else{
+    $("#opponentStatus").textContent="Esperando al segundo jugador";
+  }
   renderMatches(); renderPleno(); renderProgress(); renderCompare(); renderHistory();
+  maybeCelebrateBothComplete();
 }
 
 function renderMatches(){
   const normal=matches.filter(m=>m.number<=14);
+  const locked=journey.status!=="open";
   $("#matches").innerHTML=normal.map(m=>{
     const mp=myPickFor(m.number);
     return `<article class="match-card">
@@ -204,7 +240,7 @@ function renderMatches(){
           <div class="kickoff">${escapeHtml(formatKickoff(m.kickoff))}</div>
         </div>
         <div class="pick-row">
-          ${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}">${v}</button>`).join("")}
+          ${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}>${v}</button>`).join("")}
         </div>
       </div>
     </article>`;
@@ -219,15 +255,17 @@ function renderPleno(){
   $("#plenoHomeName").textContent=m.home; $("#plenoHomeLabel").textContent=m.home;
   $("#plenoAwayName").textContent=m.away; $("#plenoAwayLabel").textContent=m.away;
   const mp=myPickFor(15);
-  $$(".goal-options").forEach(row=>{
+  const locked=journey.status!=="open";
+  $(".goal-options").forEach(row=>{
     const team=row.dataset.team;
     const selected=team==="home"?mp?.home_goals:mp?.away_goals;
-    row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}">${v}</button>`).join("");
+    row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("");
   });
   $$(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));
 }
 
 async function saveNormalPick(n,val){
+  if(journey?.status!=="open"){ toast("La jornada ya está cerrada"); return; }
   if(saving) return; saving=true; setSync("","Guardando");
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(n);
@@ -244,6 +282,7 @@ async function saveNormalPick(n,val){
 }
 
 async function savePleno(team,val){
+  if(journey?.status!=="open"){ toast("La jornada ya está cerrada"); return; }
   if(saving) return; saving=true; setSync("","Guardando");
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(15);
@@ -276,7 +315,7 @@ function renderProgress(){
   const p15=myPickFor(15); if(p15?.home_goals && p15?.away_goals) total++;
   $("#progressText").textContent=`${total} de 15 completados`;
   $("#progressBar").style.width=`${total/15*100}%`;
-  $("#saveState").textContent=total===15?"✓ Completa":"En la nube";
+  $("#saveState").textContent=journey.status==="open"?(total===15?"✓ Completa":"En la nube"):"Jornada cerrada";
 }
 
 function displayPick(p,n){
@@ -289,19 +328,35 @@ function renderCompare(){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   $("#compareP1").textContent=p1?.display_name||"Jugador 1";
   $("#compareP2").textContent=p2?.display_name||"Jugador 2";
-  let same=0;
+
+  let same=0, different=0, pending=0;
   $("#compareBody").innerHTML=matches.map(m=>{
     const a=displayPick(p1&&pickFor(p1.user_id,m.number),m.number);
     const b=displayPick(p2&&pickFor(p2.user_id,m.number),m.number);
-    const eq=a!=="—"&&b!=="—"&&a===b; if(eq) same++;
+    const both=a!=="—"&&b!=="—";
+    const eq=both&&a===b;
+    if(eq) same++;
+    else if(both) different++;
+    else pending++;
+
     return `<tr>
       <td>${m.number===15?"P-15":m.number}. ${escapeHtml(m.home)} - ${escapeHtml(m.away)}</td>
       <td class="${a==="—"?"missing":eq?"same":""}">${a}</td>
       <td class="${b==="—"?"missing":eq?"same":""}">${b}</td>
     </tr>`;
   }).join("");
+
   $("#coincidences").textContent=`${same} / 15`;
-  $("#compareSubtitle").textContent=p2?"se actualiza automáticamente":"Comparte el código para añadir al segundo jugador";
+
+  if(!p2){
+    $("#compareSubtitle").textContent="Comparte el código para añadir al segundo jugador";
+    return;
+  }
+
+  const c1=completedCountForUser(p1?.user_id);
+  const c2=completedCountForUser(p2?.user_id);
+  $("#compareSubtitle").textContent=
+    `${p1?.display_name||"Jugador 1"} ${c1}/15 · ${p2?.display_name||"Jugador 2"} ${c2}/15 · ${different} diferentes · ${pending} pendientes`;
 }
 
 
@@ -517,7 +572,21 @@ init();
 
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Service Worker:", err));
+  window.addEventListener("load", async () => {
+    const hadController=Boolean(navigator.serviceWorker.controller);
+    try{
+      const reg=await navigator.serviceWorker.register("./sw.js");
+      await reg.update();
+      if(hadController){
+        let reloading=false;
+        navigator.serviceWorker.addEventListener("controllerchange",()=>{
+          if(reloading) return;
+          reloading=true;
+          location.reload();
+        });
+      }
+    }catch(err){
+      console.warn("Service Worker:",err);
+    }
   });
 }
