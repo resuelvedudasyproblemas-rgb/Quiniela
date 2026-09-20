@@ -1361,6 +1361,12 @@ function renderElige8Progress(){
   if(panel)panel.classList.toggle("e8-prize-zone",prize);
   el.classList.toggle("e8-prize-score",prize);
 
+  if(prize){
+    el.innerHTML='<span class="e8-prize-win">★ 8/8 aciertos</span>';
+    if(status)status.textContent="Premio Elige 8 · 8/8 confirmados.";
+    return;
+  }
+
   if(projected.considered>0){
     el.innerHTML=`<span class="e8-score-ok">✓ ${projected.correct} aciertos</span><span class="e8-score-bad">✕ ${projected.wrong} fallos</span>`;
     if(status){
