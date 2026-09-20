@@ -333,6 +333,16 @@ function applyMatchFilter(){
     if(activeMatchFilter==="e8") visible=card.dataset.e8==="true";
     card.classList.toggle("filter-hidden",!visible);
   });
+
+  const pleno=$("#plenoCard"),m15=matches.find(m=>m.number===15);
+  if(pleno&&m15){
+    let visible=activeMatchFilter==="all";
+    if(activeMatchFilter==="pending") visible=!matchResolved(m15);
+    if(activeMatchFilter==="correct") visible=matchOutcomeForUser(m15)==="correct";
+    if(activeMatchFilter==="wrong") visible=matchOutcomeForUser(m15)==="wrong";
+    if(activeMatchFilter==="e8") visible=false;
+    pleno.classList.toggle("filter-hidden",!visible);
+  }
 }
 function setMatchFilter(mode){
   activeMatchFilter=MATCH_FILTER_MODES.has(mode)?mode:"all";
