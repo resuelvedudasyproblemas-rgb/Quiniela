@@ -1021,3 +1021,38 @@ html[data-theme="dark"] .pick-opponent-marker{
   text-align:center;
 }
 .notification-enable{margin-bottom:7px}
+
+
+/* Marcador Elige 8 en directo */
+#elige8Progress{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.e8-score-ok,.e8-score-bad{
+  display:inline-flex;
+  align-items:center;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:.66rem;
+  font-weight:950;
+  white-space:nowrap;
+}
+.e8-score-ok{
+  background:#e8f6ee;
+  color:#247a54;
+}
+.e8-score-bad{
+  background:#fdeaea;
+  color:#a43a3a;
+}
+html[data-theme="dark"] .e8-score-ok{
+  background:#173729;
+  color:#7fe0b1;
+}
+html[data-theme="dark"] .e8-score-bad{
+  background:#432424;
+  color:#f0a0a0;
+}

@@ -991,11 +991,47 @@ function renderProgress(){
         : "Jornada cerrada";
 }
 
+function projectedScoreElige8(uid,j){
+  const selected=allElige8.filter(e=>e.user_id===uid&&e.journey_id===j.id);
+  let correct=0,wrong=0,considered=0,live=0;
+  for(const e of selected){
+    const m=allMatches.find(x=>x.journey_id===j.id&&x.number===e.match_number);
+    const actual=projectedResultForMatch(m);
+    if(actual==="—") continue;
+    considered++;
+    if(m&&!matchResolved(m)) live++;
+    const mine=pickForJourney(uid,j.id,e.match_number)?.pick;
+    if(mine===actual) correct++;
+    else if(mine) wrong++;
+  }
+  return {
+    selected:selected.length,
+    correct,
+    wrong,
+    considered,
+    live,
+    pending:Math.max(0,selected.length-considered)
+  };
+}
 function renderElige8Progress(){
   const count=elige8Count(user.id);
-  const el=$("#elige8Progress");
-  if(!el) return;
+  const el=$("#elige8Progress"),status=$("#elige8Status");
+  if(!el||!journey) return;
+  const projected=projectedScoreElige8(user.id,journey);
+
+  if(projected.considered>0){
+    el.innerHTML=`<span class="e8-score-ok">✓ ${projected.correct} aciertos</span><span class="e8-score-bad">✕ ${projected.wrong} fallos</span>`;
+    if(status){
+      const parts=[`${projected.considered}/${projected.selected||8} valorados`];
+      if(projected.live)parts.push(`${projected.live} en directo`);
+      if(projected.pending)parts.push(`${projected.pending} pendientes`);
+      status.textContent=parts.join(" · ")+(projected.live?" · provisional":"");
+    }
+    return;
+  }
+
   el.textContent=count===8?"✓ 8 / 8 seleccionados":`${count} / 8 seleccionados`;
+  if(status)status.textContent=count===8?"Elige 8 completo · esperando resultados.":"Marca E8 en ocho partidos del 1 al 14.";
 }
 
 function displayPick(p,n){
