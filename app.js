@@ -869,7 +869,7 @@ function renderPleno(){
   if(oppEl){const reveal=Boolean(mp?.home_goals&&mp?.away_goals);oppEl.classList.toggle("hidden",!reveal);if(reveal)oppEl.innerHTML=`<span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${opp?.home_goals&&opp?.away_goals?`${opp.home_goals}-${opp.away_goals}`:"pendiente"}</strong>`}
   const resultEl=$("#plenoResult"),resultHtml=resultBarHtml(m,mp);resultEl.className="match-result-bar";
   if(resultHtml){const wrapper=document.createElement("div");wrapper.innerHTML=resultHtml;resultEl.className=wrapper.firstElementChild.className;resultEl.innerHTML=wrapper.firstElementChild.innerHTML}else{resultEl.classList.add("hidden");resultEl.innerHTML=""}
-  $(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));$("#plenoTv [data-detail-match]").forEach(b=>b.addEventListener("click",()=>openMatchDetail(15)));updateCountdowns();applyMatchFilter();
+  $$(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));$$("#plenoTv [data-detail-match]").forEach(b=>b.addEventListener("click",()=>openMatchDetail(15)));updateCountdowns();
 }
 
 async function toggleElige8(n){
