@@ -710,3 +710,62 @@ html[data-theme="dark"] .clear-pick-btn{color:#a9bbb2}
     font-size:.42rem;
   }
 }
+
+
+/* Pronóstico frente al marcador en directo */
+.match-card.has-live-result.live-pick-correct .live-fixture-score,
+.live-fixture-score.live-pick-correct{
+  background:#eefaf3!important;
+  border-color:#b9e7cb!important;
+  color:#147a43!important;
+  box-shadow:0 8px 20px rgba(20,122,67,.12)!important;
+}
+.match-card.has-live-result.live-pick-wrong .live-fixture-score,
+.live-fixture-score.live-pick-wrong{
+  background:#fff6f6!important;
+  border-color:#f0cece!important;
+  color:#a13b3b!important;
+}
+.match-card.has-live-result.live-pick-neutral .live-fixture-score,
+.live-fixture-score.live-pick-neutral{
+  background:#f6f8f7!important;
+  border-color:#e1e7e4!important;
+  color:#68756e!important;
+}
+.match-card.has-live-result.live-pick-correct .match-result-bar.live-result{
+  background:#f0faf4!important;
+  border-color:#c7ead4!important;
+  color:#147a43!important;
+}
+.match-card.has-live-result.live-pick-wrong .match-result-bar.live-result{
+  background:#fff7f7!important;
+  border-color:#efd5d5!important;
+  color:#9f3d3d!important;
+}
+.match-card.has-live-result.live-pick-neutral .match-result-bar.live-result{
+  background:#f7faf8!important;
+  border-color:#e1e9e5!important;
+  color:#65736c!important;
+}
+.live-pick-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:22px;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:.52rem;
+  line-height:1.1;
+  font-weight:950;
+  white-space:nowrap;
+}
+.live-pick-badge.correct{background:#dff5e7;color:#126d3d}
+.live-pick-badge.wrong{background:#fbe6e6;color:#9b3636}
+.live-pick-badge.neutral{background:#eef2f0;color:#738079}
+.pleno-live-score.live-pick-correct{background:#eefaf3!important;border-color:#b9e7cb!important;color:#147a43!important}
+.pleno-live-score.live-pick-wrong{background:#fff6f6!important;border-color:#f0cece!important;color:#a13b3b!important}
+.pleno-live-score.live-pick-neutral{background:#f7faf8!important;border-color:#e1e7e4!important;color:#68756e!important}
+@media(max-width:430px){
+  .match-result-bar.live-result{flex-wrap:wrap}
+  .live-pick-badge{width:100%;white-space:normal;text-align:center}
+}

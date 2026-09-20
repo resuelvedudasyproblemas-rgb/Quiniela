@@ -16,7 +16,10 @@ let saving = false;
 let elige8Saving = false;
 let jointSaving = false;
 let selectedJourneyId = null;
-let activeMatchFilter = "all";
+const MATCH_FILTER_KEY="quiniela-match-filter";
+const MATCH_FILTER_MODES=new Set(["all","pending","correct","wrong","e8"]);
+const savedMatchFilter=localStorage.getItem(MATCH_FILTER_KEY);
+let activeMatchFilter = MATCH_FILTER_MODES.has(savedMatchFilter)?savedMatchFilter:"all";
 let notices = [];
 let installPrompt = null;
 let countdownTimer = null;
@@ -308,7 +311,8 @@ function applyMatchFilter(){
   });
 }
 function setMatchFilter(mode){
-  activeMatchFilter=mode||"all";
+  activeMatchFilter=MATCH_FILTER_MODES.has(mode)?mode:"all";
+  localStorage.setItem(MATCH_FILTER_KEY,activeMatchFilter);
   applyMatchFilter();
 }
 function noticeStorageKey(){return roomId?`quiniela-notices-${roomId}`:"quiniela-notices"}
@@ -1117,9 +1121,27 @@ function liveMatchLabel(m){
   if(m.live_status==="finished") return "Final · pendiente SELAE";
   return m.live_status_text || "";
 }
+function livePickState(m){
+  if(!hasLiveMatch(m)) return "neutral";
+  var p=myPickFor(m.number);
+  if(m.number<=14){
+    if(!p || !p.pick) return "neutral";
+    var sign=m.live_home_score>m.live_away_score?"1":m.live_home_score<m.live_away_score?"2":"X";
+    return p.pick===sign?"correct":"wrong";
+  }
+  if(!p || !p.home_goals || !p.away_goals) return "neutral";
+  var home=normalizedGoalScore(m.live_home_score);
+  var away=normalizedGoalScore(m.live_away_score);
+  return p.home_goals===home && p.away_goals===away?"correct":"wrong";
+}
+function livePickLabel(m){
+  var state=livePickState(m);
+  return state==="correct"?"✓ Tu pronóstico va acertando":state==="wrong"?"Tu pronóstico no coincide ahora":"Sin pronóstico";
+}
 function buildLiveScoreNode(m){
   var score=document.createElement("span");
-  score.className="fixture-score live-fixture-score "+(m.live_status==="inprogress"?"is-live":"is-provisional");
+  var pickState=livePickState(m);
+  score.className="fixture-score live-fixture-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
   var small=document.createElement("small");
   if(m.live_status==="inprogress"){
     var dot=document.createElement("i");
@@ -1143,7 +1165,10 @@ function decorateLiveMatchCards(){
   normal.forEach(function(m,i){
     if(!hasLiveMatch(m) || !cards[i]) return;
     var card=cards[i];
+    var pickState=livePickState(m);
     card.classList.add("has-live-result");
+    card.classList.remove("live-pick-correct","live-pick-wrong","live-pick-neutral");
+    card.classList.add("live-pick-"+pickState);
     var vs=card.querySelector(".fixture-vs");
     if(vs) vs.replaceWith(buildLiveScoreNode(m));
     var bar=card.querySelector(".match-result-bar");
@@ -1166,8 +1191,12 @@ function decorateLiveMatchCards(){
     strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
     right.appendChild(strong);
     right.appendChild(document.createTextNode(" · SofaScore"));
+    var pickBadge=document.createElement("span");
+    pickBadge.className="live-pick-badge "+pickState;
+    pickBadge.textContent=livePickLabel(m);
     bar.appendChild(left);
     bar.appendChild(right);
+    bar.appendChild(pickBadge);
   });
 }
 function decorateLivePleno(){
@@ -1177,7 +1206,8 @@ function decorateLivePleno(){
   if(!el) return;
   el.innerHTML="";
   var box=document.createElement("div");
-  box.className="pleno-live-score "+(m.live_status==="inprogress"?"is-live":"is-provisional");
+  var pickState=livePickState(m);
+  box.className="pleno-live-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
   var small=document.createElement("small");
   if(m.live_status==="inprogress"){
     var dot=document.createElement("i");
@@ -1188,7 +1218,7 @@ function decorateLivePleno(){
   var score=document.createElement("strong");
   score.textContent=String(m.live_home_score)+" – "+String(m.live_away_score);
   var note=document.createElement("em");
-  note.textContent="Resultado provisional · SofaScore";
+  note.textContent=livePickState(m)==="neutral"?"Resultado provisional · SofaScore":livePickLabel(m)+" · SofaScore";
   box.appendChild(small);
   box.appendChild(score);
   box.appendChild(note);
