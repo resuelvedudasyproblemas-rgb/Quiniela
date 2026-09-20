@@ -2309,3 +2309,42 @@ html[data-theme="dark"] .history-real-result{
     font-size:.9rem;
   }
 }
+
+/* Día límite en cabecera v46 */
+.journey-main .journey-deadline{
+  display:flex;
+  align-items:baseline;
+  gap:7px;
+  flex-wrap:wrap;
+  margin-top:7px;
+  opacity:1;
+}
+.journey-deadline small{
+  font-size:.5rem;
+  line-height:1;
+  letter-spacing:.11em;
+  font-weight:950;
+  color:rgba(255,255,255,.68);
+}
+.journey-deadline b{
+  font-size:.76rem;
+  line-height:1.2;
+  font-weight:850;
+  color:#fff;
+}
+.journey-deadline.passed b{
+  color:rgba(255,255,255,.82);
+}
+@media(max-width:430px){
+  .journey-main .journey-deadline{
+    gap:5px;
+    margin-top:6px;
+  }
+  .journey-deadline small{
+    flex-basis:100%;
+    font-size:.47rem;
+  }
+  .journey-deadline b{
+    font-size:.73rem;
+  }
+}

@@ -153,16 +153,34 @@ function journeyDisplayState(j){
   if(resolved>0 || (firstKickoff && Date.now()>=new Date(firstKickoff).getTime())) return "playing";
   return "closed";
 }
-function journeyCanEdit(j){
-  if(!j || j.status!=="open") return false;
+function journeyDeadline(j){
+  if(!j) return null;
   const kickoffs=matchesForJourney(j.id)
     .map(m=>m.kickoff)
     .filter(Boolean)
     .map(v=>new Date(v).getTime())
     .filter(Number.isFinite);
-  if(kickoffs.length) return Date.now()<Math.min(...kickoffs);
-  const draw=new Date(j.draw_date+"T00:00:00+02:00").getTime();
-  return Date.now()<draw;
+  if(kickoffs.length) return new Date(Math.min(...kickoffs));
+  const draw=new Date(j.draw_date+"T00:00:00+02:00");
+  return Number.isFinite(draw.getTime())?draw:null;
+}
+function formatJourneyDeadline(j){
+  const deadline=journeyDeadline(j);
+  if(!deadline) return "Horario límite pendiente";
+  const parts=new Intl.DateTimeFormat("es-ES",{
+    timeZone:"Europe/Madrid",
+    weekday:"short",
+    day:"numeric",
+    month:"short",
+    hour:"2-digit",
+    minute:"2-digit"
+  }).format(deadline);
+  return parts.replace(","," ·");
+}
+function journeyCanEdit(j){
+  if(!j || j.status!=="open") return false;
+  const deadline=journeyDeadline(j);
+  return Boolean(deadline && Date.now()<deadline.getTime());
 }
 function journeyStateLabel(j){
   const state=journeyDisplayState(j);
@@ -1058,7 +1076,14 @@ function renderAll(){
   if($("#roomDialogMembers"))$("#roomDialogMembers").textContent=roomSummaryText();
   if($("#roomCode"))$("#roomCode").textContent=roomCode;
   $("#myName").textContent=myMember?.display_name||"Tú";
-  $("#journeyNumber").textContent=`Jornada ${journey.number}`;$("#journeyDate").textContent=formatDate(journey.draw_date);
+  $("#journeyNumber").textContent=`Jornada ${journey.number}`;
+  const deadline=journeyDeadline(journey);
+  const deadlineEl=$("#journeyDate");
+  if(deadlineEl){
+    const passed=deadline&&Date.now()>=deadline.getTime();
+    deadlineEl.className="journey-deadline"+(passed?" passed":"");
+    deadlineEl.innerHTML=`<small>${passed?"CIERRE DE PRONÓSTICOS":"DÍA LÍMITE"}</small><b>${escapeHtml(formatJourneyDeadline(journey))}</b>`;
+  }
   const state=journeyDisplayState(journey),resolved=journeyResolvedCount(journey);
   const statusLabels={open:"Abierta para pronósticos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
   $(".status-text").textContent=statusLabels[state]||"Jornada";
