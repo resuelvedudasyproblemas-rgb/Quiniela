@@ -252,22 +252,45 @@ function commonCorrectCount(j=journey){
   }
   return n;
 }
+function projectedResultForMatch(m){
+  if(!m) return "—";
+  if(matchResolved(m)) return actualResultForMatch(m);
+  const hasLive=m.live_home_score!=null && m.live_away_score!=null
+    && (m.live_status==="inprogress" || m.live_status==="finished");
+  if(!hasLive) return "—";
+  if(m.number===15) return `${normalizedGoalScore(m.live_home_score)}-${normalizedGoalScore(m.live_away_score)}`;
+  return m.live_home_score>m.live_away_score?"1":m.live_home_score<m.live_away_score?"2":"X";
+}
+function projectedScoreUserJourney(uid,j){
+  let correct=0,considered=0,live=0;
+  for(const m of journeyMatches(j.id)){
+    const actual=projectedResultForMatch(m);
+    if(actual==="—") continue;
+    considered++;
+    if(!matchResolved(m)) live++;
+    if(displayPickForJourney(uid,j.id,m.number)===actual) correct++;
+  }
+  return {correct,considered,live};
+}
 function renderJourneyDashboard(){
   const el=$("#journeyDashboard");
   if(!el||!journey) return;
   const p1=memberBySlot(1),p2=memberBySlot(2);
   const s1=p1?scoreUserJourney(p1.user_id,journey):{correct:0,resolved:0};
   const s2=p2?scoreUserJourney(p2.user_id,journey):{correct:0,resolved:0};
+  const projected1=p1?projectedScoreUserJourney(p1.user_id,journey):{correct:0,considered:0,live:0};
+  const projected2=p2?projectedScoreUserJourney(p2.user_id,journey):{correct:0,considered:0,live:0};
   const c1=p1?completedCountForUser(p1.user_id):0;
   const c2=p2?completedCountForUser(p2.user_id):0;
   const resolved=journeyResolvedCount(journey);
-  const next=nextUnresolvedMatch(journey);
   const playing=journeyDisplayState(journey)==="playing";
   const score1=resolved?`${s1.correct} aciertos`:`${c1}/15 hechos`;
   const score2=resolved?`${s2.correct} aciertos`:`${c2}/15 hechos`;
-  const nextCopy=next
-    ? `<strong>${escapeHtml(next.home)} – ${escapeHtml(next.away)}</strong><small>${escapeHtml(formatKickoff(next.kickoff))}<span class="dashboard-countdown" data-countdown="${escapeHtml(next.kickoff||"")}">${escapeHtml(countdownText(next.kickoff))}</span></small>`
-    : `<strong>Jornada completa</strong><small>Todos los partidos resueltos</small>`;
+  const considered=Math.max(projected1.considered,projected2.considered);
+  const liveCount=Math.max(projected1.live,projected2.live);
+  const projectedCopy=considered
+    ? `<strong>${projected1.correct} · ${projected2.correct}</strong><small>${escapeHtml(p1?.display_name||"J1")} · ${escapeHtml(p2?.display_name||"J2")}<br>${considered} valorados${liveCount?` · ${liveCount} en directo`:""}</small>`
+    : `<strong>0 · 0</strong><small>Aún sin resultados</small>`;
   el.innerHTML=`
     <div class="dashboard-title-row">
       <div><span class="dashboard-live-dot ${playing?"live":""}"></span><strong>${playing?"Seguimiento de resultados":"Resumen de jornada"}</strong></div>
@@ -277,9 +300,8 @@ function renderJourneyDashboard(){
       <div class="dashboard-stat"><span>Resultados</span><strong>${resolved}/15</strong><small>${15-resolved} pendientes</small></div>
       <div class="dashboard-stat"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados</small></div>
       <div class="dashboard-stat"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados</small></div>
-      <div class="dashboard-stat next-match-stat"><span>Próximo partido</span>${nextCopy}</div>
+      <div class="dashboard-stat projected-score-stat"><span>Aciertos posibles</span>${projectedCopy}</div>
     </div>`;
-  updateCountdowns();
 }
 function matchOutcomeForUser(m,uid=user?.id){
   if(!matchResolved(m)) return "pending";
