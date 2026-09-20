@@ -307,8 +307,8 @@ function renderJourneyDashboard(){
     </div>
     <div class="dashboard-grid">
       <div class="dashboard-stat"><span>Resultados</span><strong>${resolved}/15</strong><small>${15-resolved} pendientes</small></div>
-      <div class="dashboard-stat ${resolved&&prize1?"prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados</small></div>
-      <div class="dashboard-stat ${resolved&&prize2?"prize-zone":""}"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados</small></div>
+      <div class="dashboard-stat player-one-stat ${resolved&&prize1?"prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados</small></div>
+      <div class="dashboard-stat player-two-stat ${resolved&&prize2?"prize-zone":""}"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados</small></div>
       <div class="dashboard-stat projected-score-stat"><span>Aciertos posibles</span>${projectedCopy}</div>
     </div>`;
 }
@@ -1307,14 +1307,17 @@ function renderCompare(){
       if(m.number<=14&&joint!=="—") jointMark=joint.includes(result)?'<em class="pick-mark ok">✓</em>':'<em class="pick-mark bad">✕</em>';
     }
 
+    const aVisual=m.number<=14?jointReadonlySignsHtml(a,"player-one-signs compare-readonly"):`<strong>${a}</strong>`;
+    const bVisual=m.number<=14?jointReadonlySignsHtml(b,"player-two-signs compare-readonly"):`<strong>${b}</strong>`;
+    const jointVisual=m.number<=14?jointReadonlySignsHtml(joint,"joint-signs compare-readonly"):`<strong>${joint}</strong>`;
     return `<article class="compare-card ${state} ${ej?"compare-joint-e8":""}">
       <div class="compare-card-head"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m,true)}
       ${resultLine}
       <div class="compare-picks">
-        <div class="compare-pick-box"><span>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><strong>${a}${aMark}</strong></div>
-        <div class="compare-pick-box"><span>${escapeHtml(p2?.display_name||"Jugador 2")}${e2?'<b class="e8-chip">★ E8</b>':""}</span><strong>${b}${bMark}</strong></div>
-        <div class="compare-pick-box joint-box"><span>Conjunta${ej?'<b class="e8-chip joint-e8-chip">★ E8 conjunto</b>':""}</span><strong>${joint}${jointMark}</strong></div>
+        <div class="compare-pick-box player-one"><span><i class="player-dot"></i>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${aVisual}${aMark}</div></div>
+        <div class="compare-pick-box player-two"><span><i class="player-dot"></i>${escapeHtml(p2?.display_name||"Jugador 2")}${e2?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${bVisual}${bMark}</div></div>
+        <div class="compare-pick-box joint-box"><span><i class="player-dot"></i>Conjunta${ej?'<b class="e8-chip joint-e8-chip">★ E8 conjunto</b>':""}</span><div class="compare-pick-value">${jointVisual}${jointMark}</div></div>
       </div>
     </article>`;
   }).join("");
@@ -1328,14 +1331,14 @@ function renderCompare(){
   const jointE8=jointElige8Selections().length;
   if(!p2){
     $("#compareSubtitle").textContent="Comparte el código para añadir al segundo jugador";
-    if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid two"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${p1e8}/8</strong></div><div class="joint"><span>Conjunto</span><strong>${jointE8}/8</strong></div></div>`;
+    if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid two"><div class="player-one"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${p1e8}/8</strong></div><div class="joint"><span>Conjunto</span><strong>${jointE8}/8</strong></div></div>`;
     return;
   }
   $("#compareSubtitle").textContent=`${p1?.display_name||"Jugador 1"} ${completedCountForUser(p1?.user_id)}/15 · ${p2?.display_name||"Jugador 2"} ${completedCountForUser(p2?.user_id)}/15`;
   if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid">
-    <div><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${p1e8}/8</strong></div>
+    <div class="player-one"><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${p1e8}/8</strong></div>
     <div><span>Coincidís</span><strong>${e8Both}</strong><small>${e8Only1+e8Only2?`${e8Only1+e8Only2} distintos`:"mismos partidos"}</small></div>
-    <div><span>${escapeHtml(p2?.display_name||"J2")}</span><strong>${p2e8}/8</strong></div>
+    <div class="player-two"><span>${escapeHtml(p2?.display_name||"J2")}</span><strong>${p2e8}/8</strong></div>
     <div class="joint"><span>Conjunto</span><strong>${jointE8}/8</strong></div>
   </div>`;
 }
