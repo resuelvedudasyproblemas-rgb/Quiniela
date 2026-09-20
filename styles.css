@@ -1790,3 +1790,46 @@ html[data-theme="dark"] .live-freshness.delayed{
     padding:4px 6px;
   }
 }
+
+/* Goleadores SofaScore v38 */
+.live-result .result-outcome{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:5px;
+  flex-wrap:wrap;
+}
+.live-scorers{
+  display:inline-flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:3px;
+  margin-left:2px;
+  font-size:.54rem;
+  line-height:1.35;
+  font-weight:800;
+  color:color-mix(in srgb,currentColor 82%,var(--muted));
+}
+.live-result.is-provisional .live-scorers{
+  color:#9b4848;
+}
+.live-result.is-live .live-scorers{
+  color:#247a54;
+}
+html[data-theme="dark"] .live-result.is-provisional .live-scorers{
+  color:#f0a0a0;
+}
+html[data-theme="dark"] .live-result.is-live .live-scorers{
+  color:#83dfb2;
+}
+@media(max-width:430px){
+  .live-result .result-outcome{
+    justify-content:flex-start;
+    width:100%;
+  }
+  .live-scorers{
+    flex-basis:100%;
+    margin-left:0;
+    font-size:.51rem;
+  }
+}

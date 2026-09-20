@@ -1566,6 +1566,19 @@ function liveMatchLabel(m){
   if(m.live_status==="finished") return "Final · pendiente SELAE";
   return m.live_status_text || "";
 }
+function liveScorersText(m){
+  const scorers=Array.isArray(m?.live_scorers)?m.live_scorers:[];
+  return scorers.map(g=>{
+    const name=String(g?.name||"").trim();
+    if(!name) return "";
+    const time=Number(g?.time);
+    const added=Number(g?.added_time);
+    const minute=Number.isFinite(time)?`${time}${Number.isFinite(added)&&added>0?`+${added}`:""}'`:"";
+    const kind=String(g?.kind||"").toLowerCase();
+    const extra=kind.includes("penalty")?" (p.)":kind.includes("own")?" (p.p.)":"";
+    return `${name}${extra}${minute?` ${minute}`:""}`;
+  }).filter(Boolean).join(" · ");
+}
 function livePickVerdict(m,uid){
   if(!hasLiveMatch(m) || !uid) return "missing";
   var p=pickFor(uid,m.number);
@@ -1655,6 +1668,13 @@ function decorateLiveMatchCards(){
     strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
     right.appendChild(strong);
     right.appendChild(document.createTextNode(" · SofaScore"));
+    var scorersText=liveScorersText(m);
+    if(scorersText){
+      var scorers=document.createElement("span");
+      scorers.className="live-scorers";
+      scorers.textContent="⚽ "+scorersText;
+      right.appendChild(scorers);
+    }
     var pickBadge=document.createElement("span");
     pickBadge.className="live-pick-badge "+pickState;
     pickBadge.textContent=livePickLabel(m);
