@@ -62,29 +62,27 @@
 
   <div id="app" class="app-shell hidden">
     <section class="room-strip room-card room-card-unified">
-      <div class="room-main">
-        <span class="room-icon" aria-hidden="true">👥</span>
-        <div class="room-copy">
+      <div class="room-unified-top">
+        <div class="room-unified-title">
+          <span class="room-icon" aria-hidden="true">👥</span>
           <strong id="roomMembers">Vosotros dos</strong>
-          <div class="room-meta-line">
-            <div class="room-player-meta">
-              <span class="room-playing-as">Tú: <b id="myName">—</b></span>
-              <button id="renameBtn" class="rename-btn room-rename-btn" type="button">Cambiar</button>
-            </div>
-            <span id="opponentStatus" class="opponent-status room-opponent-status">Esperando al segundo jugador</span>
-          </div>
+        </div>
+        <div class="room-tools" aria-label="Acciones de la app">
+          <button id="notificationBtn" class="icon-tool-btn room-tool-btn" type="button" aria-label="Notificaciones">
+            <span aria-hidden="true">🔔</span><b id="notificationBadge" class="notification-badge hidden">0</b>
+          </button>
+          <button id="themeToggle" class="theme-toggle room-tool-btn" type="button" aria-label="Cambiar tema">
+            <span class="theme-icon" aria-hidden="true">☾</span>
+            <span class="theme-label">Oscuro</span>
+          </button>
+          <div id="syncBadge" class="sync-badge room-tool-btn" aria-label="Estado de sincronización"><span></span><b class="sync-label">Sincronizando</b></div>
+          <button id="openRoomBtn" class="room-manage-btn room-tool-btn" type="button" aria-label="Sala e invitación"><span aria-hidden="true">⌁</span><span class="room-manage-label">Sala e invitación</span></button>
         </div>
       </div>
-      <div class="room-tools" aria-label="Acciones de la app">
-        <button id="notificationBtn" class="icon-tool-btn room-tool-btn" type="button" aria-label="Notificaciones">
-          <span aria-hidden="true">🔔</span><b id="notificationBadge" class="notification-badge hidden">0</b>
-        </button>
-        <button id="themeToggle" class="theme-toggle room-tool-btn" type="button" aria-label="Cambiar tema">
-          <span class="theme-icon" aria-hidden="true">☾</span>
-          <span class="theme-label">Oscuro</span>
-        </button>
-        <div id="syncBadge" class="sync-badge room-tool-btn" aria-label="Estado de sincronización"><span></span><b class="sync-label">Sincronizando</b></div>
-        <button id="openRoomBtn" class="room-manage-btn room-tool-btn" type="button" aria-label="Sala e invitación"><span aria-hidden="true">⌁</span><span class="room-manage-label">Sala e invitación</span></button>
+      <div class="room-meta-line">
+        <span class="room-playing-as">Tú: <b id="myName">—</b></span>
+        <button id="renameBtn" class="rename-btn room-rename-btn" type="button">Cambiar</button>
+        <span id="opponentStatus" class="opponent-status room-opponent-status">Esperando al segundo jugador</span>
       </div>
     </section>
 
