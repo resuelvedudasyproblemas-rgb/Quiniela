@@ -20,7 +20,8 @@ let activeMatchFilter = "all";
 let notices = [];
 let installPrompt = null;
 let countdownTimer = null;
-const requestedView = new URLSearchParams(location.search).get("view") || "play";\nconst UNIQUE_ROOM_CODE = "R4LBRU";
+const requestedView = new URLSearchParams(location.search).get("view") || "play";
+const UNIQUE_ROOM_CODE = "R4LBRU";
 
 const escapeHtml = (str="") => str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const TEAM_DOMAINS={"CEUTA":"adceutafc.com","REAL SOCIEDAD":"realsociedad.eus","REAL SOCIEDAD B":"realsociedad.eus","GRANADA":"granadacf.es","ANDORRA":"fcandorra.com","CELTA":"rccelta.es","CELTA FORTUNA":"rccelta.es","SABADELL":"cesabadellfc.com","TENERIFE":"clubdeportivotenerife.es","CADIZ":"cadizcf.com","REAL VALLADOLID":"realvalladolid.es","CORDOBA":"cordobacf.com","MALLORCA":"rcdmallorca.es","ALMERIA":"udalmeriasad.com","BURGOS":"burgoscf.es","ELDENSE":"cdeldense.es","EIBAR":"sdeibar.com","LAS PALMAS":"udlaspalmas.es","REAL OVIEDO":"realoviedo.es","SPORTING":"realsporting.com","LEGANES":"cdleganes.com","CASTELLON":"cdcastellon.com","ATHLETIC CLUB":"athletic-club.eus","AT MADRID":"atleticodemadrid.com","ATLETICO MADRID":"atleticodemadrid.com","VALENCIA":"valenciacf.com","SEVILLA":"sevillafc.es","DEPORTIVO":"rcdeportivo.es","ESPANYOL":"rcdespanyol.com","REAL MADRID":"realmadrid.com","BARCELONA":"fcbarcelona.com","VILLARREAL":"villarrealcf.es","BETIS":"realbetisbalompie.es","REAL BETIS":"realbetisbalompie.es","RAYO VALLECANO":"rayovallecano.es","GETAFE":"getafecf.com","ALAVES":"deportivoalaves.com","GIRONA":"gironafc.cat","OSASUNA":"osasuna.es","LEVANTE":"levanteud.com","ELCHE":"elchecf.es","RACING":"realracingclub.es","RACING SANTANDER":"realracingclub.es","MALAGA":"malagacf.com","HUESCA":"sdhuesca.es","ZARAGOZA":"realzaragoza.com","ALBACETE":"albacetebalompie.es","MIRANDES":"cdmirandes.com"};
@@ -502,8 +503,8 @@ async function init(){
     }
     user=session.user;
 
-    const urlCode=cleanCode(new URLSearchParams(location.search).get("room")||"");
-    if(urlCode) $("#roomCodeInput").value=urlCode;
+    const roomInput=$("#roomCodeInput");
+    if(roomInput) roomInput.value=UNIQUE_ROOM_CODE;
 
     const {data:mine,error}=await sb.from("members")
       .select("room_id,user_id,slot,display_name")
@@ -550,10 +551,8 @@ async function createRoom(){
 
 async function joinRoom(){
   const name=$("#displayName").value.trim();
-  const code=cleanCode($("#roomCodeInput").value);
-  $("#roomCodeInput").value=code;
+  const code=UNIQUE_ROOM_CODE;
   if(!name){ $("#onboardingError").textContent="Escribe tu nombre."; return; }
-  if(code.length!==6){ $("#onboardingError").textContent="El código debe tener 6 caracteres."; return; }
   $("#onboardingError").textContent="";
   $("#joinRoomBtn").disabled=true;
   try{

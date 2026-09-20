@@ -587,3 +587,29 @@ html[data-theme="dark"] .match-card.has-result{
 .utility-dialog-card{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:22px;padding:18px;box-shadow:var(--shadow-lg);width:min(92vw,480px)}#roomDialog,#notificationDialog,#matchDetailDialog{border:0;background:transparent;padding:0}#roomDialog::backdrop,#notificationDialog::backdrop,#matchDetailDialog::backdrop{background:rgba(4,18,12,.58);backdrop-filter:blur(4px)}.utility-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.utility-dialog-head h2{margin:2px 0 0;font-size:1.12rem}.dialog-copy{color:var(--muted);font-size:.68rem;line-height:1.45}.room-dialog-code{margin:14px 0;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;text-align:center}.room-dialog-code span{display:block;font-size:.53rem;color:var(--muted);font-weight:900;letter-spacing:.12em}.room-dialog-code strong{display:block;margin-top:4px;font-size:1.25rem;letter-spacing:.18em}.notification-enable{margin:12px 0}.notification-list{max-height:54vh;overflow:auto;display:flex;flex-direction:column;gap:7px}.notification-item{border:1px solid var(--border);background:var(--surface-2);border-radius:13px;padding:9px 10px}.notification-item.unread{border-color:color-mix(in srgb,var(--brand) 40%,var(--border))}.notification-item strong{font-size:.68rem}.notification-item p{margin:3px 0;color:var(--muted);font-size:.61rem;line-height:1.4}.notification-item small{font-size:.5rem;color:var(--muted)}.notification-empty{padding:20px;text-align:center;color:var(--muted);font-size:.66rem}.match-detail-fixture{display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin:14px 0}.match-detail-fixture>div:not(.match-detail-score){display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px}.match-detail-fixture>div>strong{font-size:.72rem}.match-detail-score{text-align:center}.match-detail-score small{display:block;font-size:.47rem;color:var(--muted);font-weight:900}.match-detail-score strong{font-size:1.6rem}.match-detail-meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.58rem}.match-detail-picks{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}.match-detail-picks>div{background:var(--surface-2);border-radius:12px;padding:10px;text-align:center}.match-detail-picks span{display:block;font-size:.55rem;color:var(--muted)}.match-detail-picks strong{font-size:1rem}.match-detail-picks small{display:block;margin-top:3px;font-size:.53rem}.history-match-row{cursor:pointer}.team-crest-img.high-quality{inset:2px;width:calc(100% - 4px);height:calc(100% - 4px);background:transparent}.tv-more{background:var(--surface-3);font-weight:950}.pleno-final-score{border:0;cursor:pointer;width:100%;color:#fff}.pleno-final-score em{display:block;margin-top:4px;font-size:.5rem;font-style:normal;opacity:.7}
 html[data-theme="dark"] .joint-builder-summary,html[data-theme="dark"] .h2h-card{box-shadow:0 14px 32px rgba(0,0,0,.28)}
 @media(max-width:620px){.tabs-five{justify-content:flex-start}.dashboard-grid{grid-template-columns:1fr 1fr}.dashboard-title-row{align-items:flex-start;flex-direction:column}.room-manage-btn{width:100%}.stats-player-grid{grid-template-columns:1fr}.joint-builder-head{grid-template-columns:32px minmax(0,1fr)}.joint-mode{grid-column:2;justify-self:center}.match-detail-fixture{grid-template-columns:1fr 58px 1fr}.header-actions{width:100%}.header-tool-row{justify-content:center}}
+
+
+/* Sala única R4LBRU */
+.unique-room-preview{
+  margin:14px auto;
+  max-width:220px;
+  padding:12px 14px;
+  border-radius:15px;
+  background:var(--soft);
+  border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));
+  text-align:center;
+}
+.unique-room-preview span{
+  display:block;
+  font-size:.52rem;
+  font-weight:950;
+  letter-spacing:.14em;
+  color:var(--muted);
+}
+.unique-room-preview strong{
+  display:block;
+  margin-top:4px;
+  font-size:1.2rem;
+  letter-spacing:.16em;
+  color:var(--brand);
+}
