@@ -614,7 +614,8 @@ function renderJoint(){
       <div class="joint-builder-head">
         <span class="match-index">${String(m.number).padStart(2,"0")}</span>
         <div class="joint-builder-fixture">${fixtureMiniHtml(m)}</div>
-        <div class="joint-builder-tools"><span class="joint-kickoff" title="${escapeHtml(formatKickoff(m.kickoff))}">◷ ${escapeHtml(formatJointKickoff(m.kickoff))}</span><span class="joint-mode ${override?"manual":""}">${kind}</span></div>
+        <span class="joint-kickoff" title="${escapeHtml(formatKickoff(m.kickoff))}">◷ ${escapeHtml(formatJointKickoff(m.kickoff))}</span>
+        <div class="joint-builder-tools"><span class="joint-mode ${override?"manual":""}">${kind}</span></div>
       </div>
       <div class="joint-player-rows">
         <div class="joint-player-row player-one">
