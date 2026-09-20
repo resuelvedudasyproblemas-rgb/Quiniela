@@ -68,6 +68,8 @@
       <span class="journey-ball" aria-hidden="true">⚽</span>
     </section>
 
+    <section id="journeySwitcher" class="journey-switcher" aria-label="Cambiar jornada"></section>
+
     <nav class="tabs" aria-label="Secciones">
       <button class="tab active" data-view="play">Mi quiniela</button>
       <button class="tab" data-view="compare">Comparar</button>
@@ -108,6 +110,7 @@
           <div class="pleno-head">
             <span class="badge">PLENO AL 15</span>
             <h2><span id="plenoHomeName"></span> <em>vs</em> <span id="plenoAwayName"></span></h2>
+            <span id="plenoKickoff" class="pleno-kickoff">Horario pendiente</span>
           </div>
           <div class="goal-row">
             <span id="plenoHomeLabel"></span>
@@ -118,6 +121,7 @@
             <div class="goal-options" data-team="away"></div>
           </div>
           <p class="hint">M = 3 o más goles</p>
+          <div id="plenoResult" class="match-result-bar hidden"></div>
         </section>
       </section>
 
