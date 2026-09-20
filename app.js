@@ -646,12 +646,23 @@ async function init(){
       auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
     });
 
-    let {data:{session}}=await sb.auth.getSession();
-    if(!session){
+    let {data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError) throw sessionError;
+
+    if(session){
+      const expiresAt=Number(session.expires_at||0)*1000;
+      if(!expiresAt || expiresAt<=Date.now()+60000){
+        const {data:refreshed,error:refreshError}=await sb.auth.refreshSession();
+        if(refreshError) throw refreshError;
+        session=refreshed.session;
+      }
+    }else{
       const {data,error}=await sb.auth.signInAnonymously();
       if(error) throw error;
       session=data.session;
     }
+
+    if(!session?.user) throw new Error("No se pudo recuperar la sesión.");
     user=session.user;
 
     const params=new URLSearchParams(location.search);
