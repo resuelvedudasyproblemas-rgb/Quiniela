@@ -813,3 +813,46 @@ html[data-theme="dark"] .clear-pick-btn{color:#a9bbb2}
 .pleno-live-score.live-pick-both{background:#e9f8ef!important;border-color:#9fdab5!important;color:#11713d!important}
 .pleno-live-score.live-pick-one{background:#fff8e8!important;border-color:#efd48b!important;color:#8b6512!important}
 .pleno-live-score.live-pick-none{background:#fff5f5!important;border-color:#edc5c5!important;color:#a13b3b!important}
+
+
+/* Indicadores gráficos de pronóstico individual
+   círculo = tu selección · rombo = selección del compañero */
+.pick{position:relative}
+.pick-self-marker,
+.pick-opponent-marker{
+  position:absolute;
+  top:8px;
+  width:10px;
+  height:10px;
+  z-index:2;
+  pointer-events:none;
+}
+.pick-self-marker{
+  left:9px;
+  border-radius:50%;
+  background:rgba(255,255,255,.98);
+  box-shadow:0 0 0 2px rgba(255,255,255,.26);
+}
+.pick-opponent-marker{
+  right:10px;
+  border-radius:2px;
+  background:#c4a65f;
+  border:1px solid rgba(99,78,26,.18);
+  transform:rotate(45deg);
+  box-shadow:0 1px 4px rgba(92,70,20,.18);
+}
+.pick.opponent-selected:not(.selected){
+  border-color:#d7c189;
+  background:color-mix(in srgb,#c4a65f 8%,var(--surface-2));
+}
+.pick.selected.opponent-selected{
+  box-shadow:0 6px 14px rgba(7,91,60,.17), inset 0 0 0 1px rgba(196,166,95,.5);
+}
+html[data-theme="dark"] .pick-opponent-marker{
+  border-color:rgba(255,255,255,.22);
+}
+@media(max-width:430px){
+  .pick-self-marker,.pick-opponent-marker{top:7px;width:9px;height:9px}
+  .pick-self-marker{left:8px}
+  .pick-opponent-marker{right:9px}
+}
