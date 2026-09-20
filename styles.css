@@ -613,3 +613,19 @@ html[data-theme="dark"] .joint-builder-summary,html[data-theme="dark"] .h2h-card
   letter-spacing:.16em;
   color:var(--brand);
 }
+
+/* Borrar pronósticos antes del inicio v7 */
+.clear-pick-row{display:flex;justify-content:center;margin:7px 0 0}
+.clear-pick-btn{
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  padding:5px 9px;
+  border-radius:999px;
+  font-size:.56rem;
+  font-weight:850;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.clear-pick-btn:active{background:var(--surface-2)}
+html[data-theme="dark"] .clear-pick-btn{color:#a9bbb2}

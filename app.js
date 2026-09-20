@@ -142,6 +142,17 @@ function journeyDisplayState(j){
   if(resolved>0 || (firstKickoff && Date.now()>=new Date(firstKickoff).getTime())) return "playing";
   return "closed";
 }
+function journeyCanEdit(j){
+  if(!j || j.status!=="open") return false;
+  const kickoffs=matchesForJourney(j.id)
+    .map(m=>m.kickoff)
+    .filter(Boolean)
+    .map(v=>new Date(v).getTime())
+    .filter(Number.isFinite);
+  if(kickoffs.length) return Date.now()<Math.min(...kickoffs);
+  const draw=new Date(j.draw_date+"T00:00:00+02:00").getTime();
+  return Date.now()<draw;
+}
 function journeyStateLabel(j){
   const state=journeyDisplayState(j);
   return state==="open"?"Abierta":state==="playing"?"En juego":state==="finished"?"Finalizada":"Cerrada";
@@ -368,7 +379,7 @@ function jointSelectionKind(n,jid=journey?.id){
   return a&&b?"Automática":"Provisional";
 }
 async function saveJointSelection(n,selection){
-  if(journey.status!=="open"){toast("La jornada ya está cerrada");return}
+  if(!journeyCanEdit(journey)){toast("La jornada ya ha empezado o está cerrada");return}
   if(jointSaving)return;
   const clean=normalizeJointSelection(selection);if(!clean){toast("Debe quedar al menos un signo");return}
   jointSaving=true;setSync("","Guardando");
@@ -382,7 +393,7 @@ async function saveJointSelection(n,selection){
   finally{jointSaving=false}
 }
 async function resetJointSelection(n){
-  if(journey.status!=="open")return;
+  if(!journeyCanEdit(journey))return;
   const {error}=await sb.from("joint_picks").delete().eq("room_id",roomId).eq("journey_id",journey.id).eq("match_number",n);
   if(error){console.error(error);toast("No se pudo volver a automático");return}
   allJointPicks=allJointPicks.filter(x=>!(x.journey_id===journey.id&&x.match_number===n));renderJoint();toast("Vuelve al cálculo automático");
@@ -393,7 +404,7 @@ function renderJoint(){
   for(let n=1;n<=14;n++){const len=effectiveJointSelection(n).length;if(!len)pending++;else if(len===1)singles++;else if(len===2)doubles++;else triples++}
   const combinations=Math.pow(2,doubles)*Math.pow(3,triples);
   summary.innerHTML=`<div class="joint-summary-grid"><div><span>Simples</span><strong>${singles}</strong></div><div><span>Dobles</span><strong>${doubles}</strong></div><div><span>Triples</span><strong>${triples}</strong></div><div><span>Pendientes</span><strong>${pending}</strong></div></div><p>${pending?"Aún faltan pronósticos para cerrar la conjunta.":`${combinations.toLocaleString("es-ES")} combinación${combinations===1?"":"es"} resultante${combinations===1?"":"s"}.`}</p>`;
-  const locked=journey.status!=="open",normal=matches.filter(m=>m.number<=14);
+  const locked=!journeyCanEdit(journey),normal=matches.filter(m=>m.number<=14);
   list.innerHTML=normal.map(m=>{
     const sel=effectiveJointSelection(m.number),override=jointOverrideFor(m.number),kind=jointSelectionKind(m.number);
     const p1pick=p1?pickForJourney(p1.user_id,journey.id,m.number)?.pick:null,p2pick=p2?pickForJourney(p2.user_id,journey.id,m.number)?.pick:null;
@@ -666,7 +677,7 @@ function renderAll(){
 }
 
 function renderMatches(){
-  const normal=matches.filter(m=>m.number<=14),locked=journey.status!=="open",myE8Count=elige8Count(user.id),opponent=members.find(m=>m.user_id!==user.id);
+  const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),myE8Count=elige8Count(user.id),opponent=members.find(m=>m.user_id!==user.id);
   $("#matches").innerHTML=normal.map(m=>{
     const mp=myPickFor(m.number),e8=isElige8(user.id,m.number),e8Disabled=locked||elige8Saving||(myE8Count>=8&&!e8),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
     const opponentHtml=reveal?`<div class="opponent-pick"><span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${oppPick?.pick||"pendiente"}</strong></div>`:"";
@@ -675,11 +686,13 @@ function renderMatches(){
       <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small>LOCAL</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small>VISITANTE</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>
+      ${mp?.pick&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn" data-clear-match="${m.number}" type="button">Borrar selección</button></div>`:""}
       ${opponentHtml}${resultHtml}
     </article>`;
   }).join("");
-  $$(".pick").forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));
-  $$(".e8-toggle").forEach(b=>b.addEventListener("click",()=>toggleElige8(Number(b.dataset.e8Match))));
+  $(".pick").forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));
+  $(".clear-pick-btn").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.clearMatch))));
+  $(".e8-toggle").forEach(b=>b.addEventListener("click",()=>toggleElige8(Number(b.dataset.e8Match))));
   $$(".detail-btn").forEach(b=>b.addEventListener("click",()=>openMatchDetail(Number(b.dataset.detailMatch))));
   renderMatchFilterCounts();applyMatchFilter();updateCountdowns();
 }
@@ -690,8 +703,16 @@ function renderPleno(){
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url);
   $("#plenoKickoff").innerHTML=`◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
   const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<button class="pleno-final-score" data-detail-match="15" type="button"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong><em>Ver detalles</em></button>`:tvBroadcastHtml(m);
-  const mp=myPickFor(15),locked=journey.status!=="open";
+  const mp=myPickFor(15),locked=!journeyCanEdit(journey);
   $$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
+  let plenoClear=$("#plenoClearAction");
+  if(!plenoClear){
+    plenoClear=document.createElement("div");
+    plenoClear.id="plenoClearAction";
+    $(".hint")?.after(plenoClear);
+  }
+  plenoClear.innerHTML=mp&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn clear-pleno-btn" type="button">Borrar Pleno al 15</button></div>`:"";
+  plenoClear.querySelector(".clear-pleno-btn")?.addEventListener("click",()=>deletePick(15));
   const opponent=members.find(x=>x.user_id!==user.id),opp=opponent?pickFor(opponent.user_id,15):null,oppEl=$("#plenoOpponent");
   if(oppEl){const reveal=Boolean(mp?.home_goals&&mp?.away_goals);oppEl.classList.toggle("hidden",!reveal);if(reveal)oppEl.innerHTML=`<span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${opp?.home_goals&&opp?.away_goals?`${opp.home_goals}-${opp.away_goals}`:"pendiente"}</strong>`}
   const resultEl=$("#plenoResult"),resultHtml=resultBarHtml(m,mp);resultEl.className="match-result-bar";
@@ -700,7 +721,7 @@ function renderPleno(){
 }
 
 async function toggleElige8(n){
-  if(journey?.status!=="open"){ toast("La jornada ya está cerrada"); return; }
+  if(!journeyCanEdit(journey)){ toast("La jornada ya ha empezado o está cerrada"); return; }
   if(elige8Saving) return;
 
   const selected=isElige8(user.id,n);
@@ -749,8 +770,36 @@ async function toggleElige8(n){
   }
 }
 
+async function deletePick(n){
+  if(!journeyCanEdit(journey)){toast("Solo puedes borrar antes de que empiece la jornada");return}
+  if(saving)return;
+  const previous=myPickFor(n);
+  if(!previous)return;
+  saving=true;setSync("","Borrando");
+  picks=picks.filter(p=>!(p.user_id===user.id&&p.match_number===n));
+  allPicks=allPicks.filter(p=>!(p.user_id===user.id&&p.match_number===n&&p.journey_id===journey.id));
+  renderAll();
+  const {error}=await sb.from("picks")
+    .delete()
+    .eq("room_id",roomId)
+    .eq("journey_id",journey.id)
+    .eq("match_number",n)
+    .eq("user_id",user.id);
+  saving=false;
+  if(error){
+    console.error(error);
+    optimisticUpsert(previous);
+    renderAll();
+    setSync("error","Error");
+    toast("No se pudo borrar");
+  }else{
+    setSync("online","Sincronizado");
+    toast(n===15?"Pleno al 15 borrado":"Selección borrada");
+  }
+}
+
 async function saveNormalPick(n,val){
-  if(journey?.status!=="open"){ toast("La jornada ya está cerrada"); return; }
+  if(!journeyCanEdit(journey)){ toast("La jornada ya ha empezado o está cerrada"); return; }
   if(saving) return; saving=true; setSync("","Guardando");
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(n);
@@ -767,7 +816,7 @@ async function saveNormalPick(n,val){
 }
 
 async function savePleno(team,val){
-  if(journey?.status!=="open"){ toast("La jornada ya está cerrada"); return; }
+  if(!journeyCanEdit(journey)){ toast("La jornada ya ha empezado o está cerrada"); return; }
   if(saving) return; saving=true; setSync("","Guardando");
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(15);
