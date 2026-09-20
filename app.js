@@ -24,6 +24,14 @@ function teamInitials(name=""){const p=normalizeTeamName(name).replace(/\b(CLUB|
 function teamCrestHtml(name,size=""){const k=normalizeTeamName(name),flag=TEAM_FLAGS[k],label=escapeHtml(String(name).replace(/\s*\([MF]\)\s*$/i,""));if(flag)return `<span class="team-crest ${size} flag-crest" title="${label}">${flag}</span>`;const d=TEAM_DOMAINS[k],ini=escapeHtml(teamInitials(name));if(!d)return `<span class="team-crest ${size} fallback-only" title="${label}"><span class="crest-fallback">${ini}</span></span>`;const src=`https://www.google.com/s2/favicons?domain_url=https://${encodeURIComponent(d)}&sz=128`;return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${ini}</span><img class="team-crest-img" src="${src}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`}
 function teamInlineHtml(name){return `<span class="team-inline">${teamCrestHtml(name,"sm")}<span>${escapeHtml(name)}</span></span>`}
 function fixtureMiniHtml(m){return `<span class="fixture-mini"><span class="fixture-mini-team">${teamCrestHtml(m.home,"xs")}<span>${escapeHtml(m.home)}</span></span><span class="fixture-mini-sep">–</span><span class="fixture-mini-team">${teamCrestHtml(m.away,"xs")}<span>${escapeHtml(m.away)}</span></span></span>`}
+function tvBroadcastHtml(m,compact=false){
+  const channels=Array.isArray(m?.tv_channels)?m.tv_channels.filter(Boolean):[];
+  const cls=compact?"tv-broadcast compact":"tv-broadcast";
+  if(!channels.length){
+    return `<div class="${cls} pending-tv"><span class="tv-icon" aria-hidden="true">▣</span><span class="tv-title">TV</span><span class="tv-pending">Por confirmar</span></div>`;
+  }
+  return `<div class="${cls}"><span class="tv-icon" aria-hidden="true">▣</span><span class="tv-title">TV</span><div class="tv-channels">${channels.map(ch=>`<span class="tv-channel">${escapeHtml(ch)}</span>`).join("")}</div></div>`;
+}
 
 
 function show(id) {
@@ -368,6 +376,7 @@ function renderMatches(){
         <div class="fixture-team">${teamCrestHtml(m.home)}<div><small>LOCAL</small><strong>${escapeHtml(m.home)}</strong></div></div>
         <div class="fixture-team">${teamCrestHtml(m.away)}<div><small>VISITANTE</small><strong>${escapeHtml(m.away)}</strong></div></div>
       </div>
+      ${tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>
       ${resultHtml}
     </article>`;
@@ -384,6 +393,8 @@ function renderPleno(){
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home); $("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away);
   $("#plenoKickoff").textContent=`◷ ${formatKickoff(m.kickoff)}`;
   $("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
+  const plenoTv=$("#plenoTv");
+  if(plenoTv) plenoTv.innerHTML=tvBroadcastHtml(m);
   const mp=myPickFor(15);
   const locked=journey.status!=="open";
   $$(".goal-options").forEach(row=>{
@@ -555,6 +566,7 @@ function renderCompare(){
 
     return `<article class="compare-card ${state}">
       <div class="compare-card-head"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div>
+      ${tvBroadcastHtml(m,true)}
       ${resultLine}
       <div class="compare-picks">
         <div class="compare-pick-box"><span>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><strong>${a}${aMark}</strong></div>

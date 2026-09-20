@@ -173,3 +173,22 @@ body{background:radial-gradient(circle at 20% -10%,rgba(18,131,90,.11),transpare
   .match-result-bar{align-items:flex-start;flex-direction:column}
   .compare-result-line{margin-left:0}
 }
+
+/* Canales TV v1 */
+.tv-broadcast{display:flex;align-items:flex-start;gap:7px;margin:0 0 10px;padding:8px 9px;border-radius:12px;background:#f4f7f5;border:1px solid #e7ede9;color:#45564d}
+.tv-icon{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;border-radius:6px;background:#e2ece6;color:var(--brand);font-size:.7rem;font-weight:950;line-height:1}
+.tv-title{font-size:.58rem;line-height:20px;font-weight:950;letter-spacing:.08em;color:#6e7c75;flex:0 0 auto}
+.tv-channels{display:flex;gap:5px;flex-wrap:wrap;min-width:0}
+.tv-channel{display:inline-flex;align-items:center;min-height:20px;padding:3px 7px;border-radius:999px;background:#fff;border:1px solid #dce7e1;color:#2c4337;font-size:.58rem;font-weight:800;line-height:1.2}
+.tv-broadcast.pending-tv{background:#fafbf9;color:#8c9791}
+.tv-pending{font-size:.6rem;line-height:20px;font-weight:750;color:#89958f}
+.tv-broadcast.compact{margin:7px 0 0 39px;padding:5px 7px;border-radius:9px;gap:5px;background:#f7f9f8}
+.tv-broadcast.compact .tv-icon{width:17px;height:17px;flex-basis:17px;font-size:.58rem;border-radius:5px}
+.tv-broadcast.compact .tv-title,.tv-broadcast.compact .tv-pending{font-size:.52rem;line-height:17px}
+.tv-broadcast.compact .tv-channel{min-height:17px;padding:2px 5px;font-size:.5rem}
+.pleno-tv .tv-broadcast{margin:-5px 0 12px}
+@media(max-width:430px){
+  .tv-broadcast{padding:7px 8px}
+  .tv-channel{font-size:.55rem}
+  .tv-broadcast.compact{margin-left:0}
+}
