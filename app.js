@@ -126,6 +126,18 @@ function formatKickoff(v){
   }).format(new Date(v));
   return formatted.replace(",", " ·");
 }
+function formatJointKickoff(v){
+  if(!v)return "Pendiente";
+  const parts=new Intl.DateTimeFormat("es-ES",{
+    timeZone:"Europe/Madrid",
+    weekday:"short",
+    day:"numeric",
+    hour:"2-digit",
+    minute:"2-digit"
+  }).formatToParts(new Date(v));
+  const get=t=>parts.find(p=>p.type===t)?.value||"";
+  return `${get("weekday").replace(".","")} ${get("day")} · ${get("hour")}:${get("minute")}`;
+}
 function matchesForJourney(journeyId){
   return allMatches.filter(m=>m.journey_id===journeyId).sort((a,b)=>a.number-b.number);
 }
@@ -602,7 +614,7 @@ function renderJoint(){
       <div class="joint-builder-head">
         <span class="match-index">${String(m.number).padStart(2,"0")}</span>
         <div class="joint-builder-fixture">${fixtureMiniHtml(m)}</div>
-        <div class="joint-builder-tools"><span class="joint-mode ${override?"manual":""}">${kind}</span></div>
+        <div class="joint-builder-tools"><span class="joint-kickoff" title="${escapeHtml(formatKickoff(m.kickoff))}">◷ ${escapeHtml(formatJointKickoff(m.kickoff))}</span><span class="joint-mode ${override?"manual":""}">${kind}</span></div>
       </div>
       <div class="joint-player-rows">
         <div class="joint-player-row player-one">
