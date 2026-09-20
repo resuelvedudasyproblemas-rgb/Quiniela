@@ -3197,3 +3197,51 @@ main,
     top:4px!important;
   }
 }
+
+/* Logos de ligas en vertical v57 */
+.journey-leagues{
+  right:12px!important;
+  bottom:12px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:5px!important;
+  min-height:0!important;
+}
+.journey-league-logo,
+.journey-league-more{
+  width:28px!important;
+  height:28px!important;
+  flex:0 0 28px!important;
+  margin:0!important;
+  border-radius:9px!important;
+}
+.journey-league-logo img{
+  width:20px!important;
+  height:20px!important;
+}
+.journey-league-logo>b{
+  font-size:.43rem!important;
+}
+.journey-league-more{
+  font-size:.46rem!important;
+}
+@media(max-width:430px){
+  .journey-leagues{
+    right:10px!important;
+    bottom:10px!important;
+    gap:4px!important;
+  }
+  .journey-league-logo,
+  .journey-league-more{
+    width:26px!important;
+    height:26px!important;
+    flex-basis:26px!important;
+    border-radius:8px!important;
+  }
+  .journey-league-logo img{
+    width:18px!important;
+    height:18px!important;
+  }
+}
