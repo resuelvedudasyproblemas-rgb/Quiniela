@@ -1705,13 +1705,8 @@ function decorateLiveMatchCards(){
     bar.appendChild(left);
     bar.appendChild(right);
     bar.appendChild(pickBadge);
-    var scorersText=liveScorersText(m);
-    if(scorersText){
-      var scorers=document.createElement("div");
-      scorers.className="live-scorers-row";
-      scorers.textContent="⚽ "+scorersText;
-      bar.appendChild(scorers);
-    }
+    var scorerGroups=buildScorerGroupsNode(m);
+    if(scorerGroups) bar.appendChild(scorerGroups);
     if(m.live_status==="inprogress"){
       var freshness=document.createElement("small");
       freshness.className="live-freshness";
@@ -1725,15 +1720,22 @@ function appendScorersToMatchCards(){
   var cards=$$(".match-card");
   normal.forEach(function(m,i){
     if(!cards[i]) return;
-    var text=liveScorersText(m);
-    if(!text) return;
     var bar=cards[i].querySelector(".match-result-bar");
-    if(!bar || bar.querySelector(".live-scorers-row")) return;
-    var scorers=document.createElement("div");
-    scorers.className="live-scorers-row";
-    scorers.textContent="⚽ "+text;
-    bar.appendChild(scorers);
+    if(!bar || bar.querySelector(".live-scorers-groups")) return;
+    var groups=buildScorerGroupsNode(m);
+    if(groups) bar.appendChild(groups);
   });
+}
+function appendScorersToPleno(){
+  var m=matches.find(function(x){return x.number===15;});
+  if(!m) return;
+  var groups=buildScorerGroupsNode(m);
+  if(!groups) return;
+  var target=matchResolved(m)?$("#plenoResult"):$("#plenoTv .pleno-live-score");
+  if(!target) target=$("#plenoTv");
+  if(!target || target.querySelector(".live-scorers-groups")) return;
+  groups.classList.add("pleno-scorers-groups");
+  target.appendChild(groups);
 }
 function decorateLivePleno(){
   var m=matches.find(function(x){return x.number===15;});
@@ -1795,6 +1797,7 @@ var __renderPlenoLiveBase=renderPleno;
 renderPleno=function(){
   __renderPlenoLiveBase();
   decorateLivePleno();
+  appendScorersToPleno();
   updateLiveFreshness();
 };
 var __renderCompareLiveBase=renderCompare;
