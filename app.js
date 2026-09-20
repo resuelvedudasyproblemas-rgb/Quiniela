@@ -193,15 +193,18 @@ function resultBarHtml(m,p){
 function renderJourneySwitcher(){
   const el=$("#journeySwitcher");
   if(!el) return;
-  const available=journeys
-    .filter(j=>journeyDisplayState(j)!=="finished")
-    .sort((a,b)=>b.number-a.number);
+  const ordered=[...journeys].sort((a,b)=>b.number-a.number);
+  const latestFinished=ordered.find(j=>journeyDisplayState(j)==="finished");
+  const available=ordered.filter(j=>{
+    const state=journeyDisplayState(j);
+    return state!=="finished" || j.id===latestFinished?.id || j.id===journey?.id;
+  });
   if(!available.length){ el.classList.add("hidden"); el.innerHTML=""; return; }
   el.classList.remove("hidden");
   el.innerHTML=available.map(j=>{
     const state=journeyDisplayState(j);
     const resolved=journeyResolvedCount(j);
-    const detail=state==="playing"?`${resolved}/15 resultados`:state==="open"?"Pronósticos abiertos":"Esperando partidos";
+    const detail=state==="playing"?`${resolved}/15 resultados`:state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
     return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}" data-journey-id="${j.id}">
       <span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small>
     </button>`;

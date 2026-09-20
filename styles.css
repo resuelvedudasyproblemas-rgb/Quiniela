@@ -1942,3 +1942,20 @@ html[data-theme="dark"] .live-result.is-provisional .live-scorers-groups{color:#
     font-size:.49rem;
   }
 }
+
+/* Jornada anterior visible v41 */
+.journey-choice.state-finished{
+  border-color:#d7dfdb;
+  background:#f7f9f8;
+}
+.journey-choice.state-finished>span{
+  background:#e8eeeb;
+  color:#65756d;
+}
+.journey-choice.state-finished>strong{
+  color:#65756d;
+}
+.journey-choice.state-finished.active{
+  border-color:#9eb8aa;
+  background:#eef4f1;
+}
