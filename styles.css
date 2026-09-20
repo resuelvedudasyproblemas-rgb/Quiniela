@@ -1010,3 +1010,14 @@ html[data-theme="dark"] .pick-opponent-marker{
   }
   .room-manage-label{display:none}
 }
+
+
+/* Estado de Web Push */
+.push-status-text{
+  margin:0 0 12px;
+  color:var(--muted);
+  font-size:.62rem;
+  line-height:1.4;
+  text-align:center;
+}
+.notification-enable{margin-bottom:7px}

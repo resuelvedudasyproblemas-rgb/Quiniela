@@ -21,6 +21,8 @@ const MATCH_FILTER_MODES=new Set(["all","pending","correct","wrong","e8"]);
 const savedMatchFilter=localStorage.getItem(MATCH_FILTER_KEY);
 let activeMatchFilter = MATCH_FILTER_MODES.has(savedMatchFilter)?savedMatchFilter:"all";
 let notices = [];
+let pushSubscribed = false;
+const VAPID_PUBLIC_KEY = "BFmY1Uy8yquoZDQ57fxY2awxtrfSXYh-Nj0LtK4fuWKbrTRoSH6Z9hYtfShACqyMeeWMLo1LlLx52FwZuuE3W0o";
 let installPrompt = null;
 let countdownTimer = null;
 const requestedView = new URLSearchParams(location.search).get("view") || "play";
@@ -338,22 +340,85 @@ function setMatchFilter(mode){
   applyMatchFilter();
 }
 function noticeStorageKey(){return roomId?`quiniela-notices-${roomId}`:"quiniela-notices"}
-function loadNotices(){
-  try{notices=JSON.parse(localStorage.getItem(noticeStorageKey())||"[]")}catch{notices=[]}
-  renderNotificationBadge();
+function pushCapable(){
+  return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
 }
-function saveNotices(){try{localStorage.setItem(noticeStorageKey(),JSON.stringify(notices.slice(0,30)))}catch{}}
+function urlBase64ToUint8Array(value){
+  const padding="=".repeat((4-value.length%4)%4);
+  const base64=(value+padding).replace(/-/g,"+").replace(/_/g,"/");
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)));
+}
+async function loadNotices(){
+  let local=[];
+  try{local=JSON.parse(localStorage.getItem(noticeStorageKey())||"[]")}catch{local=[]}
+  notices=Array.isArray(local)?local:[];
+  if(sb&&user){
+    const {data,error}=await sb.from("push_notifications")
+      .select("id,title,body,created_at,read_at")
+      .eq("user_id",user.id)
+      .order("created_at",{ascending:false})
+      .limit(30);
+    if(!error&&data){
+      const server=data.map(n=>({
+        id:"server-"+n.id,
+        serverId:n.id,
+        title:n.title,
+        body:n.body,
+        at:n.created_at,
+        read:Boolean(n.read_at)
+      }));
+      const serverKeys=new Set(server.map(n=>n.title+"\n"+n.body));
+      const localOnly=notices.filter(n=>!serverKeys.has(n.title+"\n"+n.body));
+      notices=[...server,...localOnly].sort((a,b)=>new Date(b.at)-new Date(a.at)).slice(0,30);
+    }
+  }
+  renderNotificationBadge();
+  renderNotifications();
+}
+function saveNotices(){
+  try{
+    localStorage.setItem(noticeStorageKey(),JSON.stringify(notices.filter(n=>!n.serverId).slice(0,30)));
+  }catch{}
+}
 function renderNotificationBadge(){
   const badge=$("#notificationBadge");if(!badge)return;
   const unread=notices.filter(n=>!n.read).length;
   badge.textContent=String(unread);badge.classList.toggle("hidden",unread===0);
 }
 function recordNotice(title,body){
+  const duplicate=notices.some(n=>n.title===title&&n.body===body&&Date.now()-new Date(n.at).getTime()<120000);
+  if(duplicate)return;
   notices.unshift({id:Date.now()+Math.random(),title,body,at:new Date().toISOString(),read:false});
   notices=notices.slice(0,30);saveNotices();renderNotificationBadge();renderNotifications();
 }
+async function registerPushSubscription(){
+  if(!pushCapable()||Notification.permission!=="granted"||!sb||!user)return false;
+  const reg=await navigator.serviceWorker.ready;
+  let subscription=await reg.pushManager.getSubscription();
+  if(!subscription){
+    subscription=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+  }
+  const {error}=await sb.functions.invoke("push-register",{body:subscription.toJSON()});
+  if(error)throw error;
+  pushSubscribed=true;
+  renderNotifications();
+  return true;
+}
+async function refreshPushSubscription(){
+  if(!pushCapable()||Notification.permission!=="granted")return;
+  try{await registerPushSubscription()}catch(e){
+    pushSubscribed=false;
+    console.warn("Push:",e);
+    renderNotifications();
+  }
+}
 async function notifyUser(title,body){
   recordNotice(title,body);
+  if(pushSubscribed)return;
   if(!("Notification" in window)||Notification.permission!=="granted")return;
   try{
     if("serviceWorker" in navigator){
@@ -363,26 +428,60 @@ async function notifyUser(title,body){
   }catch(e){console.warn("Notificación:",e)}
 }
 function renderNotifications(){
-  const list=$("#notificationList"),btn=$("#enableNotificationsBtn");
+  const list=$("#notificationList"),btn=$("#enableNotificationsBtn"),status=$("#pushStatusText");
   if(btn){
-    if(!("Notification" in window)){btn.textContent="Notificaciones no disponibles";btn.disabled=true}
-    else if(Notification.permission==="granted"){btn.textContent="✓ Notificaciones activadas";btn.disabled=true}
-    else if(Notification.permission==="denied"){btn.textContent="Notificaciones bloqueadas en el navegador";btn.disabled=true}
-    else{btn.textContent="Activar notificaciones del navegador";btn.disabled=false}
+    if(!("Notification" in window)){
+      btn.textContent="Notificaciones no disponibles";btn.disabled=true;
+      if(status)status.textContent="Este navegador no admite notificaciones.";
+    }else if(Notification.permission==="denied"){
+      btn.textContent="Notificaciones bloqueadas";btn.disabled=true;
+      if(status)status.textContent="Actívalas desde los permisos del navegador o del sistema.";
+    }else if(Notification.permission==="granted"&&pushSubscribed){
+      btn.textContent="✓ Notificaciones push activadas";btn.disabled=true;
+      if(status)status.textContent="Te llegarán aunque Nuestra Quiniela esté cerrada.";
+    }else if(Notification.permission==="granted"&&pushCapable()){
+      btn.textContent="Completar activación push";btn.disabled=false;
+      if(status)status.textContent="El permiso está concedido, falta registrar este dispositivo.";
+    }else if(Notification.permission==="granted"){
+      btn.textContent="✓ Avisos con la app abierta";btn.disabled=true;
+      if(status)status.textContent="Este navegador no admite Web Push en este modo.";
+    }else{
+      btn.textContent="Activar notificaciones";btn.disabled=false;
+      if(status)status.textContent=pushCapable()?"Recibirás avisos incluso con la app cerrada.":"En iPhone, instala primero la app en la pantalla de inicio para usar Web Push.";
+    }
   }
   if(!list)return;
-  if(!notices.length){list.innerHTML=`<div class="notification-empty">Aquí aparecerán resultados, nuevas jornadas y avisos cuando el otro jugador complete su quiniela.</div>`;return}
+  if(!notices.length){list.innerHTML=`<div class="notification-empty">Aquí aparecerán resultados oficiales, nuevas jornadas y avisos cuando el otro jugador complete su quiniela.</div>`;return}
   const fmt=new Intl.DateTimeFormat("es-ES",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
   list.innerHTML=notices.map(n=>`<article class="notification-item ${n.read?"":"unread"}"><strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(n.body)}</p><small>${fmt.format(new Date(n.at))}</small></article>`).join("");
 }
 async function requestNotifications(){
   if(!("Notification" in window))return;
-  const permission=await Notification.requestPermission();
+  try{
+    let permission=Notification.permission;
+    if(permission==="default")permission=await Notification.requestPermission();
+    if(permission==="granted"){
+      if(pushCapable()){
+        const ok=await registerPushSubscription();
+        if(ok)toast("Notificaciones push activadas");
+      }else{
+        toast("Notificaciones activadas mientras la app esté abierta");
+      }
+    }
+  }catch(e){
+    console.error(e);
+    toast("No se pudieron activar las notificaciones");
+  }
   renderNotifications();
-  if(permission==="granted")toast("Notificaciones activadas");
 }
-function openNotificationCenter(){
-  notices=notices.map(n=>({...n,read:true}));saveNotices();renderNotificationBadge();renderNotifications();$("#notificationDialog").showModal();
+async function openNotificationCenter(){
+  await loadNotices();
+  const serverIds=notices.filter(n=>n.serverId&&!n.read).map(n=>n.serverId);
+  if(serverIds.length&&sb){
+    await sb.from("push_notifications").update({read_at:new Date().toISOString()}).in("id",serverIds);
+  }
+  notices=notices.map(n=>({...n,read:true}));
+  saveNotices();renderNotificationBadge();renderNotifications();$("#notificationDialog").showModal();
 }
 function detectNewResults(oldMatches){
   const oldMap=new Map((oldMatches||[]).map(m=>[`${m.journey_id}-${m.number}`,m]));
@@ -627,10 +726,11 @@ async function enterApp(){
   setSync("","Cargando");
   await Promise.all([loadAllJourneys(),loadMembers()]);
   await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks()]);
-  loadNotices();
+  await loadNotices();
   selectActiveJourney();
   renderAll();
   subscribeRealtime();
+  refreshPushSubscription();
   startCountdownTimer();
   activateView(requestedView);
   setSync("online","Sincronizado");

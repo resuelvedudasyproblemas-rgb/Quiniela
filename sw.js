@@ -1,4 +1,4 @@
-const CACHE="quiniela-v24";
+const CACHE="quiniela-v25";
 const CORE=["./","index.html","styles.css","app.js","config.js","manifest.webmanifest","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install",event=>{
@@ -36,11 +36,30 @@ self.addEventListener("fetch",event=>{
   })());
 });
 
+
+self.addEventListener("push",event=>{
+  let data={};
+  try{data=event.data?event.data.json():{}}catch{data={body:event.data?event.data.text():""}}
+  const title=data.title||"Nuestra Quiniela";
+  event.waitUntil(self.registration.showNotification(title,{
+    body:data.body||"",
+    icon:"icon-192.svg",
+    badge:"icon-192.svg",
+    tag:data.tag||"quiniela-push",
+    data:{url:data.url||"./"},
+    renotify:true
+  }));
+});
+
 self.addEventListener("notificationclick",event=>{
   event.notification.close();
+  const target=new URL(event.notification.data?.url||"./",self.location.origin).href;
   event.waitUntil((async()=>{
     const clientsList=await self.clients.matchAll({type:"window",includeUncontrolled:true});
-    for(const client of clientsList){ if("focus" in client) return client.focus(); }
-    if(self.clients.openWindow) return self.clients.openWindow("./");
+    for(const client of clientsList){
+      if("navigate" in client) try{await client.navigate(target)}catch{}
+      if("focus" in client) return client.focus();
+    }
+    if(self.clients.openWindow) return self.clients.openWindow(target);
   })());
 });
