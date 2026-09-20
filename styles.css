@@ -2353,3 +2353,79 @@ html[data-theme="dark"] .history-real-result{
 .history-detail-fixture .fixture-mini-sep{
   display:none;
 }
+
+/* Hero de jornada centrado v48 */
+.journey-card{
+  min-height:154px;
+  padding:17px 18px 18px;
+}
+.journey-card .journey-status{
+  justify-content:center;
+  width:100%;
+}
+.journey-card .journey-main{
+  align-items:center;
+  text-align:center;
+  margin-top:15px;
+}
+.journey-card .journey-kicker{
+  margin-bottom:2px;
+}
+.journey-card .journey-main>strong{
+  font-size:1.55rem;
+  line-height:1.08;
+}
+.journey-main .journey-deadline{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  width:max-content;
+  max-width:calc(100% - 48px);
+  margin:11px auto 0;
+  padding:8px 15px 9px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:14px;
+  background:rgba(255,255,255,.09);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+  backdrop-filter:blur(4px);
+}
+.journey-deadline small{
+  font-size:.48rem;
+  letter-spacing:.13em;
+  color:rgba(255,255,255,.66);
+}
+.journey-deadline b{
+  font-size:.78rem;
+  letter-spacing:.01em;
+  color:#fff;
+  white-space:nowrap;
+}
+@media(max-width:430px){
+  .journey-card{
+    min-height:150px;
+    padding:16px 14px 17px;
+  }
+  .journey-card .journey-main{
+    margin-top:14px;
+  }
+  .journey-card .journey-main>strong{
+    font-size:1.5rem;
+  }
+  .journey-main .journey-deadline{
+    width:auto;
+    min-width:210px;
+    max-width:calc(100% - 62px);
+    margin-top:10px;
+    padding:7px 12px 8px;
+    gap:3px;
+  }
+  .journey-deadline small{
+    flex-basis:auto;
+    font-size:.46rem;
+  }
+  .journey-deadline b{
+    font-size:.74rem;
+  }
+}
