@@ -1252,29 +1252,32 @@ function renderCompare(){
     const a=displayPick(p1&&pickFor(p1.user_id,m.number),m.number), b=displayPick(p2&&pickFor(p2.user_id,m.number),m.number);
     const both=a!=="—"&&b!=="—", eq=both&&a===b;
     if(eq) same++; else if(both&&m.number<=14) diffNormal++; else if(!both) pending++;
-    const e1=m.number<=14&&p1?isElige8(p1.user_id,m.number):false, e2=m.number<=14&&p2?isElige8(p2.user_id,m.number):false;
+    const e1=m.number<=14&&p1?isElige8(p1.user_id,m.number):false;
+    const e2=m.number<=14&&p2?isElige8(p2.user_id,m.number):false;
+    const ej=m.number<=14?isJointElige8(m.number):false;
     if(e1&&e2)e8Both++;else if(e1)e8Only1++;else if(e2)e8Only2++;
     const state=!both?"is-pending":eq?"is-same":"is-different";
-    const label=!both?"Pendiente":eq?"Coincidís":m.number<=14?"Doble propuesto":"Distintos";
-    const joint=!both?"—":eq?a:`${a} · ${b}`;
+    const label=!both?"Pendiente":eq?"Coincidís":m.number<=14?"Diferentes":"Distintos";
+    const joint=m.number<=14?(effectiveJointSelection(m.number)||"—"):(!both?"—":eq?a:`${a} · ${b}`);
 
     let resultLine="";
-    let aMark="",bMark="";
+    let aMark="",bMark="",jointMark="";
     if(matchResolved(m)){
       const result=m.number===15?`${normalizedGoalScore(m.home_score)}-${normalizedGoalScore(m.away_score)}`:resultSignForMatch(m);
       resultLine=`<div class="compare-result-line">Resultado <strong>${m.home_score}-${m.away_score}</strong>${m.number<=14?` · signo <strong>${result}</strong>`:""}</div>`;
       if(a!=="—") aMark=a===result?'<em class="pick-mark ok">✓</em>':'<em class="pick-mark bad">✕</em>';
       if(b!=="—") bMark=b===result?'<em class="pick-mark ok">✓</em>':'<em class="pick-mark bad">✕</em>';
+      if(m.number<=14&&joint!=="—") jointMark=joint.includes(result)?'<em class="pick-mark ok">✓</em>':'<em class="pick-mark bad">✕</em>';
     }
 
-    return `<article class="compare-card ${state}">
+    return `<article class="compare-card ${state} ${ej?"compare-joint-e8":""}">
       <div class="compare-card-head"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m,true)}
       ${resultLine}
       <div class="compare-picks">
         <div class="compare-pick-box"><span>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><strong>${a}${aMark}</strong></div>
         <div class="compare-pick-box"><span>${escapeHtml(p2?.display_name||"Jugador 2")}${e2?'<b class="e8-chip">★ E8</b>':""}</span><strong>${b}${bMark}</strong></div>
-        <div class="compare-pick-box joint-box"><span>Conjunta${e1&&e2?'<b class="e8-chip">★ E8 ambos</b>':""}</span><strong>${joint}</strong></div>
+        <div class="compare-pick-box joint-box"><span>Conjunta${ej?'<b class="e8-chip joint-e8-chip">★ E8 conjunto</b>':""}</span><strong>${joint}${jointMark}</strong></div>
       </div>
     </article>`;
   }).join("");
@@ -1283,13 +1286,21 @@ function renderCompare(){
   $("#jointPending").textContent=String(pending);
   $("#e8BothStat").textContent=String(e8Both);
   const e8=$("#elige8CompareSummary");
+  const p1e8=p1?elige8Count(p1.user_id):0;
+  const p2e8=p2?elige8Count(p2.user_id):0;
+  const jointE8=jointElige8Selections().length;
   if(!p2){
     $("#compareSubtitle").textContent="Comparte el código para añadir al segundo jugador";
-    if(e8)e8.textContent=`Elige 8 · ${p1?.display_name||"Jugador 1"} ${elige8Count(p1?.user_id)}/8`;
+    if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid two"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${p1e8}/8</strong></div><div class="joint"><span>Conjunto</span><strong>${jointE8}/8</strong></div></div>`;
     return;
   }
   $("#compareSubtitle").textContent=`${p1?.display_name||"Jugador 1"} ${completedCountForUser(p1?.user_id)}/15 · ${p2?.display_name||"Jugador 2"} ${completedCountForUser(p2?.user_id)}/15`;
-  if(e8)e8.textContent=`Elige 8 · ambos ${e8Both} · solo ${p1?.display_name||"J1"} ${e8Only1} · solo ${p2?.display_name||"J2"} ${e8Only2}`;
+  if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid">
+    <div><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${p1e8}/8</strong></div>
+    <div><span>Coincidís</span><strong>${e8Both}</strong><small>${e8Only1+e8Only2?`${e8Only1+e8Only2} distintos`:"mismos partidos"}</small></div>
+    <div><span>${escapeHtml(p2?.display_name||"J2")}</span><strong>${p2e8}/8</strong></div>
+    <div class="joint"><span>Conjunto</span><strong>${jointE8}/8</strong></div>
+  </div>`;
 }
 
 function pickForJourney(uid,journeyId,n){
