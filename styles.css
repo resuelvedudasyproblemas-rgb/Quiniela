@@ -1131,3 +1131,105 @@ html[data-theme="dark"] .joint-e8-live-score .bad{background:#432424;color:#f0a0
   .joint-builder-tools{flex-direction:column;align-items:flex-end;gap:4px}
   .joint-e8-toggle{font-size:.46rem;padding:4px 6px}
 }
+
+/* Comparación Elige 8 v2 */
+.elige8-compare-summary{
+  padding:10px 11px;
+  text-align:left;
+}
+.e8-compare-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.e8-compare-head>span{
+  font-size:.52rem;
+  font-weight:950;
+  letter-spacing:.12em;
+  color:#8a6410;
+}
+.e8-compare-head>strong{
+  font-size:.68rem;
+  color:var(--text);
+}
+.e8-compare-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:6px;
+}
+.e8-compare-grid.two{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.e8-compare-grid>div{
+  min-width:0;
+  padding:7px 6px;
+  border-radius:10px;
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(138,100,16,.12);
+  text-align:center;
+}
+.e8-compare-grid>div.joint{
+  background:#edf7f1;
+  border-color:#d4e8dc;
+}
+.e8-compare-grid span{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.49rem;
+  color:var(--muted);
+  font-weight:850;
+}
+.e8-compare-grid strong{
+  display:block;
+  margin-top:2px;
+  font-size:.78rem;
+  color:var(--text);
+}
+.e8-compare-grid small{
+  display:block;
+  margin-top:1px;
+  font-size:.43rem;
+  color:var(--muted);
+  line-height:1.15;
+}
+.joint-e8-chip{
+  background:#e3f3e9!important;
+  color:#176a48!important;
+}
+.compare-card.compare-joint-e8{
+  border-color:color-mix(in srgb,var(--brand) 28%,var(--border));
+}
+.compare-card.compare-joint-e8:after{
+  content:"E8 conjunto";
+  position:absolute;
+  right:10px;
+  bottom:7px;
+  font-size:.42rem;
+  font-weight:950;
+  letter-spacing:.04em;
+  color:color-mix(in srgb,var(--brand) 72%,var(--muted));
+  opacity:.72;
+}
+@media(max-width:430px){
+  .e8-compare-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .compare-card.compare-joint-e8:after{display:none}
+  .compare-pick-box>span{align-items:flex-start}
+  .e8-chip{max-width:100%;white-space:normal;line-height:1.05}
+}
+html[data-theme="dark"] .elige8-compare-summary{
+  background:#2b2413;
+  border-color:#55451c;
+  color:#e8ce84;
+}
+html[data-theme="dark"] .e8-compare-grid>div{
+  background:rgba(255,255,255,.04);
+  border-color:#514623;
+}
+html[data-theme="dark"] .e8-compare-grid>div.joint{
+  background:#142b20;
+  border-color:#284737;
+}
