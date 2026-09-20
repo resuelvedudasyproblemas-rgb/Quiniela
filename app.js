@@ -829,7 +829,7 @@ async function shareRoom(){
 applyTheme(currentTheme(),false);
 $("#themeToggle")?.addEventListener("click",toggleTheme);
 
-$(".tab").forEach(tab=>tab.addEventListener("click",()=>{
+$$(".tab").forEach(tab=>tab.addEventListener("click",()=>{
   $$(".tab").forEach(t=>t.classList.toggle("active",t===tab));
   $$(".view").forEach(v=>v.classList.remove("active"));
   $("#"+tab.dataset.view+"View").classList.add("active");
