@@ -1874,3 +1874,71 @@ html[data-theme="dark"] .live-result.is-provisional .live-scorers-row{color:#f0a
     line-height:1.5;
   }
 }
+
+/* Goleadores por equipo + Pleno limpio v40 */
+.live-scorers-groups{
+  flex:0 0 100%;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  margin-top:7px;
+  padding-top:7px;
+  border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);
+}
+.live-scorer-row{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(92px,30%) minmax(0,1fr);
+  align-items:start;
+  gap:8px;
+  font-size:.55rem;
+  line-height:1.45;
+}
+.live-scorer-team{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.53rem;
+  font-weight:950;
+}
+.live-scorer-goals{
+  min-width:0;
+  max-width:100%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  font-weight:800;
+}
+.live-result.is-live .live-scorers-groups{color:#247a54}
+.live-result.is-provisional .live-scorers-groups{color:#9b4848}
+.match-result-bar.correct .live-scorers-groups{color:#247a54}
+.match-result-bar.wrong .live-scorers-groups{color:#a43a3a}
+.match-result-bar.neutral .live-scorers-groups{color:var(--muted)}
+.match-result-bar.pending .live-scorers-groups{color:#87661e}
+.pleno-scorers-groups{
+  margin-top:8px;
+}
+.pleno-final-score{
+  cursor:default!important;
+}
+.team-crest:has(.team-crest-img) .crest-fallback{
+  display:none;
+}
+html[data-theme="dark"] .live-result.is-live .live-scorers-groups{color:#83dfb2}
+html[data-theme="dark"] .live-result.is-provisional .live-scorers-groups{color:#f0a0a0}
+@media(max-width:430px){
+  .live-scorer-row{
+    grid-template-columns:minmax(76px,28%) minmax(0,1fr);
+    gap:6px;
+    font-size:.51rem;
+  }
+  .live-scorer-team{
+    font-size:.49rem;
+  }
+}
