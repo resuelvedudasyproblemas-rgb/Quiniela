@@ -1296,29 +1296,35 @@ function renderCompare(){
     if(e1&&e2)e8Both++;else if(e1)e8Only1++;else if(e2)e8Only2++;
     const state=!both?"is-pending":eq?"is-same":"is-different";
     const label=!both?"Pendiente":eq?"Coincidís":m.number<=14?"Diferentes":"Distintos";
-    const joint=m.number<=14?(effectiveJointSelection(m.number)||"—"):(!both?"—":eq?a:`${a} · ${b}`);
+    const official=matchResolved(m);
+    const projectedResult=projectedResultForMatch(m);
+    const liveResult=!official&&projectedResult!=="—";
+    const resultStatus=official?"Oficial":liveResult?"En directo":"Pendiente";
+    const rawScore=official
+      ? `${m.home_score}-${m.away_score}`
+      : liveResult&&m.live_home_score!=null&&m.live_away_score!=null
+        ? `${m.live_home_score}-${m.live_away_score}`
+        : "—";
 
-    let resultLine="";
-    let aMark="",bMark="",jointMark="";
-    if(matchResolved(m)){
+    let aMark="",bMark="";
+    if(official){
       const result=m.number===15?`${normalizedGoalScore(m.home_score)}-${normalizedGoalScore(m.away_score)}`:resultSignForMatch(m);
-      resultLine=`<div class="compare-result-line">Resultado <strong>${m.home_score}-${m.away_score}</strong>${m.number<=14?` · signo <strong>${result}</strong>`:""}</div>`;
       if(a!=="—") aMark=a===result?'<em class="pick-mark ok">✓</em>':'<em class="pick-mark bad">✕</em>';
       if(b!=="—") bMark=b===result?'<em class="pick-mark ok">✓</em>':'<em class="pick-mark bad">✕</em>';
-      if(m.number<=14&&joint!=="—") jointMark=joint.includes(result)?'<em class="pick-mark ok">✓</em>':'<em class="pick-mark bad">✕</em>';
     }
 
     const aVisual=m.number<=14?jointReadonlySignsHtml(a,"player-one-signs compare-readonly"):`<strong>${a}</strong>`;
     const bVisual=m.number<=14?jointReadonlySignsHtml(b,"player-two-signs compare-readonly"):`<strong>${b}</strong>`;
-    const jointVisual=m.number<=14?jointReadonlySignsHtml(joint,"joint-signs compare-readonly"):`<strong>${joint}</strong>`;
+    const resultVisual=m.number<=14
+      ? jointReadonlySignsHtml(projectedResult,"result-signs compare-readonly")
+      : `<strong class="compare-real-score">${rawScore}</strong>`;
     return `<article class="compare-card ${state} ${ej?"compare-joint-e8":""}">
       <div class="compare-card-head"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div>
-      ${matchResolved(m)?"":tvBroadcastHtml(m,true)}
-      ${resultLine}
+      ${official?"":tvBroadcastHtml(m,true)}
       <div class="compare-picks">
         <div class="compare-pick-box player-one"><span><i class="player-dot"></i>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${aVisual}${aMark}</div></div>
         <div class="compare-pick-box player-two"><span><i class="player-dot"></i>${escapeHtml(p2?.display_name||"Jugador 2")}${e2?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${bVisual}${bMark}</div></div>
-        <div class="compare-pick-box joint-box"><span><i class="player-dot"></i>Conjunta${ej?'<b class="e8-chip joint-e8-chip">★ E8 conjunto</b>':""}</span><div class="compare-pick-value">${jointVisual}${jointMark}</div></div>
+        <div class="compare-pick-box result-box ${official?"official":liveResult?"live":"pending"}"><span><i class="result-dot"></i>Resultado <b class="compare-result-status">${resultStatus}</b></span><div class="compare-pick-value">${resultVisual}<small class="compare-score-text">${rawScore}</small></div></div>
       </div>
     </article>`;
   }).join("");
