@@ -2797,3 +2797,112 @@ html[data-theme="dark"] .history-real-result{
     font-size:.8rem;
   }
 }
+
+/* Sala ultracompacta sin instalar v53 */
+.room-card-unified{
+  padding:7px 9px;
+  gap:7px;
+}
+.room-card-unified .room-main{
+  gap:7px;
+}
+.room-card-unified .room-icon{
+  width:30px;
+  height:30px;
+  flex:0 0 30px;
+  border-radius:9px;
+  font-size:.8rem;
+}
+.room-card-unified .room-copy>strong{
+  font-size:.76rem;
+  line-height:1.1;
+}
+.room-meta-line{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:3px;
+}
+.room-card-unified .room-player-meta{
+  margin:0;
+  gap:4px;
+  flex:0 0 auto;
+}
+.room-card-unified .room-playing-as,
+.room-card-unified .room-rename-btn{
+  min-height:20px;
+}
+.room-card-unified .room-playing-as{
+  padding:3px 6px;
+  font-size:.48rem;
+}
+.room-card-unified .room-playing-as b{
+  font-size:.52rem;
+}
+.room-card-unified .room-rename-btn{
+  padding:3px 6px;
+  font-size:.47rem;
+}
+.room-card-unified .room-opponent-status{
+  margin:0;
+  font-size:.47rem;
+  line-height:1.15;
+  white-space:nowrap;
+}
+.room-card-unified .room-tools{
+  grid-template-columns:repeat(2,27px);
+  grid-auto-rows:27px;
+  gap:3px;
+}
+.room-card-unified .room-tool-btn{
+  width:27px!important;
+  min-width:27px!important;
+  height:27px!important;
+  min-height:27px!important;
+  border-radius:8px!important;
+  font-size:.64rem!important;
+}
+.room-card-unified .theme-icon{
+  font-size:.76rem;
+}
+.room-card-unified .sync-badge>span{
+  width:7px;
+  height:7px;
+}
+@media(max-width:430px){
+  .room-card-unified{
+    padding:7px 8px;
+    gap:6px;
+  }
+  .room-card-unified .room-main{
+    gap:6px;
+  }
+  .room-card-unified .room-icon{
+    width:28px;
+    height:28px;
+    flex-basis:28px;
+    font-size:.76rem;
+  }
+  .room-card-unified .room-copy>strong{
+    font-size:.73rem;
+  }
+  .room-meta-line{
+    gap:5px;
+    margin-top:2px;
+  }
+  .room-card-unified .room-opponent-status{
+    font-size:.44rem;
+  }
+  .room-card-unified .room-tools{
+    grid-template-columns:repeat(2,26px);
+    grid-auto-rows:26px;
+    gap:3px;
+  }
+  .room-card-unified .room-tool-btn{
+    width:26px!important;
+    min-width:26px!important;
+    height:26px!important;
+    min-height:26px!important;
+  }
+}
