@@ -1573,6 +1573,8 @@ $("#joinRoomBtn").addEventListener("click",joinRoom);
 $("#roomCodeInput")?.addEventListener("input",e=>e.target.value=UNIQUE_ROOM_CODE);
 $("#openRoomBtn").addEventListener("click",openRoomDialog);
 $("#closeRoomDialog").addEventListener("click",()=>$("#roomDialog").close());
+$("#closeHistoryDialog")?.addEventListener("click",()=>$("#historyDialog")?.close());
+$("#historyDialog")?.addEventListener("click",e=>{if(e.target===$("#historyDialog"))$("#historyDialog").close()});
 $("#shareBtn").addEventListener("click",shareRoom);
 $("#notificationBtn").addEventListener("click",openNotificationCenter);
 $("#closeNotificationDialog").addEventListener("click",()=>$("#notificationDialog").close());
