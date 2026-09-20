@@ -10,11 +10,12 @@ const configured =
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
-let sb, user, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [];
+let sb, user, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
 let channel = null;
 let saving = false;
 let elige8Saving = false;
 let jointSaving = false;
+let jointElige8Saving = false;
 let selectedJourneyId = null;
 const MATCH_FILTER_KEY="quiniela-match-filter";
 const MATCH_FILTER_MODES=new Set(["all","pending","correct","wrong","e8"]);
@@ -555,6 +556,182 @@ function renderJoint(){
   $$(".joint-sign").forEach(btn=>btn.addEventListener("click",()=>{const n=Number(btn.dataset.jointMatch),sign=btn.dataset.jointSign,current=effectiveJointSelection(n),next=current.includes(sign)?current.replace(sign,""):current+sign;saveJointSelection(n,next)}));
   $$(".joint-reset").forEach(btn=>btn.addEventListener("click",()=>resetJointSelection(Number(btn.dataset.jointReset))));
 }
+function jointElige8Selections(jid=journey?.id){
+  if(!jid) return [];
+  return allJointElige8.filter(e=>e.journey_id===jid).sort((a,b)=>a.match_number-b.match_number);
+}
+
+function isJointElige8(n,jid=journey?.id){
+  return Boolean(allJointElige8.find(e=>e.journey_id===jid&&e.match_number===n));
+}
+
+function projectedScoreJointElige8(j=journey){
+  const selected=jointElige8Selections(j?.id);
+  let correct=0,wrong=0,considered=0,live=0;
+  for(const e of selected){
+    const m=allMatches.find(x=>x.journey_id===j.id&&x.number===e.match_number);
+    const actual=projectedResultForMatch(m);
+    const selection=effectiveJointSelection(e.match_number,j.id);
+    if(actual==="—"||!selection) continue;
+    considered++;
+    if(m&&!matchResolved(m)) live++;
+    if(selection.includes(actual)) correct++;
+    else wrong++;
+  }
+  return {
+    selected:selected.length,
+    correct,
+    wrong,
+    considered,
+    live,
+    pending:Math.max(0,selected.length-considered)
+  };
+}
+
+async function saveJointElige8Set(numbers,successText="Elige 8 conjunto actualizado"){
+  if(!journeyCanEdit(journey)){toast("La jornada ya ha empezado o está cerrada");return}
+  if(jointElige8Saving)return;
+  const clean=[...new Set((numbers||[]).map(Number).filter(n=>n>=1&&n<=14))].slice(0,8).sort((a,b)=>a-b);
+  jointElige8Saving=true;
+  setSync("","Guardando");
+  renderJoint();
+  try{
+    const {error}=await sb.rpc("set_joint_elige8",{
+      p_room_id:roomId,
+      p_journey_id:journey.id,
+      p_match_numbers:clean
+    });
+    if(error)throw error;
+    await loadAllJointElige8();
+    renderJoint();
+    setSync("online","Sincronizado");
+    toast(successText);
+  }catch(e){
+    console.error(e);
+    await loadAllJointElige8();
+    renderJoint();
+    setSync("error","Error");
+    toast("No se pudo guardar el Elige 8 conjunto");
+  }finally{
+    jointElige8Saving=false;
+    renderJoint();
+  }
+}
+
+async function toggleJointElige8(n){
+  const current=jointElige8Selections().map(e=>e.match_number);
+  const selected=current.includes(n);
+  if(!selected&&current.length>=8){toast("El Elige 8 conjunto ya tiene 8 partidos");return}
+  const next=selected?current.filter(x=>x!==n):[...current,n];
+  await saveJointElige8Set(next,selected?"Partido quitado del E8 conjunto":"Partido añadido al E8 conjunto");
+}
+
+async function copyJointElige8From(uid,label){
+  if(!uid)return;
+  const numbers=allElige8
+    .filter(e=>e.user_id===uid&&e.journey_id===journey.id)
+    .map(e=>e.match_number)
+    .sort((a,b)=>a-b)
+    .slice(0,8);
+  if(!numbers.length){toast(`${label} todavía no tiene Elige 8`);return}
+  await saveJointElige8Set(numbers,`Copiado el Elige 8 de ${label}`);
+}
+
+async function autoJointElige8(){
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  const ranked=matches.filter(m=>m.number<=14).map(m=>{
+    const e1=p1?isElige8(p1.user_id,m.number):false;
+    const e2=p2?isElige8(p2.user_id,m.number):false;
+    const simple=effectiveJointSelection(m.number).length===1;
+    return {n:m.number,score:(e1&&e2?100:(e1||e2?50:0))+(simple?10:0)};
+  }).sort((a,b)=>b.score-a.score||a.n-b.n);
+  await saveJointElige8Set(ranked.slice(0,8).map(x=>x.n),"Elige 8 conjunto generado por coincidencias");
+}
+
+function decorateJointElige8UI(){
+  const summary=$("#jointSummary"),list=$("#jointList");
+  if(!summary||!list||!journey)return;
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  const score=projectedScoreJointElige8(journey);
+  const locked=!journeyCanEdit(journey);
+
+  let panel=$("#jointElige8Panel");
+  if(!panel){
+    panel=document.createElement("section");
+    panel.id="jointElige8Panel";
+    panel.className="joint-e8-panel";
+    summary.insertAdjacentElement("afterend",panel);
+  }
+
+  const scoreHtml=score.considered
+    ? `<div class="joint-e8-live-score"><span class="ok">✓ ${score.correct}</span><span class="bad">✕ ${score.wrong}</span></div>`
+    : `<strong class="joint-e8-count">${score.selected}/8</strong>`;
+  const statusParts=[];
+  if(score.considered)statusParts.push(`${score.considered}/${score.selected||8} valorados`);
+  if(score.live)statusParts.push(`${score.live} en directo`);
+  if(score.pending)statusParts.push(`${score.pending} pendientes`);
+  const statusText=statusParts.length?statusParts.join(" · ")+(score.live?" · provisional":""):(score.selected===8?"Listo para la conjunta":"Selecciona 8 partidos del 1 al 14");
+
+  panel.innerHTML=`
+    <div class="joint-e8-head">
+      <div><span>ELIGE 8 CONJUNTO</span><h3>El Elige 8 de vuestra apuesta</h3></div>
+      ${scoreHtml}
+    </div>
+    <p class="joint-e8-status">${statusText}</p>
+    <div class="joint-e8-actions">
+      <button type="button" data-joint-e8-copy="1" ${locked||jointElige8Saving?"disabled":""}>Copiar ${escapeHtml(p1?.display_name||"J1")}</button>
+      <button type="button" data-joint-e8-copy="2" ${locked||jointElige8Saving?"disabled":""}>Copiar ${escapeHtml(p2?.display_name||"J2")}</button>
+      <button type="button" data-joint-e8-auto ${locked||jointElige8Saving?"disabled":""}>Priorizar coincidencias</button>
+      <button type="button" class="subtle" data-joint-e8-clear ${locked||jointElige8Saving||!score.selected?"disabled":""}>Vaciar</button>
+    </div>
+    <small>Compartido por los dos. Puedes retocarlo partido a partido con la estrella ★.</small>`;
+
+  panel.querySelector('[data-joint-e8-copy="1"]')?.addEventListener("click",()=>copyJointElige8From(p1?.user_id,p1?.display_name||"J1"));
+  panel.querySelector('[data-joint-e8-copy="2"]')?.addEventListener("click",()=>copyJointElige8From(p2?.user_id,p2?.display_name||"J2"));
+  panel.querySelector("[data-joint-e8-auto]")?.addEventListener("click",autoJointElige8);
+  panel.querySelector("[data-joint-e8-clear]")?.addEventListener("click",()=>saveJointElige8Set([],"Elige 8 conjunto vaciado"));
+
+  const cards=[...list.querySelectorAll(".joint-builder-card:not(.p15-joint)")];
+  cards.forEach(card=>{
+    const n=Number(card.querySelector(".match-index")?.textContent);
+    if(!Number.isInteger(n)||n<1||n>14)return;
+    const selected=isJointElige8(n);
+    const projected=matches.find(m=>m.number===n);
+    const actual=projectedResultForMatch(projected);
+    const jointSel=effectiveJointSelection(n);
+
+    card.classList.toggle("joint-e8-active",selected);
+    card.classList.remove("joint-e8-correct","joint-e8-wrong");
+    if(selected&&actual!=="—"&&jointSel){
+      card.classList.add(jointSel.includes(actual)?"joint-e8-correct":"joint-e8-wrong");
+    }
+
+    const head=card.querySelector(".joint-builder-head");
+    const mode=head?.querySelector(".joint-mode");
+    if(head&&mode){
+      const tools=document.createElement("div");
+      tools.className="joint-builder-tools";
+      mode.replaceWith(tools);
+      tools.appendChild(mode);
+      const btn=document.createElement("button");
+      btn.type="button";
+      btn.className="joint-e8-toggle"+(selected?" selected":"");
+      btn.disabled=locked||jointElige8Saving||(score.selected>=8&&!selected);
+      btn.innerHTML=selected?"<span>★</span> E8 conjunto":"<span>☆</span> E8";
+      btn.addEventListener("click",()=>toggleJointElige8(n));
+      tools.appendChild(btn);
+    }
+
+    const source=card.querySelectorAll(".joint-source > span");
+    if(p1&&source[0]&&isElige8(p1.user_id,n))source[0].insertAdjacentHTML("beforeend",'<i class="joint-personal-e8">★ E8</i>');
+    if(p2&&source[1]&&isElige8(p2.user_id,n))source[1].insertAdjacentHTML("beforeend",'<i class="joint-personal-e8">★ E8</i>');
+  });
+}
+
+const __renderJointElige8Base=renderJoint;
+
+renderJoint=function(){__renderJointElige8Base();decorateJointElige8UI();};
+
 function statsForUser(uid,completed){
   const scores=completed.map(j=>({j,score:scoreUserJourney(uid,j)})),total=scores.reduce((a,x)=>a+x.score.correct,0),avg=completed.length?total/completed.length:0,best=scores.length?Math.max(...scores.map(x=>x.score.correct)):0;
   const e8=completed.map(j=>scoreElige8(uid,j)).reduce((a,x)=>({correct:a.correct+x.correct,resolved:a.resolved+x.resolved}),{correct:0,resolved:0});
@@ -746,7 +923,7 @@ async function enterApp(){
   $("#myName").textContent=myMember.display_name;
   setSync("","Cargando");
   await Promise.all([loadAllJourneys(),loadMembers()]);
-  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks()]);
+  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8()]);
   await loadNotices();
   selectActiveJourney();
   renderAll();
@@ -804,9 +981,16 @@ async function loadAllJointPicks(){
   if(error) throw error;
   allJointPicks=data||[];
 }
+function loadAllJointElige8(){
+  return (async()=>{
+    const {data,error}=await sb.from("joint_elige8_selections").select("*").eq("room_id",roomId);
+    if(error) throw error;
+    allJointElige8=data||[];
+  })();
+}
 
 async function refreshData(){
-  await Promise.all([loadAllJourneys(),loadMembers(),loadAllPicks(),loadAllElige8(),loadAllJointPicks()]);
+  await Promise.all([loadAllJourneys(),loadMembers(),loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8()]);
   selectActiveJourney();
   renderAll();
 }
@@ -1181,6 +1365,7 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"picks",filter:`room_id=eq.${roomId}`},async()=>{const opponent=members.find(m=>m.user_id!==user.id),before=opponent?completedCountForUser(opponent.user_id):0;await loadAllPicks();picks=allPicks.filter(p=>p.journey_id===journey.id);const after=opponent?completedCountForUser(opponent.user_id):0;if(opponent&&before<15&&after===15)notifyUser(`${opponent.display_name} ha completado la jornada`,`Jornada ${journey.number}: ya tiene sus 15 pronósticos.`);renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllElige8();renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_picks",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointPicks();renderJoint();setSync("online","Sincronizado")})
+    .on("postgres_changes",{event:"*",schema:"public",table:"joint_elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointElige8();renderJoint();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==user.id);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{const before=allMatches.map(m=>({...m}));await loadAllJourneys();await loadAllPicks();selectActiveJourney();detectNewResults(before);renderAll()})
