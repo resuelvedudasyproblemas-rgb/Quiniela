@@ -12,6 +12,10 @@
     } catch {}
   </script>
   <meta name="description" content="Quiniela compartida y sincronizada para dos jugadores" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Nuestra Quiniela" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="stylesheet" href="styles.css" />
@@ -66,10 +70,18 @@
         </div>
       </div>
       <div class="header-actions">
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema">
-          <span class="theme-icon" aria-hidden="true">☾</span>
-          <span class="theme-label">Oscuro</span>
-        </button>
+        <div class="header-tool-row">
+          <button id="notificationBtn" class="icon-tool-btn" type="button" aria-label="Notificaciones">
+            <span aria-hidden="true">🔔</span><b id="notificationBadge" class="notification-badge hidden">0</b>
+          </button>
+          <button id="installBtn" class="icon-tool-btn hidden" type="button" aria-label="Instalar aplicación">
+            <span aria-hidden="true">⇩</span>
+          </button>
+          <button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema">
+            <span class="theme-icon" aria-hidden="true">☾</span>
+            <span class="theme-label">Oscuro</span>
+          </button>
+        </div>
         <div id="syncBadge" class="sync-badge"><span></span> Sincronizando</div>
       </div>
     </header>
@@ -78,18 +90,12 @@
       <div class="room-main">
         <span class="room-icon" aria-hidden="true">👥</span>
         <div class="room-copy">
-          <span class="room-label">SALA COMPARTIDA</span>
+          <span class="room-label">VUESTRA SALA</span>
           <strong id="roomMembers">Vosotros dos</strong>
-          <small>Esta sala se mantiene para todas las jornadas</small>
+          <small>Una sola sala para todas las jornadas</small>
         </div>
       </div>
-      <div class="room-actions">
-        <div class="room-code-block">
-          <span>CÓDIGO</span>
-          <strong id="roomCode">------</strong>
-        </div>
-        <button id="shareBtn" class="share-btn" type="button"><span aria-hidden="true">↗</span> Compartir</button>
-      </div>
+      <button id="openRoomBtn" class="room-manage-btn" type="button"><span aria-hidden="true">⌁</span> Sala e invitación</button>
     </section>
 
     <section id="journeyCard" class="journey-card">
@@ -100,14 +106,18 @@
 
     <section id="journeySwitcher" class="journey-switcher" aria-label="Cambiar jornada"></section>
 
-    <nav class="tabs" aria-label="Secciones">
+    <nav class="tabs tabs-five" aria-label="Secciones">
       <button class="tab active" data-view="play">Mi quiniela</button>
+      <button class="tab" data-view="joint">Conjunta</button>
       <button class="tab" data-view="compare">Comparar</button>
+      <button class="tab" data-view="stats">Estadísticas</button>
       <button class="tab" data-view="history">Historial</button>
     </nav>
 
     <main>
       <section id="playView" class="view active">
+        <section id="journeyDashboard" class="journey-dashboard"></section>
+
         <div class="player-banner">
           <div class="player-identity">
             <span>Estás jugando como</span>
@@ -133,6 +143,14 @@
           <p>Marca E8 en ocho partidos del 1 al 14.</p>
         </section>
 
+        <div class="match-filter-wrap" aria-label="Filtrar partidos">
+          <button class="match-filter active" data-match-filter="all">Todos <span id="filterAll">14</span></button>
+          <button class="match-filter" data-match-filter="pending">Pendientes <span id="filterPending">14</span></button>
+          <button class="match-filter" data-match-filter="correct">Acertados <span id="filterCorrect">0</span></button>
+          <button class="match-filter" data-match-filter="wrong">Fallados <span id="filterWrong">0</span></button>
+          <button class="match-filter" data-match-filter="e8">E8 <span id="filterE8">0</span></button>
+        </div>
+
         <div id="matches" class="matches"></div>
 
         <section id="plenoCard" class="pleno-card hidden">
@@ -152,8 +170,19 @@
             <div class="goal-options" data-team="away"></div>
           </div>
           <p class="hint">M = 3 o más goles</p>
+          <div id="plenoOpponent" class="opponent-pick hidden"></div>
           <div id="plenoResult" class="match-result-bar hidden"></div>
         </section>
+      </section>
+
+      <section id="jointView" class="view">
+        <section class="section-hero compact-hero">
+          <p class="eyebrow">QUINIELA CONJUNTA</p>
+          <h2>La apuesta de los dos</h2>
+          <p>Se genera automáticamente con vuestros pronósticos y podéis ajustar simples, dobles o triples mientras la jornada esté abierta.</p>
+        </section>
+        <div id="jointSummary" class="joint-builder-summary"></div>
+        <div id="jointList" class="joint-builder-list"></div>
       </section>
 
       <section id="compareView" class="view">
@@ -165,6 +194,15 @@
         <div id="elige8CompareSummary" class="elige8-compare-summary">Elige 8 · esperando selecciones</div>
         <div class="compare-guide"><span class="guide-dot same-dot"></span> Coincidís <span class="guide-dot diff-dot"></span> Doble propuesto <span class="guide-dot pending-dot"></span> Pendiente</div>
         <div id="compareBody" class="compare-list"></div>
+      </section>
+
+      <section id="statsView" class="view">
+        <section class="section-hero compact-hero">
+          <p class="eyebrow">TEMPORADA</p>
+          <h2>Estadísticas de vuestra sala</h2>
+          <p>Rendimiento acumulado, cara a cara, Elige 8 y evolución jornada a jornada.</p>
+        </section>
+        <div id="statsContent"></div>
       </section>
 
       <section id="historyView" class="view">
@@ -206,6 +244,39 @@
     </div>
   </dialog>
 
+
+  <dialog id="roomDialog">
+    <div class="utility-dialog-card">
+      <div class="utility-dialog-head">
+        <div><p class="eyebrow">SALA COMPARTIDA</p><h2 id="roomDialogMembers">Vosotros dos</h2></div>
+        <button id="closeRoomDialog" class="close-btn" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <p class="dialog-copy">Esta sala es permanente. No hace falta crear una nueva en cada jornada.</p>
+      <div class="room-dialog-code"><span>CÓDIGO DE INVITACIÓN</span><strong id="roomCode">------</strong></div>
+      <button id="shareBtn" class="primary-btn" type="button">Compartir sala</button>
+    </div>
+  </dialog>
+
+  <dialog id="notificationDialog">
+    <div class="utility-dialog-card notification-dialog-card">
+      <div class="utility-dialog-head">
+        <div><p class="eyebrow">AVISOS</p><h2>Notificaciones</h2></div>
+        <button id="closeNotificationDialog" class="close-btn" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <button id="enableNotificationsBtn" class="secondary-btn notification-enable" type="button">Activar notificaciones del navegador</button>
+      <div id="notificationList" class="notification-list"></div>
+    </div>
+  </dialog>
+
+  <dialog id="matchDetailDialog">
+    <div class="utility-dialog-card match-detail-dialog-card">
+      <div class="utility-dialog-head">
+        <div><p class="eyebrow">DETALLE DEL PARTIDO</p><h2 id="matchDetailTitle">Partido</h2></div>
+        <button id="closeMatchDetailDialog" class="close-btn" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div id="matchDetailContent"></div>
+    </div>
+  </dialog>
 
   <dialog id="renameDialog">
     <form id="renameForm" class="rename-dialog-card" method="dialog">

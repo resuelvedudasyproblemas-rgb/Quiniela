@@ -1,4 +1,4 @@
-const CACHE="quiniela-v11";
+const CACHE="quiniela-v12";
 const CORE=["./","index.html","styles.css","app.js","config.js","manifest.webmanifest","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install",event=>{
@@ -33,5 +33,14 @@ self.addEventListener("fetch",event=>{
     }catch{
       return (await caches.match(event.request)) || (await caches.match("./"));
     }
+  })());
+});
+
+self.addEventListener("notificationclick",event=>{
+  event.notification.close();
+  event.waitUntil((async()=>{
+    const clientsList=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+    for(const client of clientsList){ if("focus" in client) return client.focus(); }
+    if(self.clients.openWindow) return self.clients.openWindow("./");
   })());
 });
