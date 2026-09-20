@@ -637,6 +637,20 @@ function isJointElige8(n,jid=journey?.id){
   return Boolean(allJointElige8.find(e=>e.journey_id===jid&&e.match_number===n));
 }
 
+function scoreJointElige8(j=journey){
+  const selected=jointElige8Selections(j?.id);
+  let correct=0,resolved=0;
+  for(const e of selected){
+    const m=allMatches.find(x=>x.journey_id===j.id&&x.number===e.match_number);
+    const actual=actualResultForMatch(m);
+    const selection=effectiveJointSelection(e.match_number,j.id);
+    if(actual==="—"||!selection) continue;
+    resolved++;
+    if(selection.includes(actual))correct++;
+  }
+  return {selected:selected.length,correct,resolved};
+}
+
 function projectedScoreJointElige8(j=journey){
   const selected=jointElige8Selections(j?.id);
   let correct=0,wrong=0,considered=0,live=0;
@@ -725,6 +739,8 @@ function decorateJointElige8UI(){
   if(!summary||!list||!journey)return;
   const p1=memberBySlot(1),p2=memberBySlot(2);
   const score=projectedScoreJointElige8(journey);
+  const officialScore=scoreJointElige8(journey);
+  const prize=officialScore.selected===8&&officialScore.resolved===8&&officialScore.correct===8;
   const locked=!journeyCanEdit(journey);
 
   let panel=$("#jointElige8Panel");
@@ -744,8 +760,9 @@ function decorateJointElige8UI(){
   if(score.pending)statusParts.push(`${score.pending} pendientes`);
   const statusText=statusParts.length?statusParts.join(" · ")+(score.live?" · provisional":""):(score.selected===8?"Listo para la conjunta":"Selecciona 8 partidos del 1 al 14");
 
+  panel.classList.toggle("e8-prize-zone",prize);
   panel.innerHTML=`
-    <div class="joint-e8-head">
+    <div class="joint-e8-head">${prize?'<span class="e8-prize-badge">★ 8/8</span>':""}
       <div><span>ELIGE 8 CONJUNTO</span><h3>El Elige 8 de vuestra apuesta</h3></div>
       ${scoreHtml}
     </div>
@@ -1338,6 +1355,11 @@ function renderElige8Progress(){
   const el=$("#elige8Progress"),status=$("#elige8Status");
   if(!el||!journey) return;
   const projected=projectedScoreElige8(user.id,journey);
+  const official=scoreElige8(user.id,journey);
+  const prize=official.selected===8&&official.resolved===8&&official.correct===8;
+  const panel=el.closest(".elige8-panel");
+  if(panel)panel.classList.toggle("e8-prize-zone",prize);
+  el.classList.toggle("e8-prize-score",prize);
 
   if(projected.considered>0){
     el.innerHTML=`<span class="e8-score-ok">✓ ${projected.correct} aciertos</span><span class="e8-score-bad">✕ ${projected.wrong} fallos</span>`;
