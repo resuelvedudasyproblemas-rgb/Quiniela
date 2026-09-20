@@ -1604,3 +1604,13 @@ html[data-theme="dark"]{
     justify-content:flex-end;
   }
 }
+
+/* Chips de jugador fijos v35 */
+.pick-owner-chip.player-one{
+  background:var(--player-one);
+  color:#fff;
+}
+.pick-owner-chip.player-two{
+  background:var(--player-two);
+  color:#fff;
+}
