@@ -1121,23 +1121,42 @@ function liveMatchLabel(m){
   if(m.live_status==="finished") return "Final · pendiente SELAE";
   return m.live_status_text || "";
 }
-function livePickState(m){
-  if(!hasLiveMatch(m)) return "neutral";
-  var p=myPickFor(m.number);
+function livePickVerdict(m,uid){
+  if(!hasLiveMatch(m) || !uid) return "missing";
+  var p=pickFor(uid,m.number);
   if(m.number<=14){
-    if(!p || !p.pick) return "neutral";
+    if(!p || !p.pick) return "missing";
     var sign=m.live_home_score>m.live_away_score?"1":m.live_home_score<m.live_away_score?"2":"X";
     return p.pick===sign?"correct":"wrong";
   }
-  if(!p || !p.home_goals || !p.away_goals) return "neutral";
+  if(!p || !p.home_goals || !p.away_goals) return "missing";
   var home=normalizedGoalScore(m.live_home_score);
   var away=normalizedGoalScore(m.live_away_score);
   return p.home_goals===home && p.away_goals===away?"correct":"wrong";
 }
-function livePickLabel(m){
-  var state=livePickState(m);
-  return state==="correct"?"✓ Tu pronóstico va acertando":state==="wrong"?"Tu pronóstico no coincide ahora":"Sin pronóstico";
+function livePickSummary(m){
+  if(!hasLiveMatch(m)) return {state:"neutral",label:"Sin pronóstico"};
+  var players=[memberBySlot(1),memberBySlot(2)].filter(Boolean);
+  if(!players.length) return {state:"neutral",label:"Sin pronóstico"};
+  var rows=players.map(function(member){return {member:member,verdict:livePickVerdict(m,member.user_id)};});
+  var correct=rows.filter(function(x){return x.verdict==="correct";});
+  var wrong=rows.filter(function(x){return x.verdict==="wrong";});
+  var missing=rows.filter(function(x){return x.verdict==="missing";});
+  if(correct.length===players.length){
+    return {state:"both",label:players.length>1?"✓ Los dos vais acertando":"✓ "+correct[0].member.display_name+" va acertando"};
+  }
+  if(correct.length){
+    var names=correct.map(function(x){return x.member.display_name;}).join(" y ");
+    var suffix=missing.length?" · falta pronóstico del otro":"";
+    return {state:"one",label:"✓ "+names+" va acertando"+suffix};
+  }
+  if(wrong.length){
+    return {state:"none",label:missing.length?"Ahora mismo ninguno de los pronósticos hechos acierta":"Ahora mismo ninguno acierta"};
+  }
+  return {state:"neutral",label:"Sin pronóstico"};
 }
+function livePickState(m){return livePickSummary(m).state;}
+function livePickLabel(m){return livePickSummary(m).label;}
 function buildLiveScoreNode(m){
   var score=document.createElement("span");
   var pickState=livePickState(m);
@@ -1167,7 +1186,7 @@ function decorateLiveMatchCards(){
     var card=cards[i];
     var pickState=livePickState(m);
     card.classList.add("has-live-result");
-    card.classList.remove("live-pick-correct","live-pick-wrong","live-pick-neutral");
+    card.classList.remove("live-pick-correct","live-pick-wrong","live-pick-both","live-pick-one","live-pick-none","live-pick-neutral");
     card.classList.add("live-pick-"+pickState);
     var vs=card.querySelector(".fixture-vs");
     if(vs) vs.replaceWith(buildLiveScoreNode(m));
