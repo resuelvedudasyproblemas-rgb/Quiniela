@@ -1435,17 +1435,23 @@ function renderCompare(){
   const p1e8=p1?elige8Count(p1.user_id):0;
   const p2e8=p2?elige8Count(p2.user_id):0;
   const jointE8=jointElige8Selections().length;
+  const p1e8Score=p1?scoreElige8(p1.user_id,journey):{selected:0,correct:0,resolved:0};
+  const p2e8Score=p2?scoreElige8(p2.user_id,journey):{selected:0,correct:0,resolved:0};
+  const jointE8Score=scoreJointElige8(journey);
+  const p1e8Prize=p1e8Score.selected===8&&p1e8Score.resolved===8&&p1e8Score.correct===8;
+  const p2e8Prize=p2e8Score.selected===8&&p2e8Score.resolved===8&&p2e8Score.correct===8;
+  const jointE8Prize=jointE8Score.selected===8&&jointE8Score.resolved===8&&jointE8Score.correct===8;
   if(!p2){
     $("#compareSubtitle").textContent="Comparte el código para añadir al segundo jugador";
-    if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid two"><div class="player-one"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${p1e8}/8</strong></div><div class="joint"><span>Conjunto</span><strong>${jointE8}/8</strong></div></div>`;
+    if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid two"><div class="player-one ${p1e8Prize?"e8-prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${p1e8Score.resolved?`${p1e8Score.correct}/8`:`${p1e8}/8`}</strong></div><div class="joint ${jointE8Prize?"e8-prize-zone":""}"><span>Conjunto</span><strong>${jointE8Score.resolved?`${jointE8Score.correct}/8`:`${jointE8}/8`}</strong></div></div>`;
     return;
   }
   $("#compareSubtitle").textContent=`${p1?.display_name||"Jugador 1"} ${completedCountForUser(p1?.user_id)}/15 · ${p2?.display_name||"Jugador 2"} ${completedCountForUser(p2?.user_id)}/15`;
   if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid">
-    <div class="player-one"><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${p1e8}/8</strong></div>
+    <div class="player-one ${p1e8Prize?"e8-prize-zone":""}"><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${p1e8Score.resolved?`${p1e8Score.correct}/8`:`${p1e8}/8`}</strong></div>
     <div><span>Coincidís</span><strong>${e8Both}</strong><small>${e8Only1+e8Only2?`${e8Only1+e8Only2} distintos`:"mismos partidos"}</small></div>
-    <div class="player-two"><span>${escapeHtml(p2?.display_name||"J2")}</span><strong>${p2e8}/8</strong></div>
-    <div class="joint"><span>Conjunto</span><strong>${jointE8}/8</strong></div>
+    <div class="player-two ${p2e8Prize?"e8-prize-zone":""}"><span>${escapeHtml(p2?.display_name||"J2")}</span><strong>${p2e8Score.resolved?`${p2e8Score.correct}/8`:`${p2e8}/8`}</strong></div>
+    <div class="joint ${jointE8Prize?"e8-prize-zone":""}"><span>Conjunto</span><strong>${jointE8Score.resolved?`${jointE8Score.correct}/8`:`${jointE8}/8`}</strong></div>
   </div>`;
 }
 
