@@ -3170,3 +3170,30 @@ html,body{
     font-size:.47rem;
   }
 }
+
+/* Sticky de navegación restaurado v56 */
+html,
+body{
+  overflow-x:clip!important;
+}
+.app-shell,
+main,
+.view{
+  overflow:visible!important;
+}
+.tabs{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  top:6px!important;
+  z-index:60!important;
+  isolation:isolate;
+  background:color-mix(in srgb,var(--surface-3) 94%,transparent);
+  box-shadow:0 5px 14px rgba(9,54,36,.08);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+@media(max-width:430px){
+  .tabs{
+    top:4px!important;
+  }
+}
