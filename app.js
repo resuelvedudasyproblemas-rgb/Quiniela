@@ -40,14 +40,14 @@ function teamCrestHtml(name,size="",logoUrl=""){
   const initials=escapeHtml(teamInitials(name));
   const direct=logoUrl?String(logoUrl):"";
   if(direct){
-    return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${initials}</span><img class="team-crest-img high-quality" src="${escapeHtml(direct)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`;
+    return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${initials}</span><img class="team-crest-img high-quality" src="${escapeHtml(direct)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
   }
   const flag=TEAM_FLAGS[key];
   if(flag) return `<span class="team-crest ${size} flag-crest" title="${label}">${flag}</span>`;
   const domain=TEAM_DOMAINS[key];
   if(!domain) return `<span class="team-crest ${size} fallback-only" title="${label}"><span class="crest-fallback">${initials}</span></span>`;
   const src=`https://www.google.com/s2/favicons?domain_url=https://${encodeURIComponent(domain)}&sz=128`;
-  return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${initials}</span><img class="team-crest-img" src="${src}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`;
+  return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${initials}</span><img class="team-crest-img" src="${src}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
 }
 function teamPositionHtml(position,compact=false){
   const n=Number(position);
@@ -1099,7 +1099,7 @@ function renderPleno(){
   $("#plenoCard").classList.remove("hidden");$("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
   $("#plenoKickoff").innerHTML=`◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
-  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<button class="pleno-final-score" data-detail-match="15" type="button"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong><em>Ver detalles</em></button>`:tvBroadcastHtml(m);
+  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></div>`:tvBroadcastHtml(m);
   const mp=myPickFor(15),locked=!journeyCanEdit(journey);
   $$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
   let plenoClear=$("#plenoClearAction");
@@ -1566,18 +1566,49 @@ function liveMatchLabel(m){
   if(m.live_status==="finished") return "Final · pendiente SELAE";
   return m.live_status_text || "";
 }
-function liveScorersText(m){
+function scorerLabel(g){
+  const name=String(g?.name||"").trim();
+  if(!name) return "";
+  const time=Number(g?.time);
+  const added=Number(g?.added_time);
+  const minute=Number.isFinite(time)?`${time}${Number.isFinite(added)&&added>0?`+${added}`:""}'`:"";
+  const kind=String(g?.kind||"").toLowerCase();
+  const extra=kind.includes("penalty")?" (p.)":kind.includes("own")?" (p.p.)":"";
+  return `${name}${extra}${minute?` ${minute}`:""}`;
+}
+function liveScorersForSide(m,home){
   const scorers=Array.isArray(m?.live_scorers)?m.live_scorers:[];
-  return scorers.map(g=>{
-    const name=String(g?.name||"").trim();
-    if(!name) return "";
-    const time=Number(g?.time);
-    const added=Number(g?.added_time);
-    const minute=Number.isFinite(time)?`${time}${Number.isFinite(added)&&added>0?`+${added}`:""}'`:"";
-    const kind=String(g?.kind||"").toLowerCase();
-    const extra=kind.includes("penalty")?" (p.)":kind.includes("own")?" (p.p.)":"";
-    return `${name}${extra}${minute?` ${minute}`:""}`;
-  }).filter(Boolean).join(" · ");
+  return scorers.filter(g=>Boolean(g?.home)===home).map(scorerLabel).filter(Boolean);
+}
+function liveScorersText(m){
+  return [...liveScorersForSide(m,true),...liveScorersForSide(m,false)].join(" · ");
+}
+function scorerTeamName(name){
+  return String(name||"")
+    .replace(/\s+\d+\s*-\s*\d+\s*$/,"")
+    .replace(/\s*\([MF]\)\s*$/i,"")
+    .trim();
+}
+function buildScorerGroupsNode(m){
+  const home=liveScorersForSide(m,true);
+  const away=liveScorersForSide(m,false);
+  if(!home.length&&!away.length) return null;
+  const wrap=document.createElement("div");
+  wrap.className="live-scorers-groups";
+  [[m.home,home,"home"],[m.away,away,"away"]].forEach(([team,goals,side])=>{
+    const row=document.createElement("div");
+    row.className="live-scorer-row "+side;
+    const teamEl=document.createElement("strong");
+    teamEl.className="live-scorer-team";
+    teamEl.textContent="⚽ "+scorerTeamName(team);
+    const goalsEl=document.createElement("span");
+    goalsEl.className="live-scorer-goals";
+    goalsEl.textContent=goals.length?goals.join(" · "):"—";
+    row.appendChild(teamEl);
+    row.appendChild(goalsEl);
+    wrap.appendChild(row);
+  });
+  return wrap;
 }
 function livePickVerdict(m,uid){
   if(!hasLiveMatch(m) || !uid) return "missing";
