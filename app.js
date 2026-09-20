@@ -503,6 +503,17 @@ async function init(){
     }
     user=session.user;
 
+    const params=new URLSearchParams(location.search);
+    const claimToken=params.get("claim");
+    if(claimToken){
+      const {error:claimError}=await sb.rpc("claim_identity",{p_token:claimToken});
+      if(claimError) throw claimError;
+      params.delete("claim");
+      const qs=params.toString();
+      history.replaceState({}, "", location.pathname+(qs?"?"+qs:""));
+      toast("Identidad recuperada");
+    }
+
     const roomInput=$("#roomCodeInput");
     if(roomInput) roomInput.value=UNIQUE_ROOM_CODE;
 
@@ -564,7 +575,7 @@ async function joinRoom(){
     myMember=m;
     await enterApp();
   }catch(e){
-    $("#onboardingError").textContent=e.message.replace("P0001: ","");
+    $("#onboardingError").textContent=String(e.message||e).includes("dos jugadores") ? "Este dispositivo no está vinculado a Salva o Ferran. Usa tu enlace de recuperación." : String(e.message||e).replace("P0001: ","");
   }finally{$("#joinRoomBtn").disabled=false}
 }
 
