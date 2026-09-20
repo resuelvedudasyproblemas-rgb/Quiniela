@@ -124,7 +124,7 @@ function renderJourneySwitcher(){
       <span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small>
     </button>`;
   }).join("");
-  $(".journey-choice").forEach(btn=>btn.addEventListener("click",()=>{
+  $$(".journey-choice").forEach(btn=>btn.addEventListener("click",()=>{
     selectedJourneyId=Number(btn.dataset.journeyId);
     selectActiveJourney();
     renderAll();
