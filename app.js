@@ -224,11 +224,34 @@ function countdownText(v){
   const days=Math.floor(hours/24);
   return `Empieza en ${days} d ${hours%24} h`;
 }
+function liveFreshnessMeta(value){
+  const at=value?new Date(value).getTime():NaN;
+  if(!Number.isFinite(at)) return {label:"Sin hora de actualización",delayed:true};
+  const seconds=Math.max(0,Math.floor((Date.now()-at)/1000));
+  if(seconds>180){
+    const mins=Math.max(3,Math.floor(seconds/60));
+    const age=mins<60?`hace ${mins} min`:`hace ${Math.floor(mins/60)} h`;
+    return {label:`Datos retrasados · ${age}`,delayed:true};
+  }
+  if(seconds<10) return {label:"Actualizado ahora",delayed:false};
+  if(seconds<60) return {label:`Actualizado hace ${seconds} s`,delayed:false};
+  const mins=Math.floor(seconds/60);
+  return {label:`Actualizado hace ${mins} min`,delayed:false};
+}
+function updateLiveFreshness(){
+  $$("[data-live-updated]").forEach(el=>{
+    const info=liveFreshnessMeta(el.dataset.liveUpdated);
+    el.textContent=info.label;
+    el.classList.toggle("delayed",info.delayed);
+    el.classList.toggle("fresh",!info.delayed);
+  });
+}
 function updateCountdowns(){
   $$("[data-countdown]").forEach(el=>{
     const value=el.dataset.countdown;
     if(value) el.textContent=countdownText(value);
   });
+  updateLiveFreshness();
 }
 function startCountdownTimer(){
   if(countdownTimer) clearInterval(countdownTimer);
@@ -1638,6 +1661,12 @@ function decorateLiveMatchCards(){
     bar.appendChild(left);
     bar.appendChild(right);
     bar.appendChild(pickBadge);
+    if(m.live_status==="inprogress"){
+      var freshness=document.createElement("small");
+      freshness.className="live-freshness";
+      freshness.dataset.liveUpdated=m.live_updated_at||"";
+      bar.appendChild(freshness);
+    }
   });
 }
 function decorateLivePleno(){
@@ -1663,32 +1692,25 @@ function decorateLivePleno(){
   box.appendChild(small);
   box.appendChild(score);
   box.appendChild(note);
+  if(m.live_status==="inprogress"){
+    var freshness=document.createElement("small");
+    freshness.className="live-freshness pleno-live-freshness";
+    freshness.dataset.liveUpdated=m.live_updated_at||"";
+    box.appendChild(freshness);
+  }
   el.appendChild(box);
 }
 function decorateLiveCompare(){
   var cards=$$(".compare-card");
   matches.forEach(function(m,i){
-    if(!hasLiveMatch(m) || !cards[i]) return;
+    if(!hasLiveMatch(m) || !cards[i] || m.live_status!=="inprogress") return;
     var card=cards[i];
-    if(card.querySelector(".live-compare")) return;
-    var line=document.createElement("div");
-    line.className="compare-result-line live-compare";
-    var label=document.createElement("span");
-    if(m.live_status==="inprogress"){
-      var dot=document.createElement("i");
-      dot.className="live-dot";
-      label.appendChild(dot);
-    }
-    label.appendChild(document.createTextNode(liveMatchLabel(m)));
-    var score=document.createElement("strong");
-    score.textContent=String(m.live_home_score)+"-"+String(m.live_away_score);
-    var note=document.createElement("small");
-    note.textContent="SofaScore · provisional";
-    line.appendChild(label);
-    line.appendChild(score);
-    line.appendChild(note);
-    var picks=card.querySelector(".compare-picks");
-    if(picks) card.insertBefore(line,picks);
+    var box=card.querySelector(".compare-pick-box.result-box");
+    if(!box || box.querySelector(".live-freshness")) return;
+    var freshness=document.createElement("small");
+    freshness.className="live-freshness compare-live-freshness";
+    freshness.dataset.liveUpdated=m.live_updated_at||"";
+    box.appendChild(freshness);
   });
 }
 function decorateLiveUI(){
@@ -1730,4 +1752,11 @@ openMatchDetail=function(n,jid){
   score.appendChild(small);
   score.appendChild(strong);
   score.appendChild(note);
+  if(m.live_status==="inprogress"){
+    var freshness=document.createElement("small");
+    freshness.className="live-freshness detail-live-freshness";
+    freshness.dataset.liveUpdated=m.live_updated_at||"";
+    score.appendChild(freshness);
+    updateLiveFreshness();
+  }
 };
