@@ -1431,11 +1431,69 @@ function renderHistory(){
 }
 
 function openHistory(jid){
-  const j=journeys.find(x=>x.id===jid);if(!j)return;const ms=journeyMatches(j.id),p1=memberBySlot(1),p2=memberBySlot(2);
-  $("#historyDialogTitle").textContent=`Jornada ${j.number} · ${formatDate(j.draw_date)}`;$("#historyP1").textContent=p1?.display_name||"Jugador 1";$("#historyP2").textContent=p2?.display_name||"Jugador 2";
-  const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0},s2=p2?scoreUserJourney(p2.user_id,j):{correct:0};$("#historyDialogSummary").innerHTML=`<span class="summary-pill">${escapeHtml(p1?.display_name||"J1")}: ${s1.correct}/15</span><span class="summary-pill">${escapeHtml(p2?.display_name||"J2")}: ${s2.correct}/15</span>`;
-  $("#historyDialogBody").innerHTML=ms.map(m=>{const a=p1?displayPickForJourney(p1.user_id,j.id,m.number):"—",b=p2?displayPickForJourney(p2.user_id,j.id,m.number):"—",r=actualResultForMatch(m),ca=r==="—"?"":a===r?"result-ok":"result-bad",cb=r==="—"?"":b===r?"result-ok":"result-bad";return `<tr class="history-match-row" data-history-jid="${j.id}" data-history-match="${m.number}"><td><span class="history-match-number">${m.number===15?"P15":m.number}</span>${fixtureMiniHtml(m)}</td><td class="${a==="—"?"missing":ca}">${a}</td><td class="${b==="—"?"missing":cb}">${b}</td><td class="${r==="—"?"result-pending":""}">${r}</td></tr>`}).join("");
-  $$("#historyDialogBody .history-match-row").forEach(row=>row.addEventListener("click",()=>openMatchDetail(Number(row.dataset.historyMatch),Number(row.dataset.historyJid))));$("#historyDialog").showModal();
+  const j=journeys.find(x=>x.id===jid);
+  if(!j) return;
+
+  const ms=journeyMatches(j.id);
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0,resolved:0};
+  const s2=p2?scoreUserJourney(p2.user_id,j):{correct:0,resolved:0};
+  const e1=p1?scoreElige8(p1.user_id,j):{selected:0,correct:0,resolved:0};
+  const e2=p2?scoreElige8(p2.user_id,j):{selected:0,correct:0,resolved:0};
+  const jointE8=allJointElige8.filter(e=>e.journey_id===j.id).length;
+
+  $("#historyDialogTitle").textContent=`Jornada ${j.number} · ${formatDate(j.draw_date)}`;
+
+  $("#historyDialogSummary").innerHTML=`
+    <div class="history-summary-player player-one">
+      <span>${escapeHtml(p1?.display_name||"Jugador 1")}</span>
+      <strong>${s1.correct}/15</strong>
+      <small>★ Elige 8 · ${e1.selected?`${e1.correct}/${e1.selected}`:"—"}</small>
+    </div>
+    <div class="history-summary-player player-two">
+      <span>${escapeHtml(p2?.display_name||"Jugador 2")}</span>
+      <strong>${s2.correct}/15</strong>
+      <small>★ Elige 8 · ${e2.selected?`${e2.correct}/${e2.selected}`:"—"}</small>
+    </div>
+    <div class="history-summary-joint">
+      <span>Elige 8 conjunto</span>
+      <strong>${jointE8}/8</strong>
+    </div>`;
+
+  $("#historyDialogBody").innerHTML=ms.map(m=>{
+    const a=p1?displayPickForJourney(p1.user_id,j.id,m.number):"—";
+    const b=p2?displayPickForJourney(p2.user_id,j.id,m.number):"—";
+    const r=actualResultForMatch(m);
+    const e8a=Boolean(p1&&m.number<=14&&allElige8.some(e=>e.user_id===p1.user_id&&e.journey_id===j.id&&e.match_number===m.number));
+    const e8b=Boolean(p2&&m.number<=14&&allElige8.some(e=>e.user_id===p2.user_id&&e.journey_id===j.id&&e.match_number===m.number));
+    const e8j=Boolean(m.number<=14&&allJointElige8.some(e=>e.journey_id===j.id&&e.match_number===m.number));
+    const ca=r==="—"?"":a===r?"ok":"bad";
+    const cb=r==="—"?"":b===r?"ok":"bad";
+    return `<article class="history-detail-match" data-history-jid="${j.id}" data-history-match="${m.number}">
+      <div class="history-detail-head">
+        <span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>
+        <div class="history-detail-fixture">${fixtureMiniHtml(m)}</div>
+        <div class="history-real-result">
+          <span>Resultado</span>
+          <strong>${r}</strong>
+        </div>
+      </div>
+      <div class="history-detail-picks">
+        <div class="history-player-pick player-one ${ca}">
+          <div><i></i><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span>${e8a?'<b>★ E8</b>':""}</div>
+          <strong>${a}</strong>
+        </div>
+        <div class="history-player-pick player-two ${cb}">
+          <div><i></i><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span>${e8b?'<b>★ E8</b>':""}</div>
+          <strong>${b}</strong>
+        </div>
+      </div>
+      ${e8j?'<div class="history-joint-e8">★ Elige 8 conjunto</div>':""}
+    </article>`;
+  }).join("");
+
+  $$("#historyDialogBody .history-detail-match").forEach(card=>card.addEventListener("click",()=>openMatchDetail(Number(card.dataset.historyMatch),Number(card.dataset.historyJid))));
+  $("#historyDialog").showModal();
 }
 
 function subscribeRealtime(){
