@@ -98,3 +98,31 @@ dialog#renameDialog::backdrop{background:rgba(7,24,17,.5);backdrop-filter:blur(3
 .rename-actions{margin-top:4px}
 .rename-actions .primary-btn:disabled{opacity:.6;cursor:wait}
 
+
+/* Elige 8 y comparación conjunta */
+.elige8-panel{background:#fff;border:1px solid var(--border);border-radius:15px;padding:11px 13px;margin:-3px 0 14px}
+.elige8-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.elige8-head>span{font-size:.66rem;letter-spacing:.12em;font-weight:900;color:var(--brand)}
+.elige8-head strong{font-size:.76rem;color:var(--text)}
+.elige8-panel p{margin:4px 0 0;font-size:.68rem;color:var(--muted)}
+.e8-toggle{margin-top:8px;border:1px solid #c7d8cf;background:#f7faf8;color:var(--brand);border-radius:9px;padding:6px 10px;font-size:.67rem;font-weight:900;letter-spacing:.04em}
+.e8-toggle.selected{background:#e5f4ec;border-color:#6bb68c;color:#075b37}
+.e8-toggle:disabled{opacity:.45;cursor:not-allowed}
+.e8-chip{display:block;width:max-content;margin:3px auto 0;padding:2px 5px;border-radius:999px;background:#e5f4ec;color:#075b37;font-size:.52rem;line-height:1.2;font-weight:900}
+.elige8-compare-summary{margin:9px 2px 0;padding:9px 11px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--muted);font-size:.7rem;text-align:center;font-weight:750}
+.joint-same{background:#eff8f3;color:var(--brand)}
+.joint-different{background:#fff8ec;color:#775b1d}
+.joint-sign{display:block;font-weight:900;font-size:.84rem}
+.joint-note{display:block;margin-top:2px;font-size:.55rem;font-weight:750;opacity:.78}
+.e8-both{display:block;margin-top:4px;font-size:.52rem;font-weight:900;color:#075b37}
+.history-stat small{display:block;margin-top:3px;font-size:.59rem;color:var(--muted);font-weight:700}
+.e8-summary-pill{background:#fff3d8;color:#70551a}
+@media(max-width:520px){
+  .compare-table th,.compare-table td{padding:9px 6px;font-size:.68rem}
+  .compare-table td:not(:first-child){font-size:.79rem}
+  .compare-table th:first-child,.compare-table td:first-child{min-width:145px}
+}
+
+/* Ajuste tabla móvil conjunta */
+.compare-table-wrap{overflow-x:auto}
+.compare-table{min-width:620px}
