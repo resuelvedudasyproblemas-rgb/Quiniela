@@ -287,22 +287,28 @@ function renderJourneyDashboard(){
   const c2=p2?completedCountForUser(p2.user_id):0;
   const resolved=journeyResolvedCount(journey);
   const playing=journeyDisplayState(journey)==="playing";
+  const prize1=s1.correct>=10&&s1.correct<=15;
+  const prize2=s2.correct>=10&&s2.correct<=15;
+  const commonCorrect=commonCorrectCount(journey);
+  const commonPrize=commonCorrect>=10&&commonCorrect<=15;
+  const projectedPrize1=projected1.correct>=10&&projected1.correct<=15;
+  const projectedPrize2=projected2.correct>=10&&projected2.correct<=15;
   const score1=resolved?`${s1.correct} aciertos`:`${c1}/15 hechos`;
   const score2=resolved?`${s2.correct} aciertos`:`${c2}/15 hechos`;
   const considered=Math.max(projected1.considered,projected2.considered);
   const liveCount=Math.max(projected1.live,projected2.live);
   const projectedCopy=considered
-    ? `<strong>${projected1.correct} · ${projected2.correct}</strong><small>${escapeHtml(p1?.display_name||"J1")} · ${escapeHtml(p2?.display_name||"J2")}<br>${considered} valorados${liveCount?` · ${liveCount} en directo`:""}</small>`
-    : `<strong>0 · 0</strong><small>Aún sin resultados</small>`;
+    ? `<strong class="projected-pair"><b class="${projectedPrize1?"prize-score":""}">${projected1.correct}</b><i>·</i><b class="${projectedPrize2?"prize-score":""}">${projected2.correct}</b></strong><small>${escapeHtml(p1?.display_name||"J1")} · ${escapeHtml(p2?.display_name||"J2")}<br>${considered} valorados${liveCount?` · ${liveCount} en directo`:""}</small>`
+    : `<strong class="projected-pair"><b>0</b><i>·</i><b>0</b></strong><small>Aún sin resultados</small>`;
   el.innerHTML=`
     <div class="dashboard-title-row">
       <div><span class="dashboard-live-dot ${playing?"live":""}"></span><strong>${playing?"Seguimiento de resultados":"Resumen de jornada"}</strong></div>
-      <span class="dashboard-common">${commonCorrectCount(journey)} coincidencias acertadas</span>
+      <span class="dashboard-common ${commonPrize?"prize-zone":""}">${commonCorrect} coincidencias acertadas</span>
     </div>
     <div class="dashboard-grid">
       <div class="dashboard-stat"><span>Resultados</span><strong>${resolved}/15</strong><small>${15-resolved} pendientes</small></div>
-      <div class="dashboard-stat"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados</small></div>
-      <div class="dashboard-stat"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados</small></div>
+      <div class="dashboard-stat ${resolved&&prize1?"prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados</small></div>
+      <div class="dashboard-stat ${resolved&&prize2?"prize-zone":""}"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados</small></div>
       <div class="dashboard-stat projected-score-stat"><span>Aciertos posibles</span>${projectedCopy}</div>
     </div>`;
 }
