@@ -1143,6 +1143,7 @@ function decorateLiveMatchCards(){
   normal.forEach(function(m,i){
     if(!hasLiveMatch(m) || !cards[i]) return;
     var card=cards[i];
+    card.classList.add("has-live-result");
     var vs=card.querySelector(".fixture-vs");
     if(vs) vs.replaceWith(buildLiveScoreNode(m));
     var bar=card.querySelector(".match-result-bar");
