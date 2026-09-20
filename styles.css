@@ -1718,3 +1718,75 @@ html[data-theme="dark"] .compare-pick-box.result-box.official>span,
 html[data-theme="dark"] .compare-pick-box.result-box.official .compare-score-text{
   color:#83dfb2;
 }
+
+/* Frescura de marcadores SofaScore v37 */
+.live-freshness{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  margin-top:5px;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:.49rem;
+  line-height:1.1;
+  font-weight:900;
+  letter-spacing:.01em;
+  white-space:nowrap;
+}
+.live-freshness:before{
+  content:"";
+  width:6px;
+  height:6px;
+  flex:0 0 6px;
+  border-radius:50%;
+}
+.live-freshness.fresh{
+  background:#e8f6ee;
+  color:#247a54;
+}
+.live-freshness.fresh:before{
+  background:#2fa46f;
+  box-shadow:0 0 0 3px rgba(47,164,111,.10);
+}
+.live-freshness.delayed{
+  background:#fff1df;
+  color:#9a5d12;
+  border:1px solid #e8c98f;
+}
+.live-freshness.delayed:before{
+  background:#d38325;
+  box-shadow:0 0 0 3px rgba(211,131,37,.10);
+}
+.match-result-bar.live-result .live-freshness{
+  flex-basis:100%;
+  width:max-content;
+  margin-left:auto;
+  margin-right:auto;
+}
+.pleno-live-freshness{
+  margin:7px auto 0;
+}
+.compare-pick-box.result-box .compare-live-freshness{
+  grid-column:1/-1;
+  justify-self:center;
+  margin:3px auto 0;
+}
+.detail-live-freshness{
+  margin:7px auto 0;
+}
+html[data-theme="dark"] .live-freshness.fresh{
+  background:#173729;
+  color:#83dfb2;
+}
+html[data-theme="dark"] .live-freshness.delayed{
+  background:#3c2916;
+  color:#f1bc72;
+  border-color:#6f4b26;
+}
+@media(max-width:430px){
+  .live-freshness{
+    font-size:.46rem;
+    padding:4px 6px;
+  }
+}

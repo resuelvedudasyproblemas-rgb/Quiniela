@@ -1722,16 +1722,19 @@ var __renderMatchesLiveBase=renderMatches;
 renderMatches=function(){
   __renderMatchesLiveBase();
   decorateLiveMatchCards();
+  updateLiveFreshness();
 };
 var __renderPlenoLiveBase=renderPleno;
 renderPleno=function(){
   __renderPlenoLiveBase();
   decorateLivePleno();
+  updateLiveFreshness();
 };
 var __renderCompareLiveBase=renderCompare;
 renderCompare=function(){
   __renderCompareLiveBase();
   decorateLiveCompare();
+  updateLiveFreshness();
 };
 var __openMatchDetailLiveBase=openMatchDetail;
 openMatchDetail=function(n,jid){
