@@ -3245,3 +3245,47 @@ main,
     height:18px!important;
   }
 }
+
+/* Equipos completos en Conjunta v58 */
+.joint-builder-fixture .fixture-mini{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:4px;
+  width:100%;
+  min-width:0;
+}
+.joint-builder-fixture .fixture-mini-team{
+  width:100%;
+  min-width:0;
+  gap:4px;
+  align-items:center;
+}
+.joint-builder-fixture .fixture-mini-team>span:last-child{
+  flex:1 1 auto;
+  min-width:0;
+  max-width:none!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+  line-height:1.25;
+}
+.joint-builder-fixture .fixture-mini-sep{
+  display:none!important;
+}
+.joint-builder-tools{
+  align-self:start;
+}
+@media(max-width:430px){
+  .joint-builder-head{
+    grid-template-columns:31px minmax(0,1fr) auto;
+    gap:7px;
+    align-items:start;
+  }
+  .joint-builder-fixture .fixture-mini-team{
+    font-size:.63rem;
+  }
+  .joint-builder-fixture .fixture-mini-team>span:last-child{
+    max-width:none!important;
+  }
+}
