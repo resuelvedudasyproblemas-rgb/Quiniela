@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b5d3b" />
+  <meta name="description" content="Quiniela compartida y sincronizada para dos jugadores" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Nuestra Quiniela</title>
+</head>
+<body>
+  <div id="boot" class="center-screen">
+    <div class="spinner"></div>
+    <p>Conectando…</p>
+  </div>
+
+  <section id="setupMissing" class="center-screen hidden">
+    <div class="setup-card">
+      <span class="logo-mark">Q</span>
+      <h1>Falta conectar Supabase</h1>
+      <p>Abre <strong>SETUP.md</strong>, crea el proyecto de Supabase y pega la URL y la clave pública en <strong>config.js</strong>.</p>
+      <div class="notice">No pongas nunca una <em>service_role key</em> en la web.</div>
+    </div>
+  </section>
+
+  <section id="onboarding" class="center-screen hidden">
+    <div class="onboarding-card">
+      <span class="logo-mark">Q</span>
+      <p class="eyebrow">QUINIELA COMPARTIDA</p>
+      <h1>Nuestra Quiniela</h1>
+      <p class="sub">Crea una sala o entra con el código que te haya enviado tu amigo.</p>
+
+      <label class="field-label">Tu nombre
+        <input id="displayName" maxlength="20" placeholder="Ej. Salva" autocomplete="nickname" />
+      </label>
+
+      <div class="onboarding-actions">
+        <button id="createRoomBtn" class="primary-btn">Crear nueva quiniela</button>
+        <div class="separator"><span>o</span></div>
+        <label class="field-label">Código de sala
+          <input id="roomCodeInput" maxlength="6" placeholder="ABC123" autocapitalize="characters" />
+        </label>
+        <button id="joinRoomBtn" class="secondary-btn">Entrar con código</button>
+      </div>
+      <p id="onboardingError" class="error-text"></p>
+    </div>
+  </section>
+
+  <div id="app" class="app-shell hidden">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">QUINIELA COMPARTIDA</p>
+        <h1>Nuestra Quiniela</h1>
+      </div>
+      <div id="syncBadge" class="sync-badge"><span></span> Sincronizando</div>
+    </header>
+
+    <section class="room-strip">
+      <div>
+        <span class="room-label">SALA</span>
+        <strong id="roomCode">------</strong>
+      </div>
+      <button id="shareBtn" class="share-btn">Compartir</button>
+    </section>
+
+    <section class="journey-card">
+      <div>
+        <span class="status-dot"></span>
+        <span class="status-text">Jornada actual</span>
+      </div>
+      <strong id="journeyNumber">Jornada —</strong>
+      <span id="journeyDate">—</span>
+    </section>
+
+    <nav class="tabs" aria-label="Secciones">
+      <button class="tab active" data-view="play">Mi quiniela</button>
+      <button class="tab" data-view="compare">Comparar</button>
+      <button class="tab" data-view="history">Historial</button>
+    </nav>
+
+    <main>
+      <section id="playView" class="view active">
+        <div class="player-banner">
+          <div class="player-identity">
+            <span>Estás jugando como</span>
+            <div class="player-name-row">
+              <strong id="myName">—</strong>
+              <button id="renameBtn" class="rename-btn" type="button">Cambiar nombre</button>
+            </div>
+          </div>
+          <span id="opponentStatus" class="opponent-status">Esperando al segundo jugador</span>
+        </div>
+
+        <div class="progress-row">
+          <span id="progressText">0 de 15 completados</span>
+          <span id="saveState">En la nube</span>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+
+        <div id="matches" class="matches"></div>
+
+        <section id="plenoCard" class="pleno-card hidden">
+          <div class="match-index">15</div>
+          <div class="pleno-head">
+            <span class="badge">PLENO AL 15</span>
+            <h2><span id="plenoHomeName"></span> <em>vs</em> <span id="plenoAwayName"></span></h2>
+          </div>
+          <div class="goal-row">
+            <span id="plenoHomeLabel"></span>
+            <div class="goal-options" data-team="home"></div>
+          </div>
+          <div class="goal-row">
+            <span id="plenoAwayLabel"></span>
+            <div class="goal-options" data-team="away"></div>
+          </div>
+          <p class="hint">M = 3 o más goles</p>
+        </section>
+      </section>
+
+      <section id="compareView" class="view">
+        <div class="compare-summary">
+          <p>Coincidencias completas</p>
+          <strong id="coincidences">0 / 15</strong>
+          <span id="compareSubtitle">Esperando pronósticos</span>
+        </div>
+        <div class="compare-table-wrap">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>Partido</th>
+                <th id="compareP1">Jugador 1</th>
+                <th id="compareP2">Jugador 2</th>
+              </tr>
+            </thead>
+            <tbody id="compareBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="historyView" class="view">
+        <div class="history-head">
+          <div>
+            <p class="eyebrow">TEMPORADA</p>
+            <h2>Historial de jornadas</h2>
+          </div>
+          <span id="historyCount" class="history-count">0</span>
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="historyDialog">
+    <div class="history-dialog-card">
+      <div class="history-dialog-head">
+        <div>
+          <p class="eyebrow">HISTÓRICO</p>
+          <h2 id="historyDialogTitle">Jornada</h2>
+        </div>
+        <button id="closeHistoryDialog" class="close-btn" aria-label="Cerrar">×</button>
+      </div>
+      <div id="historyDialogSummary" class="history-dialog-summary"></div>
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Partido</th>
+              <th id="historyP1">Jugador 1</th>
+              <th id="historyP2">Jugador 2</th>
+              <th>Res.</th>
+            </tr>
+          </thead>
+          <tbody id="historyDialogBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+
+  <dialog id="renameDialog">
+    <form id="renameForm" class="rename-dialog-card" method="dialog">
+      <div class="rename-dialog-head">
+        <div>
+          <p class="eyebrow">PERFIL</p>
+          <h2>Cambiar nombre</h2>
+        </div>
+        <button id="closeRenameDialog" class="close-btn" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <label class="field-label">Tu nombre
+        <input id="renameInput" maxlength="20" autocomplete="nickname" />
+      </label>
+      <p id="renameError" class="error-text"></p>
+      <div class="rename-actions">
+        <button id="saveRenameBtn" class="primary-btn" type="submit">Guardar nombre</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
