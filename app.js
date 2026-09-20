@@ -20,7 +20,7 @@ let activeMatchFilter = "all";
 let notices = [];
 let installPrompt = null;
 let countdownTimer = null;
-const requestedView = new URLSearchParams(location.search).get("view") || "play";
+const requestedView = new URLSearchParams(location.search).get("view") || "play";\nconst UNIQUE_ROOM_CODE = "R4LBRU";
 
 const escapeHtml = (str="") => str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const TEAM_DOMAINS={"CEUTA":"adceutafc.com","REAL SOCIEDAD":"realsociedad.eus","REAL SOCIEDAD B":"realsociedad.eus","GRANADA":"granadacf.es","ANDORRA":"fcandorra.com","CELTA":"rccelta.es","CELTA FORTUNA":"rccelta.es","SABADELL":"cesabadellfc.com","TENERIFE":"clubdeportivotenerife.es","CADIZ":"cadizcf.com","REAL VALLADOLID":"realvalladolid.es","CORDOBA":"cordobacf.com","MALLORCA":"rcdmallorca.es","ALMERIA":"udalmeriasad.com","BURGOS":"burgoscf.es","ELDENSE":"cdeldense.es","EIBAR":"sdeibar.com","LAS PALMAS":"udlaspalmas.es","REAL OVIEDO":"realoviedo.es","SPORTING":"realsporting.com","LEGANES":"cdleganes.com","CASTELLON":"cdcastellon.com","ATHLETIC CLUB":"athletic-club.eus","AT MADRID":"atleticodemadrid.com","ATLETICO MADRID":"atleticodemadrid.com","VALENCIA":"valenciacf.com","SEVILLA":"sevillafc.es","DEPORTIVO":"rcdeportivo.es","ESPANYOL":"rcdespanyol.com","REAL MADRID":"realmadrid.com","BARCELONA":"fcbarcelona.com","VILLARREAL":"villarrealcf.es","BETIS":"realbetisbalompie.es","REAL BETIS":"realbetisbalompie.es","RAYO VALLECANO":"rayovallecano.es","GETAFE":"getafecf.com","ALAVES":"deportivoalaves.com","GIRONA":"gironafc.cat","OSASUNA":"osasuna.es","LEVANTE":"levanteud.com","ELCHE":"elchecf.es","RACING":"realracingclub.es","RACING SANTANDER":"realracingclub.es","MALAGA":"malagacf.com","HUESCA":"sdhuesca.es","ZARAGOZA":"realzaragoza.com","ALBACETE":"albacetebalompie.es","MIRANDES":"cdmirandes.com"};
@@ -999,9 +999,9 @@ $("#themeToggle")?.addEventListener("click",toggleTheme);
 
 $$(".tab").forEach(tab=>tab.addEventListener("click",()=>activateView(tab.dataset.view)));
 $$(".match-filter").forEach(btn=>btn.addEventListener("click",()=>setMatchFilter(btn.dataset.matchFilter)));
-$("#createRoomBtn").addEventListener("click",createRoom);
+$("#createRoomBtn")?.addEventListener("click",createRoom);
 $("#joinRoomBtn").addEventListener("click",joinRoom);
-$("#roomCodeInput").addEventListener("input",e=>e.target.value=cleanCode(e.target.value));
+$("#roomCodeInput")?.addEventListener("input",e=>e.target.value=UNIQUE_ROOM_CODE);
 $("#openRoomBtn").addEventListener("click",openRoomDialog);
 $("#closeRoomDialog").addEventListener("click",()=>$("#roomDialog").close());
 $("#shareBtn").addEventListener("click",shareRoom);

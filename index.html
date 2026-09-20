@@ -41,19 +41,20 @@
       <span class="logo-mark">Q</span>
       <p class="eyebrow">QUINIELA COMPARTIDA</p>
       <h1>Nuestra Quiniela</h1>
-      <p class="sub">Crea una sala o entra con el código que te haya enviado tu amigo.</p>
+      <p class="sub">Esta app utiliza una única sala privada para Salva y Ferran.</p>
+
+      <div class="unique-room-preview">
+        <span>SALA ÚNICA</span>
+        <strong>R4LBRU</strong>
+      </div>
 
       <label class="field-label">Tu nombre
         <input id="displayName" maxlength="20" placeholder="Ej. Salva" autocomplete="nickname" />
       </label>
+      <input id="roomCodeInput" type="hidden" value="R4LBRU" />
 
       <div class="onboarding-actions">
-        <button id="createRoomBtn" class="primary-btn">Crear nueva quiniela</button>
-        <div class="separator"><span>o</span></div>
-        <label class="field-label">Código de sala
-          <input id="roomCodeInput" maxlength="6" placeholder="ABC123" autocapitalize="characters" />
-        </label>
-        <button id="joinRoomBtn" class="secondary-btn">Entrar con código</button>
+        <button id="joinRoomBtn" class="primary-btn">Entrar en la sala</button>
       </div>
       <p id="onboardingError" class="error-text"></p>
     </div>
