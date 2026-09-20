@@ -3413,3 +3413,37 @@ html[data-theme="dark"] .e8-prize-inline{
     gap:3px;
   }
 }
+
+/* Horario a la derecha en Conjunta v61 */
+.joint-builder-head{
+  position:relative;
+}
+.joint-builder-fixture{
+  padding-right:78px;
+}
+.joint-builder-tools{
+  padding-top:25px;
+}
+.joint-kickoff{
+  position:absolute!important;
+  top:0;
+  right:0;
+  z-index:2;
+  min-height:23px;
+  padding:4px 7px;
+  background:var(--surface-2);
+}
+@media(max-width:430px){
+  .joint-builder-fixture{
+    padding-right:70px;
+  }
+  .joint-builder-tools{
+    padding-top:24px;
+  }
+  .joint-kickoff{
+    top:0;
+    right:0;
+    padding:4px 6px;
+    font-size:.44rem;
+  }
+}
