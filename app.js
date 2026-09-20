@@ -1,4 +1,4 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
 const cfg = window.QUINIELA_CONFIG || {};
 const configured =
@@ -16,6 +16,14 @@ let saving = false;
 let elige8Saving = false;
 
 const escapeHtml = (str="") => str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const TEAM_DOMAINS={"CEUTA":"adceutafc.com","REAL SOCIEDAD":"realsociedad.eus","REAL SOCIEDAD B":"realsociedad.eus","GRANADA":"granadacf.es","ANDORRA":"fcandorra.com","CELTA":"rccelta.es","CELTA FORTUNA":"rccelta.es","SABADELL":"cesabadellfc.com","TENERIFE":"clubdeportivotenerife.es","CADIZ":"cadizcf.com","REAL VALLADOLID":"realvalladolid.es","CORDOBA":"cordobacf.com","MALLORCA":"rcdmallorca.es","ALMERIA":"udalmeriasad.com","BURGOS":"burgoscf.es","ELDENSE":"cdeldense.es","EIBAR":"sdeibar.com","LAS PALMAS":"udlaspalmas.es","REAL OVIEDO":"realoviedo.es","SPORTING":"realsporting.com","LEGANES":"cdleganes.com","CASTELLON":"cdcastellon.com","ATHLETIC CLUB":"athletic-club.eus","AT MADRID":"atleticodemadrid.com","ATLETICO MADRID":"atleticodemadrid.com","VALENCIA":"valenciacf.com","SEVILLA":"sevillafc.es","DEPORTIVO":"rcdeportivo.es","ESPANYOL":"rcdespanyol.com","REAL MADRID":"realmadrid.com","BARCELONA":"fcbarcelona.com","VILLARREAL":"villarrealcf.es","BETIS":"realbetisbalompie.es","REAL BETIS":"realbetisbalompie.es","RAYO VALLECANO":"rayovallecano.es","GETAFE":"getafecf.com","ALAVES":"deportivoalaves.com","GIRONA":"gironafc.cat","OSASUNA":"osasuna.es","LEVANTE":"levanteud.com","ELCHE":"elchecf.es","RACING":"realracingclub.es","RACING SANTANDER":"realracingclub.es","MALAGA":"malagacf.com","HUESCA":"sdhuesca.es","ZARAGOZA":"realzaragoza.com","ALBACETE":"albacetebalompie.es","MIRANDES":"cdmirandes.com"};
+const TEAM_FLAGS={"ESPANA":"🇪🇸","INGLATERRA":"🏴","FRANCIA":"🇫🇷","ITALIA":"🇮🇹","ALEMANIA":"🇩🇪","PORTUGAL":"🇵🇹"};
+function normalizeTeamName(name=""){const c=String(name).replace(/\s*\([MF]\)\s*$/i,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\./g,"").replace(/\s+/g," ").trim();return ({"R VALLADOLID":"REAL VALLADOLID","R OVIEDO":"REAL OVIEDO","ATLETICO DE MADRID":"ATLETICO MADRID","RC DEPORTIVO":"DEPORTIVO","UD LAS PALMAS":"LAS PALMAS","CD LEGANES":"LEGANES"})[c]||c}
+function teamInitials(name=""){const p=normalizeTeamName(name).replace(/\b(CLUB|FUTBOL|FOOTBALL|CF|FC|CD|UD|SAD)\b/g,"").trim().split(/\s+/).filter(Boolean);return p.length===1?p[0].slice(0,2):(p[0][0]+p[1][0]).slice(0,2)}
+function teamCrestHtml(name,size=""){const k=normalizeTeamName(name),flag=TEAM_FLAGS[k],label=escapeHtml(String(name).replace(/\s*\([MF]\)\s*$/i,""));if(flag)return `<span class="team-crest ${size} flag-crest" title="${label}">${flag}</span>`;const d=TEAM_DOMAINS[k],ini=escapeHtml(teamInitials(name));if(!d)return `<span class="team-crest ${size} fallback-only" title="${label}"><span class="crest-fallback">${ini}</span></span>`;const src=`https://www.google.com/s2/favicons?domain_url=https://${encodeURIComponent(d)}&sz=128`;return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${ini}</span><img class="team-crest-img" src="${src}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`}
+function teamInlineHtml(name){return `<span class="team-inline">${teamCrestHtml(name,"sm")}<span>${escapeHtml(name)}</span></span>`}
+function fixtureMiniHtml(m){return `<span class="fixture-mini"><span class="fixture-mini-team">${teamCrestHtml(m.home,"xs")}<span>${escapeHtml(m.home)}</span></span><span class="fixture-mini-sep">–</span><span class="fixture-mini-team">${teamCrestHtml(m.away,"xs")}<span>${escapeHtml(m.away)}</span></span></span>`}
+
 
 function show(id) {
   ["boot","setupMissing","onboarding","app"].forEach(x => $("#"+x).classList.toggle("hidden", x !== id));
@@ -115,7 +123,7 @@ async function init(){
   }catch(err){
     console.error(err);
     show("setupMissing");
-    $(".setup-card p").innerHTML=`No se pudo conectar. Revisa <strong>SETUP.md</strong> y la configuración de Supabase.<br><br><small>${escapeHtml(err.message||String(err))}</small>`;
+    $(".setup-card p").innerHTML=`No se pudo iniciar la aplicación.<br><br><small>${escapeHtml(err.message||String(err))}</small>`;
   }
 }
 
@@ -223,67 +231,25 @@ async function refreshData(){
 }
 
 function renderAll(){
-  $("#roomCode").textContent=roomCode;
-  $("#myName").textContent=myMember?.display_name||"Tú";
-  $("#journeyNumber").textContent=`Jornada ${journey.number}`;
-  $("#journeyDate").textContent=formatDate(journey.draw_date);
-  const statusLabels={open:"Abierta para pronósticos",closed:"Jornada cerrada",finished:"Jornada finalizada"};
-  $(".status-text").textContent=statusLabels[journey.status]||"Jornada";
-  const opponent=members.find(m=>m.user_id!==user.id);
-  if(opponent){
-    const completed=completedCountForUser(opponent.user_id);
-    $("#opponentStatus").textContent=completed===15
-      ? `✓ ${opponent.display_name} ha completado la jornada`
-      : `${opponent.display_name}: ${completed}/15`;
-  }else{
-    $("#opponentStatus").textContent="Esperando al segundo jugador";
-  }
-  renderMatches(); renderPleno(); renderProgress(); renderElige8Progress(); renderCompare(); renderHistory();
-  maybeCelebrateBothComplete();
+  $("#roomCode").textContent=roomCode;$("#myName").textContent=myMember?.display_name||"Tú";$("#journeyNumber").textContent=`Jornada ${journey.number}`;$("#journeyDate").textContent=formatDate(journey.draw_date);
+  const statusLabels={open:"Abierta para pronósticos",closed:"Jornada cerrada",finished:"Jornada finalizada"};$(".status-text").textContent=statusLabels[journey.status]||"Jornada";const jc=$("#journeyCard");if(jc)jc.dataset.status=journey.status;
+  const opponent=members.find(m=>m.user_id!==user.id);$("#opponentStatus").textContent=opponent?(completedCountForUser(opponent.user_id)===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completedCountForUser(opponent.user_id)}/15 completados`):"Esperando al segundo jugador";
+  renderMatches();renderPleno();renderProgress();renderElige8Progress();renderCompare();renderHistory();maybeCelebrateBothComplete();
 }
 
 function renderMatches(){
-  const normal=matches.filter(m=>m.number<=14);
-  const locked=journey.status!=="open";
-  const myE8Count=elige8Count(user.id);
-  $("#matches").innerHTML=normal.map(m=>{
-    const mp=myPickFor(m.number);
-    const e8=isElige8(user.id,m.number);
-    const e8Disabled=locked || elige8Saving || (myE8Count>=8 && !e8);
-    return `<article class="match-card">
-      <div class="match-index">${m.number}</div>
-      <div class="match-main">
-        <div class="match-top">
-          <div class="teams">${escapeHtml(m.home)} <span style="color:#93a099;font-weight:500">—</span> ${escapeHtml(m.away)}</div>
-          <div class="kickoff">${escapeHtml(formatKickoff(m.kickoff))}</div>
-        </div>
-        <div class="pick-row">
-          ${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}>${v}</button>`).join("")}
-        </div>
-        <button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button">
-          ${e8?"✓ E8":"E8"}
-        </button>
-      </div>
-    </article>`;
-  }).join("");
-  $$(".pick").forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));
-  $$(".e8-toggle").forEach(b=>b.addEventListener("click",()=>toggleElige8(Number(b.dataset.e8Match))));
+  const normal=matches.filter(m=>m.number<=14),locked=journey.status!=="open",myE8Count=elige8Count(user.id);
+  $("#matches").innerHTML=normal.map(m=>{const mp=myPickFor(m.number),e8=isElige8(user.id,m.number),e8Disabled=locked||elige8Saving||(myE8Count>=8&&!e8),kickoff=formatKickoff(m.kickoff);return `<article class="match-card ${e8?"e8-active":""}">
+    <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span></div><div class="match-head-actions">${kickoff?`<span class="kickoff">◷ ${escapeHtml(kickoff)}</span>`:""}<button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div></div>
+    <div class="fixture-teams"><div class="fixture-team">${teamCrestHtml(m.home)}<div><small>LOCAL</small><strong>${escapeHtml(m.home)}</strong></div></div><div class="fixture-team">${teamCrestHtml(m.away)}<div><small>VISITANTE</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
+    <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>
+  </article>`}).join("");
+  $$(".pick").forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));$$(".e8-toggle").forEach(b=>b.addEventListener("click",()=>toggleElige8(Number(b.dataset.e8Match))));
 }
 
 function renderPleno(){
-  const m=matches.find(x=>x.number===15);
-  if(!m){ $("#plenoCard").classList.add("hidden"); return; }
-  $("#plenoCard").classList.remove("hidden");
-  $("#plenoHomeName").textContent=m.home; $("#plenoHomeLabel").textContent=m.home;
-  $("#plenoAwayName").textContent=m.away; $("#plenoAwayLabel").textContent=m.away;
-  const mp=myPickFor(15);
-  const locked=journey.status!=="open";
-  $$(".goal-options").forEach(row=>{
-    const team=row.dataset.team;
-    const selected=team==="home"?mp?.home_goals:mp?.away_goals;
-    row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("");
-  });
-  $$(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));
+  const m=matches.find(x=>x.number===15);if(!m){$("#plenoCard").classList.add("hidden");return}$("#plenoCard").classList.remove("hidden");$("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;$("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away);
+  const mp=myPickFor(15),locked=journey.status!=="open";$$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});$$(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));
 }
 
 async function toggleElige8(n){
@@ -404,74 +370,12 @@ function displayPick(p,n){
 }
 
 function renderCompare(){
-  const p1=memberBySlot(1),p2=memberBySlot(2);
-  $("#compareP1").textContent=p1?.display_name||"Jugador 1";
-  $("#compareP2").textContent=p2?.display_name||"Jugador 2";
-
-  let same=0, different=0, pending=0;
-  let e8Both=0, e8Only1=0, e8Only2=0;
-
-  $("#compareBody").innerHTML=matches.map(m=>{
-    const a=displayPick(p1&&pickFor(p1.user_id,m.number),m.number);
-    const b=displayPick(p2&&pickFor(p2.user_id,m.number),m.number);
-    const both=a!=="—"&&b!=="—";
-    const eq=both&&a===b;
-    if(eq) same++;
-    else if(both) different++;
-    else pending++;
-
-    const e1=m.number<=14 && p1 ? isElige8(p1.user_id,m.number) : false;
-    const e2=m.number<=14 && p2 ? isElige8(p2.user_id,m.number) : false;
-    if(e1&&e2) e8Both++;
-    else if(e1) e8Only1++;
-    else if(e2) e8Only2++;
-
-    const aHtml=`${a}${e1?'<span class="e8-chip">E8</span>':""}`;
-    const bHtml=`${b}${e2?'<span class="e8-chip">E8</span>':""}`;
-
-    let joint="—";
-    let jointClass="missing";
-    if(both){
-      if(eq){
-        joint=`<span class="joint-sign">${a}</span><span class="joint-note">coincidís</span>`;
-        jointClass="joint-same";
-      }else{
-        joint=`<span class="joint-sign">${a} / ${b}</span><span class="joint-note">distintos</span>`;
-        jointClass="joint-different";
-      }
-      if(m.number<=14 && e1 && e2){
-        joint+=`<span class="e8-both">★ E8 ambos</span>`;
-      }
-    }
-
-    return `<tr>
-      <td>${m.number===15?"P-15":m.number}. ${escapeHtml(m.home)} - ${escapeHtml(m.away)}</td>
-      <td class="${a==="—"?"missing":eq?"same":""}">${aHtml}</td>
-      <td class="${b==="—"?"missing":eq?"same":""}">${bHtml}</td>
-      <td class="${jointClass}">${joint}</td>
-    </tr>`;
-  }).join("");
-
-  $("#coincidences").textContent=`${same} / 15`;
-
-  const e8Summary=$("#elige8CompareSummary");
-  if(!p2){
-    $("#compareSubtitle").textContent="Comparte el código para añadir al segundo jugador";
-    if(e8Summary) e8Summary.textContent=`Elige 8 · ${p1?.display_name||"Jugador 1"} ${elige8Count(p1?.user_id)}/8`;
-    return;
-  }
-
-  const c1=completedCountForUser(p1?.user_id);
-  const c2=completedCountForUser(p2?.user_id);
-  $("#compareSubtitle").textContent=
-    `${p1?.display_name||"Jugador 1"} ${c1}/15 · ${p2?.display_name||"Jugador 2"} ${c2}/15 · ${different} diferentes · ${pending} pendientes`;
-
-  if(e8Summary){
-    e8Summary.textContent=
-      `Elige 8 · ambos ${e8Both} · solo ${p1?.display_name||"J1"} ${e8Only1} · solo ${p2?.display_name||"J2"} ${e8Only2}`;
-  }
+  const p1=memberBySlot(1),p2=memberBySlot(2);let same=0,pending=0,diffNormal=0,e8Both=0,e8Only1=0,e8Only2=0;
+  $("#compareBody").innerHTML=matches.map(m=>{const a=displayPick(p1&&pickFor(p1.user_id,m.number),m.number),b=displayPick(p2&&pickFor(p2.user_id,m.number),m.number),both=a!=="—"&&b!=="—",eq=both&&a===b;if(eq)same++;else if(both&&m.number<=14)diffNormal++;else if(!both)pending++;const e1=m.number<=14&&p1?isElige8(p1.user_id,m.number):false,e2=m.number<=14&&p2?isElige8(p2.user_id,m.number):false;if(e1&&e2)e8Both++;else if(e1)e8Only1++;else if(e2)e8Only2++;const state=!both?"is-pending":eq?"is-same":"is-different",label=!both?"Pendiente":eq?"Coincidís":m.number<=14?"Doble propuesto":"Distintos",joint=!both?"—":eq?a:`${a} · ${b}`;return `<article class="compare-card ${state}"><div class="compare-card-head"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div><div class="compare-picks"><div class="compare-pick-box"><span>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><strong>${a}</strong></div><div class="compare-pick-box"><span>${escapeHtml(p2?.display_name||"Jugador 2")}${e2?'<b class="e8-chip">★ E8</b>':""}</span><strong>${b}</strong></div><div class="compare-pick-box joint-box"><span>Conjunta${e1&&e2?'<b class="e8-chip">★ E8 ambos</b>':""}</span><strong>${joint}</strong></div></div></article>`}).join("");
+  $("#coincidences").textContent=`${same} / 15`;$("#jointDoubles").textContent=String(diffNormal);$("#jointPending").textContent=String(pending);$("#e8BothStat").textContent=String(e8Both);
+  const e8=$("#elige8CompareSummary");if(!p2){$("#compareSubtitle").textContent="Comparte el código para añadir al segundo jugador";if(e8)e8.textContent=`Elige 8 · ${p1?.display_name||"Jugador 1"} ${elige8Count(p1?.user_id)}/8`;return}
+  $("#compareSubtitle").textContent=`${p1?.display_name||"Jugador 1"} ${completedCountForUser(p1?.user_id)}/15 · ${p2?.display_name||"Jugador 2"} ${completedCountForUser(p2?.user_id)}/15`;if(e8)e8.textContent=`Elige 8 · ambos ${e8Both} · solo ${p1?.display_name||"J1"} ${e8Only1} · solo ${p2?.display_name||"J2"} ${e8Only2}`;
 }
-
 
 function pickForJourney(uid,journeyId,n){
   return allPicks.find(p=>p.user_id===uid&&p.journey_id===journeyId&&p.match_number===n);
@@ -589,7 +493,7 @@ function openHistory(jid){
     const ca=r==="—"?"":a===r?"result-ok":"result-bad";
     const cb=r==="—"?"":b===r?"result-ok":"result-bad";
     return `<tr>
-      <td>${m.number===15?"P-15":m.number}. ${escapeHtml(m.home)} - ${escapeHtml(m.away)}</td>
+      <td><span class="history-match-number">${m.number===15?"P15":m.number}</span>${fixtureMiniHtml(m)}</td>
       <td class="${a==="—"?"missing":ca}">${a}</td>
       <td class="${b==="—"?"missing":cb}">${b}</td>
       <td class="${r==="—"?"result-pending":""}">${r}</td>

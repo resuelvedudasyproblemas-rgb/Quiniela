@@ -19,8 +19,8 @@
   <section id="setupMissing" class="center-screen hidden">
     <div class="setup-card">
       <span class="logo-mark">Q</span>
-      <h1>Falta conectar Supabase</h1>
-      <p>Abre <strong>SETUP.md</strong>, crea el proyecto de Supabase y pega la URL y la clave pública en <strong>config.js</strong>.</p>
+      <h1>No se pudo iniciar la app</h1>
+      <p>La aplicación no ha podido iniciarse correctamente. Vuelve a cargar la página y, si continúa, revisaremos el error.</p>
       <div class="notice">No pongas nunca una <em>service_role key</em> en la web.</div>
     </div>
   </section>
@@ -50,10 +50,7 @@
 
   <div id="app" class="app-shell hidden">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">QUINIELA COMPARTIDA</p>
-        <h1>Nuestra Quiniela</h1>
-      </div>
+      <div class="brand-lockup"><span class="app-mark" aria-hidden="true">Q</span><div><p class="eyebrow">QUINIELA COMPARTIDA</p><h1>Nuestra Quiniela</h1></div></div>
       <div id="syncBadge" class="sync-badge"><span></span> Sincronizando</div>
     </header>
 
@@ -65,13 +62,10 @@
       <button id="shareBtn" class="share-btn">Compartir</button>
     </section>
 
-    <section class="journey-card">
-      <div>
-        <span class="status-dot"></span>
-        <span class="status-text">Jornada actual</span>
-      </div>
-      <strong id="journeyNumber">Jornada —</strong>
-      <span id="journeyDate">—</span>
+    <section id="journeyCard" class="journey-card">
+      <div class="journey-status"><span class="status-dot"></span><span class="status-text">Jornada actual</span></div>
+      <div class="journey-main"><span class="journey-kicker">JORNADA ACTUAL</span><strong id="journeyNumber">Jornada —</strong><span id="journeyDate">—</span></div>
+      <span class="journey-ball" aria-hidden="true">⚽</span>
     </section>
 
     <nav class="tabs" aria-label="Secciones">
@@ -129,24 +123,13 @@
 
       <section id="compareView" class="view">
         <div class="compare-summary">
-          <p>Coincidencias completas</p>
-          <strong id="coincidences">0 / 15</strong>
+          <div class="compare-summary-head"><div><p>QUINIELA CONJUNTA</p><h2>Vuestra comparación</h2></div><div class="compare-score"><span>Coincidencias</span><strong id="coincidences">0 / 15</strong></div></div>
           <span id="compareSubtitle">Esperando pronósticos</span>
+          <div class="joint-stats"><div><span>Dobles propuestos</span><strong id="jointDoubles">0</strong></div><div><span>Pendientes</span><strong id="jointPending">15</strong></div><div><span>E8 ambos</span><strong id="e8BothStat">0</strong></div></div>
         </div>
         <div id="elige8CompareSummary" class="elige8-compare-summary">Elige 8 · esperando selecciones</div>
-        <div class="compare-table-wrap">
-          <table class="compare-table">
-            <thead>
-              <tr>
-                <th>Partido</th>
-                <th id="compareP1">Jugador 1</th>
-                <th id="compareP2">Jugador 2</th>
-                <th>Conjunta</th>
-              </tr>
-            </thead>
-            <tbody id="compareBody"></tbody>
-          </table>
-        </div>
+        <div class="compare-guide"><span class="guide-dot same-dot"></span> Coincidís <span class="guide-dot diff-dot"></span> Doble propuesto <span class="guide-dot pending-dot"></span> Pendiente</div>
+        <div id="compareBody" class="compare-list"></div>
       </section>
 
       <section id="historyView" class="view">
