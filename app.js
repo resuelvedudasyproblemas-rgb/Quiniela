@@ -870,7 +870,67 @@ function roomSummaryText(){
   return ordered.length?ordered.join(" ↔ "):"Vosotros dos";
 }
 function openRoomDialog(){
-  $("#roomDialogMembers").textContent=roomSummaryText();$("#roomCode").textContent=roomCode;$("#roomDialog").showModal();
+  $("#roomDialogMembers").textContent=roomSummaryText();
+  $("#roomCode").textContent=roomCode;
+  const player=$("#deviceLinkPlayer");
+  if(player)player.textContent=myMember?.display_name||"tu jugador";
+  $("#roomDialog").showModal();
+}
+
+async function generateDeviceLink(){
+  const btn=$("#generateDeviceLinkBtn");
+  if(!btn||!roomId)return;
+  btn.disabled=true;
+  btn.textContent="Generando…";
+  try{
+    const {data,error}=await sb.rpc("create_device_link_token",{p_room_id:roomId});
+    if(error)throw error;
+    const token=String(data||"").trim();
+    if(!token)throw new Error("No se pudo crear el enlace");
+    const link=`${location.origin}${location.pathname}?device=${encodeURIComponent(token)}`;
+    const input=$("#deviceLinkUrl");
+    if(input)input.value=link;
+    $("#deviceLinkBox")?.classList.remove("hidden");
+    toast("Enlace listo · caduca en 15 minutos");
+  }catch(e){
+    console.error(e);
+    toast("No se pudo generar el enlace");
+  }finally{
+    btn.disabled=false;
+    btn.textContent="Vincular otro dispositivo";
+  }
+}
+
+async function copyDeviceLink(){
+  const link=$("#deviceLinkUrl")?.value||"";
+  if(!link)return;
+  try{
+    await navigator.clipboard.writeText(link);
+    toast("Enlace de Salva copiado".replace("Salva",myMember?.display_name||"jugador"));
+  }catch{
+    $("#deviceLinkUrl")?.select();
+    toast("Mantén pulsado el enlace para copiarlo");
+  }
+}
+
+async function shareDeviceLink(){
+  const link=$("#deviceLinkUrl")?.value||"";
+  if(!link)return;
+  const name=myMember?.display_name||"tu jugador";
+  try{
+    if(navigator.share){
+      await navigator.share({
+        title:"Vincular Nuestra Quiniela",
+        text:`Abre este enlace en el otro dispositivo para entrar como ${name}.`,
+        url:link
+      });
+    }else{
+      await navigator.clipboard.writeText(link);
+      toast("Enlace copiado");
+    }
+  }catch(e){
+    if(e?.name!=="AbortError")toast("No se pudo compartir el enlace");
+  }
 }
 function setupInstallPrompt(){
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;$("#installBtn")?.classList.remove("hidden")});
@@ -1702,6 +1762,9 @@ $("#closeRoomDialog").addEventListener("click",()=>$("#roomDialog").close());
 $("#closeHistoryDialog")?.addEventListener("click",()=>$("#historyDialog")?.close());
 $("#historyDialog")?.addEventListener("click",e=>{if(e.target===$("#historyDialog"))$("#historyDialog").close()});
 $("#shareBtn").addEventListener("click",shareRoom);
+$("#generateDeviceLinkBtn")?.addEventListener("click",generateDeviceLink);
+$("#copyDeviceLinkBtn")?.addEventListener("click",copyDeviceLink);
+$("#shareDeviceLinkBtn")?.addEventListener("click",shareDeviceLink);
 $("#notificationBtn").addEventListener("click",openNotificationCenter);
 $("#closeNotificationDialog").addEventListener("click",()=>$("#notificationDialog").close());
 $("#enableNotificationsBtn").addEventListener("click",requestNotifications);
