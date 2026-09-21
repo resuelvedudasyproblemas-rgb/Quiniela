@@ -943,10 +943,23 @@ async function autoJointElige8(){
   const ranked=matches.filter(m=>m.number<=14).map(m=>{
     const e1=p1?isElige8(p1.user_id,m.number):false;
     const e2=p2?isElige8(p2.user_id,m.number):false;
-    const simple=effectiveJointSelection(m.number).length===1;
-    return {n:m.number,score:(e1&&e2?100:(e1||e2?50:0))+(simple?10:0)};
-  }).sort((a,b)=>b.score-a.score||a.n-b.n);
-  await saveJointElige8Set(ranked.slice(0,8).map(x=>x.n),"Elige 8 conjunto generado por coincidencias");
+    const a=p1?pickForJourney(p1.user_id,journey.id,m.number)?.pick:null;
+    const b=p2?pickForJourney(p2.user_id,journey.id,m.number)?.pick:null;
+    const same=Boolean(a&&b&&a===b);
+
+    let tier=0;
+    if(e1&&e2&&same) tier=4;
+    else if(e1&&e2) tier=3;
+    else if(e1||e2) tier=2;
+    else if(same) tier=1;
+
+    return {n:m.number,tier};
+  }).sort((a,b)=>b.tier-a.tier||a.n-b.n);
+
+  await saveJointElige8Set(
+    ranked.slice(0,8).map(x=>x.n),
+    "Elige 8 conjunto priorizado por coincidencias reales"
+  );
 }
 
 function decorateJointElige8UI(){
@@ -985,7 +998,7 @@ function decorateJointElige8UI(){
     <div class="joint-e8-actions">
       <button type="button" data-joint-e8-copy="1" ${locked||jointElige8Saving?"disabled":""}>Copiar ${escapeHtml(p1?.display_name||"J1")}</button>
       <button type="button" data-joint-e8-copy="2" ${locked||jointElige8Saving?"disabled":""}>Copiar ${escapeHtml(p2?.display_name||"J2")}</button>
-      <button type="button" data-joint-e8-auto ${locked||jointElige8Saving?"disabled":""}>Priorizar coincidencias</button>
+      <button type="button" data-joint-e8-auto ${locked||jointElige8Saving?"disabled":""}>Priorizar coincidencias reales</button>
       <button type="button" class="subtle" data-joint-e8-clear ${locked||jointElige8Saving||!score.selected?"disabled":""}>Vaciar</button>
     </div>
     <small>Compartido por los dos. Puedes retocarlo partido a partido con la estrella ★.</small>`;
