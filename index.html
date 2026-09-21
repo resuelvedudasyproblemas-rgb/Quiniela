@@ -219,6 +219,25 @@
       <p class="dialog-copy">Esta sala es permanente. No hace falta crear una nueva en cada jornada.</p>
       <div class="room-dialog-code"><span>CÓDIGO DE INVITACIÓN</span><strong id="roomCode">------</strong></div>
       <button id="shareBtn" class="primary-btn" type="button">Compartir sala</button>
+
+      <div class="device-link-section">
+        <div class="device-link-copy">
+          <span>OTROS DISPOSITIVOS</span>
+          <strong>Entrar también como <b id="deviceLinkPlayer">tu jugador</b></strong>
+          <p>Genera un enlace y ábrelo una vez en el otro móvil u ordenador. Este dispositivo seguirá funcionando igual.</p>
+        </div>
+        <button id="generateDeviceLinkBtn" class="secondary-btn" type="button">Vincular otro dispositivo</button>
+        <div id="deviceLinkBox" class="device-link-box hidden">
+          <label>Enlace temporal
+            <input id="deviceLinkUrl" readonly />
+          </label>
+          <div class="device-link-actions">
+            <button id="shareDeviceLinkBtn" class="primary-btn" type="button">Compartir enlace</button>
+            <button id="copyDeviceLinkBtn" class="secondary-btn" type="button">Copiar</button>
+          </div>
+          <small>Caduca en 15 minutos y solo puede usarse una vez.</small>
+        </div>
+      </div>
     </div>
   </dialog>
 
