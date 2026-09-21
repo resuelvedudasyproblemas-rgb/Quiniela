@@ -638,18 +638,55 @@ function splitPlenoSelection(value=""){
   const m=String(value||"").match(/^(0|1|2|M)-(0|1|2|M)$/);
   return m?{home:m[1],away:m[2]}:{home:null,away:null};
 }
-function autoJointPlenoSelection(jid=journey?.id){
+function plenoGoalNumber(v){
+  if(v==="M")return 3;
+  const n=Number(v);
+  return Number.isFinite(n)?Math.max(0,Math.min(3,n)):null;
+}
+function plenoGoalToken(v){
+  const n=Math.max(0,Math.min(3,Math.round(Number(v)||0)));
+  return n>=3?"M":String(n);
+}
+function jointPlenoRecommendation(jid=journey?.id){
   const p1=memberBySlot(1),p2=memberBySlot(2);
-  const a=p1?displayPickForJourney(p1.user_id,jid,15):"—";
-  const b=p2?displayPickForJourney(p2.user_id,jid,15):"—";
-  return a!=="—"&&a===b?a:"";
+  const a=p1?pickForJourney(p1.user_id,jid,15):null;
+  const b=p2?pickForJourney(p2.user_id,jid,15):null;
+  if(!a?.home_goals||!a?.away_goals||!b?.home_goals||!b?.away_goals)return null;
+
+  const sa=`${a.home_goals}-${a.away_goals}`;
+  const sb=`${b.home_goals}-${b.away_goals}`;
+  if(sa===sb)return {selection:sa,source:"agreement",positionBias:false};
+
+  let home=(plenoGoalNumber(a.home_goals)+plenoGoalNumber(b.home_goals))/2;
+  let away=(plenoGoalNumber(a.away_goals)+plenoGoalNumber(b.away_goals))/2;
+  let positionBias=false;
+
+  const m=matchesForJourney(jid).find(x=>x.number===15);
+  const hp=Number(m?.home_position),ap=Number(m?.away_position);
+  if(Number.isFinite(hp)&&Number.isFinite(ap)&&hp>0&&ap>0){
+    const bias=Math.max(-.18,Math.min(.18,(ap-hp)/45));
+    home+=bias;
+    away-=bias;
+    positionBias=Math.abs(bias)>.01;
+  }
+
+  return {
+    selection:`${plenoGoalToken(home)}-${plenoGoalToken(away)}`,
+    source:"recommended",
+    positionBias
+  };
+}
+function autoJointPlenoSelection(jid=journey?.id){
+  return jointPlenoRecommendation(jid)?.selection||"";
 }
 function effectiveJointPlenoSelection(jid=journey?.id){
   return jointOverrideFor(15,jid)?.selection||autoJointPlenoSelection(jid);
 }
 function jointPlenoKind(jid=journey?.id){
   if(jointOverrideFor(15,jid))return "Manual";
-  return autoJointPlenoSelection(jid)?"Coincidís":"Elegid marcador";
+  const rec=jointPlenoRecommendation(jid);
+  if(!rec)return "Elegid marcador";
+  return rec.source==="agreement"?"Coincidís":"Recomendado";
 }
 function jointPlenoReadonlyHtml(value,playerClass=""){
   const p=splitPlenoSelection(value);
@@ -735,7 +772,7 @@ function jointBetRecommendation(j=journey){
     if(missing1)waiting.push(`${p1.display_name}: ${14-missing1}/14`);
     if(missing2)waiting.push(`${p2.display_name}: ${14-missing2}/14`);
     if(!p15InputsReady)waiting.push("Falta completar el Pleno al 15");
-    else if(!p15Ready)waiting.push("Elegid el Pleno al 15 conjunto");
+    else if(!p15Ready)waiting.push("Falta definir el Pleno al 15 conjunto");
     return {
       ready:false,
       p1,p2,rows,p15a,p15b,p15Joint,e8Numbers,
@@ -917,8 +954,8 @@ function renderJoint(){
           <div class="joint-player-name"><i></i><span>Conjunta</span></div>
           <div class="joint-pleno-edit-wrap">
             ${jointPlenoEditorHtml(journey.id,locked)}
-            <small>M = 3 o más goles</small>
-            ${p15override?`<button type="button" class="joint-reset joint-pleno-reset" ${locked?"disabled":""}>↺ Automática</button>`:""}
+            <small>${jointPlenoKind(journey.id)==="Recomendado"?"Recomendado a partir de vuestros dos marcadores · ":""}M = 3 o más goles</small>
+            ${p15override?`<button type="button" class="joint-reset joint-pleno-reset" ${locked?"disabled":""}>↺ Volver a recomendado</button>`:""}
           </div>
         </div>
       </div>

@@ -4443,3 +4443,14 @@ html[data-theme="dark"] .joint-plan-cell.is-e8{
   color:var(--joint-color)!important;
   font-size:.78rem!important;
 }
+
+
+/* Pleno recomendado v79 */
+.p15-joint .joint-mode:not(.manual){
+  color:var(--joint-color)!important;
+}
+.joint-pleno-edit-wrap>small{
+  max-width:285px;
+  text-align:right;
+  line-height:1.25;
+}
