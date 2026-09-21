@@ -947,29 +947,45 @@ async function init(){
 
     if(!session?.user) throw new Error("No se pudo recuperar la sesión.");
     user=session.user;
+    identityUserId=user.id;
 
     const params=new URLSearchParams(location.search);
+    const deviceToken=params.get("device");
+    if(deviceToken){
+      const {error:deviceError}=await sb.rpc("claim_device_link",{p_token:deviceToken});
+      if(deviceError) throw deviceError;
+      params.delete("device");
+      toast("✓ Dispositivo vinculado a tu jugador");
+    }
+
     const claimToken=params.get("claim");
     if(claimToken){
       const {error:claimError}=await sb.rpc("claim_identity",{p_token:claimToken});
       if(claimError) throw claimError;
       params.delete("claim");
-      const qs=params.toString();
-      history.replaceState({}, "", location.pathname+(qs?"?"+qs:""));
       toast("Identidad recuperada");
     }
+
+    const qs=params.toString();
+    history.replaceState({}, "", location.pathname+(qs?"?"+qs:""));
 
     const roomInput=$("#roomCodeInput");
     if(roomInput) roomInput.value=UNIQUE_ROOM_CODE;
 
-    const {data:mine,error}=await sb.from("members")
-      .select("room_id,user_id,slot,display_name")
-      .eq("user_id",identityUserId).limit(1).maybeSingle();
-    if(error) throw error;
+    const {data:identity,error:identityError}=await sb.rpc("get_my_identity");
+    if(identityError) throw identityError;
+    const mine=Array.isArray(identity)?identity[0]:identity;
 
     if(!mine){ show("onboarding"); return; }
 
-    myMember=mine; roomId=mine.room_id;
+    identityUserId=mine.member_user_id;
+    myMember={
+      room_id:mine.room_id,
+      user_id:mine.member_user_id,
+      slot:mine.slot,
+      display_name:mine.display_name
+    };
+    roomId=mine.room_id;
     const {data:r,error:re}=await sb.from("rooms").select("code").eq("id",roomId).single();
     if(re) throw re;
     roomCode=r.code;
