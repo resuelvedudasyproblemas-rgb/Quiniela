@@ -3757,3 +3757,85 @@ html[data-theme="dark"] .device-link-box{
     padding-top:5px!important;
   }
 }
+
+
+/* Cabecera estable y logo original v71 */
+.room-card-unified{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 0 10px!important;
+  padding:8px 10px!important;
+  overflow:hidden!important;
+}
+.room-card-unified .room-unified-top{
+  width:100%!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  column-gap:8px!important;
+}
+.room-card-unified .room-brand-title{
+  grid-column:1!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  min-width:0!important;
+  width:auto!important;
+  margin:0!important;
+  padding:0!important;
+  position:static!important;
+  transform:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+.room-card-unified .room-brand-logo{
+  display:block!important;
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  flex:0 0 36px!important;
+  object-fit:contain!important;
+  position:static!important;
+  transform:none!important;
+}
+.room-card-unified .room-brand-copy{
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  min-width:0!important;
+  position:static!important;
+  transform:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+.room-card-unified .room-brand-copy strong{
+  display:block!important;
+  font-size:.82rem!important;
+  line-height:1.05!important;
+  font-weight:950!important;
+  color:var(--text)!important;
+}
+.room-card-unified .room-brand-copy span{
+  display:block!important;
+  margin-top:3px!important;
+  font-size:.42rem!important;
+  line-height:1!important;
+  font-weight:850!important;
+  color:var(--muted)!important;
+}
+.room-card-unified .room-tools{
+  grid-column:2!important;
+  justify-self:end!important;
+  position:static!important;
+  transform:none!important;
+}
+@media(max-width:430px){
+  .room-card-unified{padding:7px 8px!important}
+  .room-card-unified .room-brand-logo{
+    width:34px!important;height:34px!important;min-width:34px!important;flex-basis:34px!important;
+  }
+  .room-card-unified .room-brand-copy strong{font-size:.77rem!important}
+  .room-card-unified .room-brand-copy span{font-size:.39rem!important}
+}
