@@ -38,9 +38,9 @@ function logoProxyUrl(url=""){
   const raw=String(url||"").trim();
   if(!raw)return "";
   let m=raw.match(/api\.sofascore\.app\/api\/v1\/team\/(\d+)\/image/i);
-  if(m)return `${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=team&id=${m[1]}`;
+  if(m)return `${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=team&id=${m[1]}&v=2`;
   m=raw.match(/api\.sofascore\.app\/api\/v1\/unique-tournament\/(\d+)\/image/i);
-  if(m)return `${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=tournament&id=${m[1]}`;
+  if(m)return `${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=tournament&id=${m[1]}&v=2`;
   return raw;
 }
 function teamCrestHtml(name,size="",logoUrl=""){
