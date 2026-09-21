@@ -242,6 +242,15 @@ function resultBarHtml(m,p){
   }
   return "";
 }
+function finishedJourneyPrizeState(j){
+  if(!j||journeyDisplayState(j)!=="finished")return "";
+  const normal=identityUserId?scoreUserJourney(identityUserId,j):{correct:0,resolved:0};
+  const e8=scoreJointElige8(j);
+  const normalPrize=normal.resolved===15&&normal.correct>=10;
+  const e8Prize=e8.selected===8&&e8.resolved===8&&e8.correct===8;
+  return normalPrize||e8Prize?"prize":"miss";
+}
+
 function renderJourneySwitcher(){
   const el=$("#journeySwitcher");
   if(!el) return;
@@ -251,8 +260,10 @@ function renderJourneySwitcher(){
   el.innerHTML=available.map(j=>{
     const state=journeyDisplayState(j);
     const resolved=journeyResolvedCount(j);
+    const prizeState=state==="finished"?finishedJourneyPrizeState(j):"";
+    const prizeClass=prizeState?` finished-${prizeState}`:"";
     const detail=state==="playing"?`${resolved}/15 resultados`:state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
-    return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}" data-journey-id="${j.id}">
+    return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-id="${j.id}">
       <span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small>
     </button>`;
   }).join("");
@@ -672,16 +683,30 @@ function isJointElige8(n,jid=journey?.id){
   return Boolean(allJointElige8.find(e=>e.journey_id===jid&&e.match_number===n));
 }
 
+function jointElige8PickForMatch(n,jid=journey?.id){
+  const selection=effectiveJointSelection(n,jid);
+  if(!selection)return "";
+  if(selection.length===1)return selection;
+
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  const salva=p1?pickForJourney(p1.user_id,jid,n)?.pick:null;
+  const ferran=p2?pickForJourney(p2.user_id,jid,n)?.pick:null;
+
+  if(salva&&ferran&&salva!==ferran&&selection.includes(ferran))return ferran;
+  if(ferran&&selection.includes(ferran))return ferran;
+  return JOINT_SIGN_ORDER.find(sign=>selection.includes(sign))||"";
+}
+
 function scoreJointElige8(j=journey){
   const selected=jointElige8Selections(j?.id);
   let correct=0,resolved=0;
   for(const e of selected){
     const m=allMatches.find(x=>x.journey_id===j.id&&x.number===e.match_number);
     const actual=actualResultForMatch(m);
-    const selection=effectiveJointSelection(e.match_number,j.id);
-    if(actual==="—"||!selection) continue;
+    const pick=jointElige8PickForMatch(e.match_number,j.id);
+    if(actual==="—"||!pick) continue;
     resolved++;
-    if(selection.includes(actual))correct++;
+    if(pick===actual)correct++;
   }
   return {selected:selected.length,correct,resolved};
 }
@@ -692,11 +717,11 @@ function projectedScoreJointElige8(j=journey){
   for(const e of selected){
     const m=allMatches.find(x=>x.journey_id===j.id&&x.number===e.match_number);
     const actual=projectedResultForMatch(m);
-    const selection=effectiveJointSelection(e.match_number,j.id);
-    if(actual==="—"||!selection) continue;
+    const pick=jointElige8PickForMatch(e.match_number,j.id);
+    if(actual==="—"||!pick) continue;
     considered++;
     if(m&&!matchResolved(m)) live++;
-    if(selection.includes(actual)) correct++;
+    if(pick===actual) correct++;
     else wrong++;
   }
   return {
@@ -1246,7 +1271,13 @@ function renderAll(){
   const statusLabels={open:"Abierta para pronósticos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
   $(".status-text").textContent=statusLabels[state]||"Jornada";
   const kicker=$(".journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
-  const journeyCard=$("#journeyCard");if(journeyCard)journeyCard.dataset.status=state;
+  const journeyCard=$("#journeyCard");
+  if(journeyCard){
+    journeyCard.dataset.status=state;
+    const prizeState=state==="finished"?finishedJourneyPrizeState(journey):"";
+    if(prizeState)journeyCard.dataset.prize=prizeState;
+    else delete journeyCard.dataset.prize;
+  }
   renderJourneyLeagues();
   const opponent=members.find(m=>m.user_id!==identityUserId);
   if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}

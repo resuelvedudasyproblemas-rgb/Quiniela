@@ -3839,3 +3839,58 @@ html[data-theme="dark"] .device-link-box{
   .room-card-unified .room-brand-copy strong{font-size:.77rem!important}
   .room-card-unified .room-brand-copy span{font-size:.39rem!important}
 }
+
+
+/* Jornadas finalizadas premio v72 */
+.journey-choice.state-finished.finished-miss{
+  background:linear-gradient(145deg,#a93f45,#8e2d34)!important;
+  border-color:#7f252b!important;
+  color:#fff!important;
+  box-shadow:0 5px 14px rgba(123,34,40,.18)!important;
+}
+.journey-choice.state-finished.finished-miss>span{
+  background:rgba(255,255,255,.16)!important;
+  color:#fff!important;
+}
+.journey-choice.state-finished.finished-miss>strong,
+.journey-choice.state-finished.finished-miss>small{
+  color:#fff!important;
+}
+.journey-choice.state-finished.finished-miss>small{
+  opacity:.8;
+}
+
+.journey-choice.state-finished.finished-prize{
+  background:linear-gradient(145deg,#f6d66d,#d7aa2a 58%,#b88410)!important;
+  border-color:#b98714!important;
+  color:#4d3600!important;
+  box-shadow:0 6px 16px rgba(168,119,11,.22)!important;
+}
+.journey-choice.state-finished.finished-prize>span{
+  background:rgba(255,255,255,.35)!important;
+  color:#684900!important;
+}
+.journey-choice.state-finished.finished-prize>strong,
+.journey-choice.state-finished.finished-prize>small{
+  color:#4d3600!important;
+}
+
+.journey-card[data-status="finished"][data-prize="miss"]{
+  background:linear-gradient(135deg,#762d33,#a64047 62%,#bd5258)!important;
+}
+.journey-card[data-status="finished"][data-prize="miss"] .status-dot{
+  background:#ffb9be!important;
+  box-shadow:0 0 0 4px rgba(255,185,190,.15)!important;
+}
+.journey-card[data-status="finished"][data-prize="prize"]{
+  background:linear-gradient(135deg,#8a6715,#c69a25 58%,#e0ba47)!important;
+  color:#fff!important;
+}
+.journey-card[data-status="finished"][data-prize="prize"] .status-dot{
+  background:#fff0a7!important;
+  box-shadow:0 0 0 4px rgba(255,240,167,.18)!important;
+}
+.journey-card[data-status="finished"][data-prize="prize"] .journey-deadline{
+  background:rgba(255,255,255,.13)!important;
+  border-color:rgba(255,255,255,.18)!important;
+}
