@@ -34,22 +34,35 @@ const TEAM_DOMAINS={"CEUTA":"adceutafc.com","REAL SOCIEDAD":"realsociedad.eus","
 const TEAM_FLAGS={"ESPANA":"🇪🇸","INGLATERRA":"🏴","FRANCIA":"🇫🇷","ITALIA":"🇮🇹","ALEMANIA":"🇩🇪","PORTUGAL":"🇵🇹"};
 function normalizeTeamName(name=""){const c=String(name).replace(/\s*\([MF]\)\s*$/i,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\./g,"").replace(/\s+/g," ").trim();return ({"R VALLADOLID":"REAL VALLADOLID","R OVIEDO":"REAL OVIEDO","ATLETICO DE MADRID":"ATLETICO MADRID","RC DEPORTIVO":"DEPORTIVO","UD LAS PALMAS":"LAS PALMAS","CD LEGANES":"LEGANES"})[c]||c}
 function teamInitials(name=""){const p=normalizeTeamName(name).replace(/\b(CLUB|FUTBOL|FOOTBALL|CF|FC|CD|UD|SAD)\b/g,"").trim().split(/\s+/).filter(Boolean);return p.length===1?p[0].slice(0,2):(p[0][0]+p[1][0]).slice(0,2)}
+function sofaLogoInfo(url=""){
+  const raw=String(url||"").trim();
+  if(!raw)return null;
+  let m=raw.match(/(?:api|img)\.sofascore\.app\/api\/v1\/team\/(\d+)\/image/i);
+  if(m)return {kind:"team",id:m[1]};
+  m=raw.match(/(?:api|img)\.sofascore\.app\/api\/v1\/unique-tournament\/(\d+)\/image/i);
+  if(m)return {kind:"tournament",id:m[1]};
+  return null;
+}
+function logoStorageUrl(url=""){
+  const raw=String(url||"").trim();
+  const info=sofaLogoInfo(raw);
+  if(!info)return raw;
+  return `${cfg.SUPABASE_URL}/storage/v1/object/public/quiniela-web/logos/${info.kind}/${info.id}.webp`;
+}
 function logoProxyUrl(url=""){
   const raw=String(url||"").trim();
-  if(!raw)return "";
-  let m=raw.match(/api\.sofascore\.app\/api\/v1\/team\/(\d+)\/image/i);
-  if(m)return `${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=team&id=${m[1]}&v=2`;
-  m=raw.match(/api\.sofascore\.app\/api\/v1\/unique-tournament\/(\d+)\/image/i);
-  if(m)return `${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=tournament&id=${m[1]}&v=2`;
-  return raw;
+  const info=sofaLogoInfo(raw);
+  if(!info)return raw;
+  return `${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=${info.kind}&id=${info.id}&v=3`;
 }
 function teamCrestHtml(name,size="",logoUrl=""){
   const key=normalizeTeamName(name);
   const label=escapeHtml(String(name).replace(/\s*\([MF]\)\s*$/i,""));
   const initials=escapeHtml(teamInitials(name));
-  const direct=logoProxyUrl(logoUrl);
+  const direct=logoStorageUrl(logoUrl);
+  const fallback=logoProxyUrl(logoUrl);
   if(direct){
-    return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${initials}</span><img class="team-crest-img high-quality" src="${escapeHtml(direct)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
+    return `<span class="team-crest ${size}" title="${label}"><span class="crest-fallback">${initials}</span><img class="team-crest-img high-quality" src="${escapeHtml(direct)}" data-logo-fallback="${escapeHtml(fallback)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
   }
   const flag=TEAM_FLAGS[key];
   if(flag) return `<span class="team-crest ${size} flag-crest" title="${label}">${flag}</span>`;
@@ -1214,7 +1227,7 @@ function renderJourneyLeagues(){
   if(!comps.length){el.innerHTML="";el.classList.add("hidden");return}
   el.classList.remove("hidden");
   const shown=comps.slice(0,3);
-  el.innerHTML=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${escapeHtml(c.name)}" aria-label="${escapeHtml(c.name)}"><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${escapeHtml(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
+  el.innerHTML=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${escapeHtml(c.name)}" aria-label="${escapeHtml(c.name)}"><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoStorageUrl(c.logo))}" data-logo-fallback="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${escapeHtml(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
 }
 function renderAll(){
   const roomMembers=$("#roomMembers");if(roomMembers)roomMembers.textContent=roomSummaryText();
