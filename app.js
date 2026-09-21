@@ -16,6 +16,7 @@ let saving = false;
 let elige8Saving = false;
 let jointSaving = false;
 let jointElige8Saving = false;
+let jointPlenoDraft = {journeyId:null,home:null,away:null};
 let selectedJourneyId = null;
 const MATCH_FILTER_KEY="quiniela-match-filter";
 const MATCH_FILTER_MODES=new Set(["all","pending","correct","wrong","e8"]);
@@ -633,6 +634,76 @@ function jointReadonlySignsHtml(selection,playerClass){
   const value=String(selection||"");
   return `<div class="joint-readonly-signs ${playerClass}">${JOINT_SIGN_ORDER.map(sign=>`<span class="${value.includes(sign)?"selected":""}">${sign}</span>`).join("")}</div>`;
 }
+function splitPlenoSelection(value=""){
+  const m=String(value||"").match(/^(0|1|2|M)-(0|1|2|M)$/);
+  return m?{home:m[1],away:m[2]}:{home:null,away:null};
+}
+function autoJointPlenoSelection(jid=journey?.id){
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  const a=p1?displayPickForJourney(p1.user_id,jid,15):"—";
+  const b=p2?displayPickForJourney(p2.user_id,jid,15):"—";
+  return a!=="—"&&a===b?a:"";
+}
+function effectiveJointPlenoSelection(jid=journey?.id){
+  return jointOverrideFor(15,jid)?.selection||autoJointPlenoSelection(jid);
+}
+function jointPlenoKind(jid=journey?.id){
+  if(jointOverrideFor(15,jid))return "Manual";
+  return autoJointPlenoSelection(jid)?"Coincidís":"Elegid marcador";
+}
+function jointPlenoReadonlyHtml(value,playerClass=""){
+  const p=splitPlenoSelection(value);
+  return `<div class="joint-pleno-readonly ${playerClass}"><strong>${p.home||"—"}</strong><b>–</b><strong>${p.away||"—"}</strong></div>`;
+}
+function jointPlenoEditorState(jid=journey?.id){
+  const base=splitPlenoSelection(effectiveJointPlenoSelection(jid));
+  if(jointPlenoDraft.journeyId!==jid)return base;
+  return {
+    home:jointPlenoDraft.home??base.home,
+    away:jointPlenoDraft.away??base.away
+  };
+}
+function jointPlenoEditorHtml(jid=journey?.id,locked=false){
+  const cur=jointPlenoEditorState(jid);
+  const values=["0","1","2","M"];
+  const side=(team,selected)=>`<div class="joint-pleno-goals">${values.map(v=>`<button type="button" class="joint-pleno-goal ${selected===v?"selected":""}" data-joint-pleno-team="${team}" data-joint-pleno-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")}</div>`;
+  return `<div class="joint-pleno-editor"><div><small>LOCAL</small>${side("home",cur.home)}</div><span>–</span><div><small>VISIT.</small>${side("away",cur.away)}</div></div>`;
+}
+async function saveJointPlenoPart(team,val){
+  if(!journeyCanEdit(journey)){toast("La jornada ya ha empezado o está cerrada");return}
+  if(jointSaving)return;
+  const current=jointPlenoEditorState(journey.id);
+  jointPlenoDraft={
+    journeyId:journey.id,
+    home:team==="home"?val:current.home,
+    away:team==="away"?val:current.away
+  };
+  if(!jointPlenoDraft.home||!jointPlenoDraft.away){renderJoint();return}
+
+  jointSaving=true;
+  setSync("","Guardando");
+  const selection=`${jointPlenoDraft.home}-${jointPlenoDraft.away}`;
+  try{
+    const row={room_id:roomId,journey_id:journey.id,match_number:15,selection,updated_by:identityUserId,updated_at:new Date().toISOString()};
+    const {data,error}=await sb.from("joint_picks").upsert(row,{onConflict:"room_id,journey_id,match_number"}).select().single();
+    if(error)throw error;
+    allJointPicks=allJointPicks.filter(x=>!(x.journey_id===journey.id&&x.match_number===15));
+    allJointPicks.push(data);
+    jointPlenoDraft={journeyId:null,home:null,away:null};
+    renderJoint();
+    setSync("online","Sincronizado");
+  }catch(e){
+    console.error(e);
+    toast("No se pudo guardar el Pleno conjunto");
+    setSync("error","Error");
+  }finally{
+    jointSaving=false;
+  }
+}
+async function resetJointPlenoSelection(){
+  jointPlenoDraft={journeyId:null,home:null,away:null};
+  await resetJointSelection(15);
+}
 function euro(value){
   return Number(value||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 }
@@ -824,10 +895,43 @@ function renderJoint(){
       </div>
     </article>`;
   }).join("");
-  const p15a=p1?displayPickForJourney(p1.user_id,journey.id,15):"—",p15b=p2?displayPickForJourney(p2.user_id,journey.id,15):"—";
-  list.insertAdjacentHTML("beforeend",`<article class="joint-builder-card p15-joint"><div class="joint-builder-head"><span class="match-index">15</span><div><strong>Pleno al 15</strong><small>${escapeHtml(p1?.display_name||"J1")} ${p15a} · ${escapeHtml(p2?.display_name||"J2")} ${p15b}</small></div><span class="joint-mode">${p15a!=="—"&&p15a===p15b?"Coincidís":"Comparar"}</span></div></article>`);
+  const p15=matches.find(m=>m.number===15);
+  if(p15){
+    const p15a=p1?displayPickForJourney(p1.user_id,journey.id,15):"—";
+    const p15b=p2?displayPickForJourney(p2.user_id,journey.id,15):"—";
+    const p15override=jointOverrideFor(15,journey.id);
+    const p15kind=jointPlenoKind(journey.id);
+    list.insertAdjacentHTML("beforeend",`<article class="joint-builder-card p15-joint">
+      <div class="joint-builder-head">
+        <span class="match-index">15</span>
+        <div class="joint-builder-fixture">${fixtureMiniHtml(p15)}</div>
+        <span class="joint-kickoff" title="${escapeHtml(formatKickoff(p15.kickoff))}">◷ ${escapeHtml(formatJointKickoff(p15.kickoff))}</span>
+        <div class="joint-builder-tools"><span class="joint-mode ${p15override?"manual":""}">${escapeHtml(p15kind)}</span></div>
+      </div>
+      <div class="joint-player-rows joint-pleno-rows">
+        <div class="joint-player-row player-one">
+          <div class="joint-player-name"><i></i><span>${escapeHtml(p1?.display_name||"J1")}</span></div>
+          ${jointPlenoReadonlyHtml(p15a,"player-one-score")}
+        </div>
+        <div class="joint-player-row player-two">
+          <div class="joint-player-name"><i></i><span>${escapeHtml(p2?.display_name||"J2")}</span></div>
+          ${jointPlenoReadonlyHtml(p15b,"player-two-score")}
+        </div>
+        <div class="joint-player-row joint-choice-row joint-pleno-choice">
+          <div class="joint-player-name"><i></i><span>Conjunta</span></div>
+          <div class="joint-pleno-edit-wrap">
+            ${jointPlenoEditorHtml(journey.id,locked)}
+            <small>M = 3 o más goles</small>
+            ${p15override?`<button type="button" class="joint-reset joint-pleno-reset" ${locked?"disabled":""}>↺ Automática</button>`:""}
+          </div>
+        </div>
+      </div>
+    </article>`);
+  }
   $$(".joint-sign").forEach(btn=>btn.addEventListener("click",()=>{const n=Number(btn.dataset.jointMatch),sign=btn.dataset.jointSign,current=effectiveJointSelection(n),next=current.includes(sign)?current.replace(sign,""):current+sign;saveJointSelection(n,next)}));
-  $$(".joint-reset").forEach(btn=>btn.addEventListener("click",()=>resetJointSelection(Number(btn.dataset.jointReset))));
+  $$(".joint-reset:not(.joint-pleno-reset)").forEach(btn=>btn.addEventListener("click",()=>resetJointSelection(Number(btn.dataset.jointReset))));
+  $$(".joint-pleno-goal").forEach(btn=>btn.addEventListener("click",()=>saveJointPlenoPart(btn.dataset.jointPlenoTeam,btn.dataset.jointPlenoGoal)));
+  $(".joint-pleno-reset")?.addEventListener("click",resetJointPlenoSelection);
 }
 function jointElige8Selections(jid=journey?.id){
   if(!jid) return [];
