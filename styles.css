@@ -3894,3 +3894,162 @@ html[data-theme="dark"] .device-link-box{
   background:rgba(255,255,255,.13)!important;
   border-color:rgba(255,255,255,.18)!important;
 }
+
+
+/* Cabecera y premios v73 */
+.room-card-unified{
+  padding:7px 9px!important;
+  border-radius:15px!important;
+}
+.room-card-unified .room-unified-top{
+  column-gap:7px!important;
+}
+.room-card-unified .room-brand-title{
+  gap:7px!important;
+}
+.room-card-unified .room-brand-logo{
+  width:35px!important;
+  height:35px!important;
+  min-width:35px!important;
+  flex-basis:35px!important;
+}
+.room-card-unified .room-brand-copy strong{
+  font-size:.8rem!important;
+}
+.room-card-unified .room-brand-copy span{
+  margin-top:3px!important;
+  font-size:.4rem!important;
+  letter-spacing:.1em!important;
+}
+.room-card-unified .room-tools{
+  gap:3px!important;
+}
+.room-card-unified .room-tool-btn{
+  flex-basis:25px!important;
+  width:25px!important;
+  min-width:25px!important;
+  max-width:25px!important;
+  height:25px!important;
+  min-height:25px!important;
+  max-height:25px!important;
+  border-radius:8px!important;
+}
+.room-card-unified .room-meta-line{
+  margin-top:5px!important;
+  padding-top:5px!important;
+}
+.room-card-unified .room-playing-as{
+  border:1px solid transparent!important;
+  border-radius:999px!important;
+  font-weight:850!important;
+}
+.room-card-unified .room-playing-as.player-one{
+  color:#155fb7!important;
+  background:rgba(30,120,220,.09)!important;
+  border-color:rgba(30,120,220,.16)!important;
+}
+.room-card-unified .room-playing-as.player-two{
+  color:#b55b08!important;
+  background:rgba(238,129,20,.10)!important;
+  border-color:rgba(238,129,20,.18)!important;
+}
+.room-card-unified .room-opponent-status::before{
+  content:"";
+  display:inline-block;
+  width:5px;
+  height:5px;
+  margin-right:4px;
+  border-radius:50%;
+  background:#31a766;
+  vertical-align:middle;
+}
+
+.prize-stats-card{
+  margin:0 0 10px;
+  padding:13px;
+  border:1px solid #dfc46f;
+  border-radius:18px;
+  background:linear-gradient(145deg,#fffdf3,#fff8df);
+  box-shadow:0 7px 20px rgba(157,116,19,.08);
+}
+.prize-stats-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+  margin-top:10px;
+}
+.prize-stat{
+  min-width:0;
+  padding:10px 9px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:var(--surface);
+}
+.prize-stat>span{
+  display:block;
+  color:var(--muted);
+  font-size:.53rem;
+  font-weight:900;
+  line-height:1.2;
+}
+.prize-stat>strong{
+  display:block;
+  margin-top:4px;
+  font-size:1.2rem;
+  line-height:1;
+  color:var(--text);
+}
+.prize-stat>small{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:.45rem;
+  line-height:1.25;
+}
+.prize-stat.gold{
+  background:linear-gradient(145deg,#fff4c5,#f4dc87);
+  border-color:#d8b85f;
+}
+.prize-stat.gold>strong{color:#795506}
+.prize-stat.player-one{border-top:3px solid #2e7bd2}
+.prize-stat.player-two{border-top:3px solid #e98525}
+.prize-stat.joint{border-top:3px solid #2f9b65}
+.stats-kpis{
+  grid-template-columns:repeat(auto-fit,minmax(82px,1fr))!important;
+}
+.evolution-row{
+  position:relative;
+}
+.evolution-row.prize-row{
+  border-color:#d8b85f!important;
+  background:linear-gradient(145deg,#fffdf5,#fff8e2)!important;
+}
+.evolution-prize{
+  position:absolute;
+  top:7px;
+  right:8px;
+  color:#b08011;
+  font-size:.72rem;
+}
+html[data-theme="dark"] .prize-stats-card,
+html[data-theme="dark"] .evolution-row.prize-row{
+  background:linear-gradient(145deg,#302912,#3d3212)!important;
+  border-color:#806820!important;
+}
+html[data-theme="dark"] .prize-stat.gold{
+  background:#403513!important;
+  border-color:#8f7227!important;
+}
+html[data-theme="dark"] .prize-stat.gold>strong{color:#ffe08a}
+@media(max-width:600px){
+  .prize-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:430px){
+  .room-card-unified .room-brand-logo{
+    width:33px!important;height:33px!important;min-width:33px!important;flex-basis:33px!important;
+  }
+  .room-card-unified .room-brand-copy strong{font-size:.76rem!important}
+  .room-card-unified .room-brand-copy span{font-size:.37rem!important}
+  .prize-stats-card{padding:11px}
+  .prize-stat{padding:9px 8px}
+}

@@ -886,19 +886,49 @@ const __renderJointElige8Base=renderJoint;
 renderJoint=function(){__renderJointElige8Base();decorateJointElige8UI();};
 
 function statsForUser(uid,completed){
-  const scores=completed.map(j=>({j,score:scoreUserJourney(uid,j)})),total=scores.reduce((a,x)=>a+x.score.correct,0),avg=completed.length?total/completed.length:0,best=scores.length?Math.max(...scores.map(x=>x.score.correct)):0;
-  const e8=completed.map(j=>scoreElige8(uid,j)).reduce((a,x)=>({correct:a.correct+x.correct,resolved:a.resolved+x.resolved}),{correct:0,resolved:0});
-  return {total,avg,best,e8,scores};
+  const scores=completed.map(j=>({j,score:scoreUserJourney(uid,j)}));
+  const total=scores.reduce((a,x)=>a+x.score.correct,0);
+  const avg=completed.length?total/completed.length:0;
+  const best=scores.length?Math.max(...scores.map(x=>x.score.correct)):0;
+  const e8Scores=completed.map(j=>scoreElige8(uid,j));
+  const e8=e8Scores.reduce((a,x)=>({correct:a.correct+x.correct,resolved:a.resolved+x.resolved}),{correct:0,resolved:0});
+  const tenPlus=scores.filter(x=>x.score.resolved===15&&x.score.correct>=10).length;
+  const e8Perfect=e8Scores.filter(x=>x.selected===8&&x.resolved===8&&x.correct===8).length;
+  return {total,avg,best,e8,scores,tenPlus,e8Perfect};
+}
+function jointPrizeStats(completed){
+  let e8Perfect=0,gold=0;
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  for(const j of completed){
+    const e8=scoreJointElige8(j);
+    const jointPerfect=e8.selected===8&&e8.resolved===8&&e8.correct===8;
+    if(jointPerfect)e8Perfect++;
+    const s1=p1?scoreUserJourney(p1.user_id,j).correct:0;
+    const s2=p2?scoreUserJourney(p2.user_id,j).correct:0;
+    if(s1>=10||s2>=10||jointPerfect)gold++;
+  }
+  return {e8Perfect,gold};
 }
 function renderStats(){
   const el=$("#statsContent");if(!el)return;
   const completed=journeys.filter(j=>journeyResolvedCount(j)===15).sort((a,b)=>a.number-b.number),p1=memberBySlot(1),p2=memberBySlot(2);
   if(!completed.length||!p1||!p2){el.innerHTML=`<div class="stats-empty">Las estadísticas completas aparecerán cuando haya jornadas con 15/15 resultados.</div>`;return}
-  const a=statsForUser(p1.user_id,completed),b=statsForUser(p2.user_id,completed);let wins1=0,wins2=0,ties=0;
+  const a=statsForUser(p1.user_id,completed),b=statsForUser(p2.user_id,completed),joint=jointPrizeStats(completed);
+  let wins1=0,wins2=0,ties=0;
   for(const j of completed){const s1=scoreUserJourney(p1.user_id,j).correct,s2=scoreUserJourney(p2.user_id,j).correct;if(s1>s2)wins1++;else if(s2>s1)wins2++;else ties++}
-  el.innerHTML=`<section class="h2h-card"><span>CARA A CARA</span><div class="h2h-score"><div><strong>${wins1}</strong><small>${escapeHtml(p1.display_name)}</small></div><b>–</b><div><strong>${wins2}</strong><small>${escapeHtml(p2.display_name)}</small></div></div><p>${ties} empate${ties===1?"":"s"} · ${completed.length} jornadas finalizadas</p></section>
-    <div class="stats-player-grid">${[[p1,a],[p2,b]].map(([p,s])=>`<article class="stats-player-card"><h3>${escapeHtml(p.display_name)}</h3><div class="stats-kpis"><div><span>Aciertos</span><strong>${s.total}</strong></div><div><span>Media</span><strong>${s.avg.toFixed(1)}</strong></div><div><span>Mejor</span><strong>${s.best}/15</strong></div><div><span>Elige 8</span><strong>${s.e8.correct}/${s.e8.resolved}</strong></div></div></article>`).join("")}</div>
-    <section class="evolution-card"><div class="stats-section-head"><div><span>EVOLUCIÓN</span><h3>Jornada a jornada</h3></div></div><div class="evolution-list">${completed.map(j=>{const s1=scoreUserJourney(p1.user_id,j).correct,s2=scoreUserJourney(p2.user_id,j).correct;return `<div class="evolution-row"><span class="evolution-j">J${j.number}</span><div class="evolution-bars"><div><span>${escapeHtml(p1.display_name)}</span><i style="width:${s1/15*100}%"></i><b>${s1}</b></div><div><span>${escapeHtml(p2.display_name)}</span><i style="width:${s2/15*100}%"></i><b>${s2}</b></div></div></div>`}).join("")}</div></section>`;
+  el.innerHTML=`
+    <section class="prize-stats-card">
+      <div class="stats-section-head"><div><span>PREMIOS</span><h3>Historial de premios</h3></div></div>
+      <div class="prize-stats-grid">
+        <div class="prize-stat gold"><span>Jornadas doradas</span><strong>${joint.gold}</strong><small>10+ de alguno o E8 conjunto 8/8</small></div>
+        <div class="prize-stat player-one"><span>10+ · ${escapeHtml(p1.display_name)}</span><strong>${a.tenPlus}</strong><small>Jornadas con 10 o más</small></div>
+        <div class="prize-stat player-two"><span>10+ · ${escapeHtml(p2.display_name)}</span><strong>${b.tenPlus}</strong><small>Jornadas con 10 o más</small></div>
+        <div class="prize-stat joint"><span>E8 conjunto 8/8</span><strong>${joint.e8Perfect}</strong><small>Premios perfectos confirmados</small></div>
+      </div>
+    </section>
+    <section class="h2h-card"><span>CARA A CARA</span><div class="h2h-score"><div><strong>${wins1}</strong><small>${escapeHtml(p1.display_name)}</small></div><b>–</b><div><strong>${wins2}</strong><small>${escapeHtml(p2.display_name)}</small></div></div><p>${ties} empate${ties===1?"":"s"} · ${completed.length} jornadas finalizadas</p></section>
+    <div class="stats-player-grid">${[[p1,a],[p2,b]].map(([p,s])=>`<article class="stats-player-card"><h3>${escapeHtml(p.display_name)}</h3><div class="stats-kpis"><div><span>Aciertos</span><strong>${s.total}</strong></div><div><span>Media</span><strong>${s.avg.toFixed(1)}</strong></div><div><span>Mejor</span><strong>${s.best}/15</strong></div><div><span>10+</span><strong>${s.tenPlus}</strong></div><div><span>E8 personal 8/8</span><strong>${s.e8Perfect}</strong></div></div></article>`).join("")}</div>
+    <section class="evolution-card"><div class="stats-section-head"><div><span>EVOLUCIÓN</span><h3>Jornada a jornada</h3></div></div><div class="evolution-list">${completed.map(j=>{const s1=scoreUserJourney(p1.user_id,j).correct,s2=scoreUserJourney(p2.user_id,j).correct,e8=scoreJointElige8(j),gold=s1>=10||s2>=10||(e8.selected===8&&e8.resolved===8&&e8.correct===8);return `<div class="evolution-row ${gold?"prize-row":""}"><span class="evolution-j">J${j.number}</span><div class="evolution-bars"><div><span>${escapeHtml(p1.display_name)}</span><i style="width:${s1/15*100}%"></i><b>${s1}</b></div><div><span>${escapeHtml(p2.display_name)}</span><i style="width:${s2/15*100}%"></i><b>${s2}</b></div></div>${gold?'<span class="evolution-prize">★</span>':""}</div>`}).join("")}</div></section>`;
 }
 function openMatchDetail(n,jid=journey?.id){
   const j=journeys.find(x=>x.id===jid),m=allMatches.find(x=>x.journey_id===jid&&x.number===n);if(!j||!m)return;
@@ -1256,6 +1286,12 @@ function renderJourneyLeagues(){
 }
 function renderAll(){
   const roomMembers=$("#roomMembers");if(roomMembers)roomMembers.textContent=roomSummaryText();
+  const pairLabel=$("#roomPairLabel");if(pairLabel)pairLabel.textContent=[...members].sort((a,b)=>a.slot-b.slot).map(m=>m.display_name).filter(Boolean).join(" × ")||"Salva × Ferran";
+  const playingAs=document.querySelector(".room-playing-as");
+  if(playingAs){
+    playingAs.classList.toggle("player-one",myMember?.slot===1);
+    playingAs.classList.toggle("player-two",myMember?.slot===2);
+  }
   if($("#roomDialogMembers"))$("#roomDialogMembers").textContent=roomSummaryText();
   if($("#roomCode"))$("#roomCode").textContent=roomCode;
   $("#myName").textContent=myMember?.display_name||"Tú";
