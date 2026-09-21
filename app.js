@@ -10,7 +10,7 @@ const configured =
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
-let sb, user, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
+let sb, user, identityUserId, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
 let channel = null;
 let saving = false;
 let elige8Saving = false;
@@ -376,7 +376,7 @@ function renderMatchFilterCounts(){
     pending:normal.filter(m=>!matchResolved(m)).length,
     correct:normal.filter(m=>matchOutcomeForUser(m)==="correct").length,
     wrong:normal.filter(m=>matchOutcomeForUser(m)==="wrong").length,
-    e8:normal.filter(m=>isElige8(user.id,m.number)).length
+    e8:normal.filter(m=>isElige8(identityUserId,m.number)).length
   };
   const map={filterAll:"all",filterPending:"pending",filterCorrect:"correct",filterWrong:"wrong",filterE8:"e8"};
   Object.entries(map).forEach(([id,key])=>{const el=$("#"+id);if(el)el.textContent=counts[key]});
@@ -424,7 +424,7 @@ async function loadNotices(){
   if(sb&&user){
     const {data,error}=await sb.from("push_notifications")
       .select("id,title,body,created_at,read_at")
-      .eq("user_id",user.id)
+      .eq("user_id",identityUserId)
       .order("created_at",{ascending:false})
       .limit(30);
     if(!error&&data){
@@ -557,7 +557,7 @@ function detectNewResults(oldMatches){
     const old=oldMap.get(`${m.journey_id}-${m.number}`);
     if(!old||matchResolved(old)||!matchResolved(m))continue;
     const j=journeys.find(x=>x.id===m.journey_id);
-    const mine=displayPickForJourney(user.id,m.journey_id,m.number),actual=actualResultForMatch(m);
+    const mine=displayPickForJourney(identityUserId,m.journey_id,m.number),actual=actualResultForMatch(m);
     const verdict=mine==="—"?"Sin pronóstico":mine===actual?"✓ Acertaste":"✕ Fallaste";
     notifyUser(`J${j?.number||""} · ${m.home} ${m.home_score}-${m.away_score} ${m.away}`,`${verdict}${m.number<=14?` · signo ${actual}`:""}`);
   }
@@ -582,7 +582,7 @@ async function saveJointSelection(n,selection){
   const clean=normalizeJointSelection(selection);if(!clean){toast("Debe quedar al menos un signo");return}
   jointSaving=true;setSync("","Guardando");
   try{
-    const row={room_id:roomId,journey_id:journey.id,match_number:n,selection:clean,updated_by:user.id,updated_at:new Date().toISOString()};
+    const row={room_id:roomId,journey_id:journey.id,match_number:n,selection:clean,updated_by:identityUserId,updated_at:new Date().toISOString()};
     const {data,error}=await sb.from("joint_picks").upsert(row,{onConflict:"room_id,journey_id,match_number"}).select().single();
     if(error)throw error;
     allJointPicks=allJointPicks.filter(x=>!(x.journey_id===journey.id&&x.match_number===n));allJointPicks.push(data);
@@ -885,7 +885,7 @@ function nameFor(uid, fallback){
   return members.find(m=>m.user_id===uid)?.display_name || fallback;
 }
 function memberBySlot(slot){ return members.find(m=>m.slot===slot); }
-function myPickFor(n){ return picks.find(p=>p.user_id===user.id && p.match_number===n); }
+function myPickFor(n){ return picks.find(p=>p.user_id===identityUserId && p.match_number===n); }
 function pickFor(uid,n){ return picks.find(p=>p.user_id===uid && p.match_number===n); }
 
 function isElige8(uid,n,journeyId=journey?.id){
@@ -964,7 +964,7 @@ async function init(){
 
     const {data:mine,error}=await sb.from("members")
       .select("room_id,user_id,slot,display_name")
-      .eq("user_id",user.id).limit(1).maybeSingle();
+      .eq("user_id",identityUserId).limit(1).maybeSingle();
     if(error) throw error;
 
     if(!mine){ show("onboarding"); return; }
@@ -992,7 +992,7 @@ async function createRoom(){
       const {data,error}=await sb.rpc("create_room",{p_code:code,p_display_name:name});
       if(!error){
         roomId=data; roomCode=code;
-        const {data:m}=await sb.from("members").select("*").eq("room_id",roomId).eq("user_id",user.id).single();
+        const {data:m}=await sb.from("members").select("*").eq("room_id",roomId).eq("user_id",identityUserId).single();
         myMember=m;
         await enterApp();
         return;
@@ -1015,7 +1015,7 @@ async function joinRoom(){
     const {data,error}=await sb.rpc("join_room",{p_code:code,p_display_name:name});
     if(error) throw error;
     roomId=data; roomCode=code;
-    const {data:m,error:me}=await sb.from("members").select("*").eq("room_id",roomId).eq("user_id",user.id).single();
+    const {data:m,error:me}=await sb.from("members").select("*").eq("room_id",roomId).eq("user_id",identityUserId).single();
     if(me) throw me;
     myMember=m;
     await enterApp();
@@ -1067,7 +1067,7 @@ async function loadMembers(){
   const {data,error}=await sb.from("members").select("room_id,user_id,slot,display_name").eq("room_id",roomId).order("slot");
   if(error) throw error;
   members=data||[];
-  myMember=members.find(m=>m.user_id===user.id)||myMember;
+  myMember=members.find(m=>m.user_id===identityUserId)||myMember;
 }
 
 async function loadAllPicks(){
@@ -1150,16 +1150,16 @@ function renderAll(){
   const kicker=$(".journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
   const journeyCard=$("#journeyCard");if(journeyCard)journeyCard.dataset.status=state;
   renderJourneyLeagues();
-  const opponent=members.find(m=>m.user_id!==user.id);
+  const opponent=members.find(m=>m.user_id!==identityUserId);
   if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
   else $("#opponentStatus").textContent="Esperando al segundo jugador";
   renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
 }
 
 function renderMatches(){
-  const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),myE8Count=elige8Count(user.id),opponent=members.find(m=>m.user_id!==user.id);
+  const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),myE8Count=elige8Count(identityUserId),opponent=members.find(m=>m.user_id!==identityUserId);
   $("#matches").innerHTML=normal.map(m=>{
-    const mp=myPickFor(m.number),e8=isElige8(user.id,m.number),e8Disabled=locked||elige8Saving||(myE8Count>=8&&!e8),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
+    const mp=myPickFor(m.number),e8=isElige8(identityUserId,m.number),e8Disabled=locked||elige8Saving||(myE8Count>=8&&!e8),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
     return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"}" data-resolved="${matchResolved(m)}" data-outcome="${outcome}" data-e8="${e8}">
@@ -1194,7 +1194,7 @@ function renderPleno(){
   }
   plenoClear.innerHTML=mp&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn clear-pleno-btn" type="button">Borrar Pleno al 15</button></div>`:"";
   plenoClear.querySelector(".clear-pleno-btn")?.addEventListener("click",()=>deletePick(15));
-  const opponent=members.find(x=>x.user_id!==user.id),opp=opponent?pickFor(opponent.user_id,15):null,oppEl=$("#plenoOpponent");
+  const opponent=members.find(x=>x.user_id!==identityUserId),opp=opponent?pickFor(opponent.user_id,15):null,oppEl=$("#plenoOpponent");
   if(oppEl){const reveal=Boolean(mp?.home_goals&&mp?.away_goals);oppEl.classList.toggle("hidden",!reveal);if(reveal)oppEl.innerHTML=`<span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${opp?.home_goals&&opp?.away_goals?`${opp.home_goals}-${opp.away_goals}`:"pendiente"}</strong>`}
   const resultEl=$("#plenoResult"),resultHtml=resultBarHtml(m,mp);resultEl.className="match-result-bar";
   if(resultHtml){const wrapper=document.createElement("div");wrapper.innerHTML=resultHtml;resultEl.className=wrapper.firstElementChild.className;resultEl.innerHTML=wrapper.firstElementChild.innerHTML}else{resultEl.classList.add("hidden");resultEl.innerHTML=""}
@@ -1205,8 +1205,8 @@ async function toggleElige8(n){
   if(!journeyCanEdit(journey)){ toast("La jornada ya ha empezado o está cerrada"); return; }
   if(elige8Saving) return;
 
-  const selected=isElige8(user.id,n);
-  if(!selected && elige8Count(user.id)>=8){
+  const selected=isElige8(identityUserId,n);
+  if(!selected && elige8Count(identityUserId)>=8){
     toast("Ya has seleccionado tus 8 partidos");
     return;
   }
@@ -1222,11 +1222,11 @@ async function toggleElige8(n){
         .eq("room_id",roomId)
         .eq("journey_id",journey.id)
         .eq("match_number",n)
-        .eq("user_id",user.id);
+        .eq("user_id",identityUserId);
       if(error) throw error;
-      allElige8=allElige8.filter(e=>!(e.room_id===roomId&&e.journey_id===journey.id&&e.match_number===n&&e.user_id===user.id));
+      allElige8=allElige8.filter(e=>!(e.room_id===roomId&&e.journey_id===journey.id&&e.match_number===n&&e.user_id===identityUserId));
     }else{
-      const row={room_id:roomId,journey_id:journey.id,match_number:n,user_id:user.id};
+      const row={room_id:roomId,journey_id:journey.id,match_number:n,user_id:identityUserId};
       const {error}=await sb.from("elige8_selections").insert(row);
       if(error) throw error;
       allElige8.push(row);
@@ -1236,7 +1236,7 @@ async function toggleElige8(n){
     renderMatches();
     renderCompare();
     setSync("online","Sincronizado");
-    if(elige8Count(user.id)===8) toast("✓ Elige 8 completo");
+    if(elige8Count(identityUserId)===8) toast("✓ Elige 8 completo");
   }catch(err){
     console.error(err);
     await loadAllElige8();
@@ -1257,15 +1257,15 @@ async function deletePick(n){
   const previous=myPickFor(n);
   if(!previous)return;
   saving=true;setSync("","Borrando");
-  picks=picks.filter(p=>!(p.user_id===user.id&&p.match_number===n));
-  allPicks=allPicks.filter(p=>!(p.user_id===user.id&&p.match_number===n&&p.journey_id===journey.id));
+  picks=picks.filter(p=>!(p.user_id===identityUserId&&p.match_number===n));
+  allPicks=allPicks.filter(p=>!(p.user_id===identityUserId&&p.match_number===n&&p.journey_id===journey.id));
   renderAll();
   const {error}=await sb.from("picks")
     .delete()
     .eq("room_id",roomId)
     .eq("journey_id",journey.id)
     .eq("match_number",n)
-    .eq("user_id",user.id);
+    .eq("user_id",identityUserId);
   saving=false;
   if(error){
     console.error(error);
@@ -1284,14 +1284,14 @@ async function saveNormalPick(n,val){
   if(saving) return; saving=true; setSync("","Guardando");
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(n);
-  const row={room_id:roomId,journey_id:journey.id,match_number:n,user_id:user.id,pick:val,home_goals:null,away_goals:null};
+  const row={room_id:roomId,journey_id:journey.id,match_number:n,user_id:identityUserId,pick:val,home_goals:null,away_goals:null};
   optimisticUpsert(row);
   renderAll();
   const {error}=await sb.from("picks").upsert(row,{onConflict:"room_id,journey_id,match_number,user_id"});
   saving=false; $$(".pick,.goal").forEach(b=>b.disabled=false);
   if(error){ console.error(error); if(previous) optimisticUpsert(previous); else {
-    picks=picks.filter(p=>!(p.user_id===user.id&&p.match_number===n));
-    allPicks=allPicks.filter(p=>!(p.user_id===user.id&&p.match_number===n&&p.journey_id===journey.id));
+    picks=picks.filter(p=>!(p.user_id===identityUserId&&p.match_number===n));
+    allPicks=allPicks.filter(p=>!(p.user_id===identityUserId&&p.match_number===n&&p.journey_id===journey.id));
   } renderAll(); setSync("error","Error"); toast("No se pudo guardar");}
   else {setSync("online","Sincronizado");}
 }
@@ -1302,7 +1302,7 @@ async function savePleno(team,val){
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(15);
   const row={
-    room_id:roomId,journey_id:journey.id,match_number:15,user_id:user.id,pick:null,
+    room_id:roomId,journey_id:journey.id,match_number:15,user_id:identityUserId,pick:null,
     home_goals: team==="home"?val:(previous?.home_goals||null),
     away_goals: team==="away"?val:(previous?.away_goals||null)
   };
@@ -1310,8 +1310,8 @@ async function savePleno(team,val){
   const {error}=await sb.from("picks").upsert(row,{onConflict:"room_id,journey_id,match_number,user_id"});
   saving=false; $$(".pick,.goal").forEach(b=>b.disabled=false);
   if(error){console.error(error); if(previous) optimisticUpsert(previous); else {
-    picks=picks.filter(p=>!(p.user_id===user.id&&p.match_number===15));
-    allPicks=allPicks.filter(p=>!(p.user_id===user.id&&p.match_number===15&&p.journey_id===journey.id));
+    picks=picks.filter(p=>!(p.user_id===identityUserId&&p.match_number===15));
+    allPicks=allPicks.filter(p=>!(p.user_id===identityUserId&&p.match_number===15&&p.journey_id===journey.id));
   } renderAll(); setSync("error","Error"); toast("No se pudo guardar");}
   else setSync("online","Sincronizado");
 }
@@ -1364,11 +1364,11 @@ function projectedScoreElige8(uid,j){
   };
 }
 function renderElige8Progress(){
-  const count=elige8Count(user.id);
+  const count=elige8Count(identityUserId);
   const el=$("#elige8Progress"),status=$("#elige8Status");
   if(!el||!journey) return;
-  const projected=projectedScoreElige8(user.id,journey);
-  const official=scoreElige8(user.id,journey);
+  const projected=projectedScoreElige8(identityUserId,journey);
+  const official=scoreElige8(identityUserId,journey);
   const prize=official.selected===8&&official.resolved===8&&official.correct===8;
   const panel=el.closest(".elige8-panel");
   if(panel)panel.classList.toggle("e8-prize-zone",prize);
@@ -1609,11 +1609,11 @@ function openHistory(jid){
 function subscribeRealtime(){
   if(channel)sb.removeChannel(channel);
   channel=sb.channel(`room-${roomId}`)
-    .on("postgres_changes",{event:"*",schema:"public",table:"picks",filter:`room_id=eq.${roomId}`},async()=>{const opponent=members.find(m=>m.user_id!==user.id),before=opponent?completedCountForUser(opponent.user_id):0;await loadAllPicks();picks=allPicks.filter(p=>p.journey_id===journey.id);const after=opponent?completedCountForUser(opponent.user_id):0;if(opponent&&before<15&&after===15)notifyUser(`${opponent.display_name} ha completado la jornada`,`Jornada ${journey.number}: ya tiene sus 15 pronósticos.`);renderAll();setSync("online","Sincronizado")})
+    .on("postgres_changes",{event:"*",schema:"public",table:"picks",filter:`room_id=eq.${roomId}`},async()=>{const opponent=members.find(m=>m.user_id!==identityUserId),before=opponent?completedCountForUser(opponent.user_id):0;await loadAllPicks();picks=allPicks.filter(p=>p.journey_id===journey.id);const after=opponent?completedCountForUser(opponent.user_id):0;if(opponent&&before<15&&after===15)notifyUser(`${opponent.display_name} ha completado la jornada`,`Jornada ${journey.number}: ya tiene sus 15 pronósticos.`);renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllElige8();renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_picks",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointPicks();renderJoint();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointElige8();renderJoint();setSync("online","Sincronizado")})
-    .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==user.id);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==identityUserId);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{const before=allMatches.map(m=>({...m}));await loadAllJourneys();await loadAllPicks();selectActiveJourney();detectNewResults(before);renderAll()})
     .subscribe(status=>{if(status==="SUBSCRIBED")setSync("online","Sincronizado");else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setSync("error","Sin conexión")});
@@ -1642,12 +1642,12 @@ async function saveRename(e){
     const {data,error}=await sb.from("members")
       .update({display_name:name})
       .eq("room_id",roomId)
-      .eq("user_id",user.id)
+      .eq("user_id",identityUserId)
       .select("room_id,user_id,slot,display_name")
       .single();
     if(error) throw error;
     myMember=data;
-    const idx=members.findIndex(m=>m.user_id===user.id);
+    const idx=members.findIndex(m=>m.user_id===identityUserId);
     if(idx>=0) members[idx]={...members[idx],...data};
     else members.push(data);
     renderAll();
