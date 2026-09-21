@@ -3518,3 +3518,91 @@ html[data-theme="dark"] .e8-prize-inline{
     border-radius:12px!important;
   }
 }
+
+/* Vincular varios dispositivos v63 */
+.device-link-section{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid var(--border);
+}
+.device-link-copy>span{
+  display:block;
+  font-size:.5rem;
+  font-weight:950;
+  letter-spacing:.11em;
+  color:var(--brand);
+}
+.device-link-copy>strong{
+  display:block;
+  margin-top:3px;
+  font-size:.78rem;
+  color:var(--text);
+}
+.device-link-copy>strong b{
+  color:var(--brand);
+}
+.device-link-copy>p{
+  margin:5px 0 10px;
+  color:var(--muted);
+  font-size:.58rem;
+  line-height:1.4;
+}
+.device-link-section>.secondary-btn{
+  width:100%;
+}
+.device-link-box{
+  margin-top:10px;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:var(--surface-2);
+}
+.device-link-box label{
+  display:block;
+  color:var(--muted);
+  font-size:.52rem;
+  font-weight:850;
+}
+.device-link-box input{
+  width:100%;
+  box-sizing:border-box;
+  margin-top:5px;
+  padding:8px 9px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:.52rem;
+}
+.device-link-actions{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:6px;
+  margin-top:8px;
+}
+.device-link-actions button{
+  margin:0;
+}
+.device-link-box>small{
+  display:block;
+  margin-top:7px;
+  text-align:center;
+  color:var(--muted);
+  font-size:.48rem;
+  line-height:1.3;
+}
+html[data-theme="dark"] .device-link-box{
+  background:var(--surface-3);
+}
+@media(max-width:430px){
+  .device-link-section{
+    margin-top:12px;
+    padding-top:12px;
+  }
+  .device-link-copy>strong{
+    font-size:.73rem;
+  }
+  .device-link-actions{
+    grid-template-columns:1fr 76px;
+  }
+}
