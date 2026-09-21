@@ -3666,3 +3666,94 @@ html[data-theme="dark"] .device-link-box{
   .brand-header-copy strong{font-size:.94rem}
   .brand-header-copy span{font-size:.51rem;margin-top:3px}
 }
+
+
+/* Marca integrada en tarjeta v70 */
+.brand-header{display:none!important}
+
+.room-card-unified{
+  padding:8px 10px!important;
+  margin-top:0!important;
+  margin-bottom:10px!important;
+  border-radius:16px!important;
+}
+.room-unified-top{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:8px!important;
+}
+.room-brand-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  flex:1 1 auto;
+}
+.room-brand-logo{
+  display:block;
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  object-fit:contain;
+}
+.room-brand-copy{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  line-height:1;
+}
+.room-brand-copy strong{
+  color:var(--text);
+  font-size:.84rem;
+  font-weight:950;
+  letter-spacing:-.025em;
+  white-space:nowrap;
+}
+.room-brand-copy span{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:.43rem;
+  font-weight:850;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.room-card-unified .room-meta-line{
+  margin-top:6px!important;
+  padding-top:6px!important;
+  border-top:1px solid var(--border)!important;
+  gap:6px!important;
+  flex-wrap:nowrap!important;
+  min-width:0!important;
+}
+.room-card-unified .room-playing-as{
+  flex:0 0 auto!important;
+}
+.room-card-unified .room-opponent-status{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  flex:1 1 auto!important;
+}
+@media(max-width:430px){
+  .app-shell{padding-top:6px!important}
+  .room-card-unified{
+    padding:7px 8px!important;
+    border-radius:15px!important;
+  }
+  .room-brand-title{gap:7px}
+  .room-brand-logo{
+    width:31px;
+    height:31px;
+    flex-basis:31px;
+  }
+  .room-brand-copy strong{font-size:.78rem}
+  .room-brand-copy span{font-size:.39rem;margin-top:3px}
+  .room-card-unified .room-meta-line{
+    margin-top:5px!important;
+    padding-top:5px!important;
+  }
+}
