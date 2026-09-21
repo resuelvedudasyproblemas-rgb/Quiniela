@@ -949,9 +949,9 @@ async function autoJointElige8(){
 
     let tier=0;
     if(e1&&e2&&same) tier=4;
-    else if(e1&&e2) tier=3;
-    else if(e1||e2) tier=2;
-    else if(same) tier=1;
+    else if(same) tier=3;
+    else if(e1&&e2) tier=2;
+    else if(e1||e2) tier=1;
 
     return {n:m.number,tier};
   }).sort((a,b)=>b.tier-a.tier||a.n-b.n);
