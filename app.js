@@ -1778,9 +1778,6 @@ $("#notificationBtn").addEventListener("click",openNotificationCenter);
 $("#closeNotificationDialog").addEventListener("click",()=>$("#notificationDialog").close());
 $("#enableNotificationsBtn").addEventListener("click",requestNotifications);
 $("#closeMatchDetailDialog").addEventListener("click",()=>$("#matchDetailDialog").close());
-$("#renameBtn").addEventListener("click",openRenameDialog);
-$("#closeRenameDialog").addEventListener("click",()=>$("#renameDialog").close());
-$("#renameForm").addEventListener("submit",saveRename);
 
 renderNotifications();
 init();
