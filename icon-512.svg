@@ -1,7 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<rect width="512" height="512" rx="118" fill="#0b5d3b"/>
-<circle cx="256" cy="246" r="142" fill="white"/>
-<path d="M256 157l70 51-27 82h-86l-27-82z" fill="#0b5d3b"/>
-<circle cx="379" cy="379" r="72" fill="#117a50"/>
-<text x="379" y="407" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="86" fill="white">Q</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nuestra Quiniela">
+  <defs>
+    <linearGradient id="b" x1="80" y1="100" x2="250" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1595ff"/><stop offset="1" stop-color="#075fe8"/>
+    </linearGradient>
+    <linearGradient id="o" x1="285" y1="90" x2="445" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffad16"/><stop offset="1" stop-color="#ff7100"/>
+    </linearGradient>
+    <linearGradient id="g" x1="256" y1="80" x2="330" y2="410" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5bd63d"/><stop offset="1" stop-color="#21ad50"/>
+    </linearGradient>
+    <radialGradient id="n" cx="42%" cy="34%" r="75%">
+      <stop stop-color="#0c3766"/><stop offset="1" stop-color="#03162b"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="250" cy="245" r="164" fill="none" stroke="url(#b)" stroke-width="72"/>
+  <path d="M250 81a164 164 0 0 1 0 328" fill="none" stroke="url(#o)" stroke-width="72" stroke-linecap="round"/>
+  <rect x="229" y="47" width="48" height="77" rx="23" fill="url(#g)"/>
+  <path d="M301 397c20-8 39-20 55-35l29 30c-19 19-42 34-68 45z" fill="url(#g)"/>
+  <path d="M363 360L445 442" fill="none" stroke="url(#o)" stroke-width="72" stroke-linecap="round"/>
+
+  <circle cx="250" cy="245" r="109" fill="url(#n)"/>
+  <g fill="#fff">
+    <path d="M250 163l39 29-15 46h-48l-15-46z"/>
+    <path d="M187 185l38-18 26 27-15 45-43 4-23-34z"/>
+    <path d="M313 185l-38-18-26 27 15 45 43 4 23-34z"/>
+    <path d="M182 273l42-10 29 35-20 41-44-2-24-35z"/>
+    <path d="M318 273l-42-10-29 35 20 41 44-2 24-35z"/>
+    <path d="M250 326l37 22-8 38h-58l-8-38z"/>
+  </g>
 </svg>

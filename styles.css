@@ -3606,3 +3606,63 @@ html[data-theme="dark"] .device-link-box{
     grid-template-columns:1fr 76px;
   }
 }
+
+
+/* Identidad Nuestra Quiniela v68 */
+.brand-header{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:9px;
+  margin:0 2px 9px;
+  padding:2px 1px 3px;
+}
+.brand-header-logo{
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  display:block;
+  object-fit:contain;
+}
+.brand-header-copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  line-height:1;
+}
+.brand-header-copy strong{
+  color:var(--text);
+  font-size:1.02rem;
+  font-weight:950;
+  letter-spacing:-.025em;
+}
+.brand-header-copy span{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:.58rem;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.brand-mark-standalone{
+  display:block;
+  width:58px;
+  height:58px;
+  object-fit:contain;
+  margin:0 0 14px;
+}
+@media(max-width:430px){
+  .app-shell{padding-top:10px!important}
+  .brand-header{
+    gap:8px;
+    margin-bottom:7px;
+  }
+  .brand-header-logo{
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+  }
+  .brand-header-copy strong{font-size:.94rem}
+  .brand-header-copy span{font-size:.51rem;margin-top:3px}
+}
