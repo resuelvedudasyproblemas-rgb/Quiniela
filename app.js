@@ -633,12 +633,167 @@ function jointReadonlySignsHtml(selection,playerClass){
   const value=String(selection||"");
   return `<div class="joint-readonly-signs ${playerClass}">${JOINT_SIGN_ORDER.map(sign=>`<span class="${value.includes(sign)?"selected":""}">${sign}</span>`).join("")}</div>`;
 }
+function euro(value){
+  return Number(value||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+}
+function jointBetRecommendation(j=journey){
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  if(!j||!p1||!p2)return {ready:false,reason:"Faltan jugadores"};
+  const rows=[];
+  let missing1=0,missing2=0;
+  for(let n=1;n<=14;n++){
+    const a=pickForJourney(p1.user_id,j.id,n)?.pick||"";
+    const b=pickForJourney(p2.user_id,j.id,n)?.pick||"";
+    if(!a)missing1++;
+    if(!b)missing2++;
+    rows.push({n,a,b,diff:Boolean(a&&b&&a!==b)});
+  }
+  const p15a=displayPickForJourney(p1.user_id,j.id,15);
+  const p15b=displayPickForJourney(p2.user_id,j.id,15);
+  const p15Ready=p15a!=="—"&&p15b!=="—";
+  const e8Numbers=jointElige8Selections(j.id).map(e=>e.match_number);
+  const e8Set=new Set(e8Numbers);
+  const differences=rows.filter(r=>r.diff);
+  const e8Differences=differences.filter(r=>e8Set.has(r.n));
+  const p15Different=p15Ready&&p15a!==p15b;
+  const ready=!missing1&&!missing2&&p15Ready;
+
+  if(!ready){
+    const waiting=[];
+    if(missing1)waiting.push(`${p1.display_name}: ${14-missing1}/14`);
+    if(missing2)waiting.push(`${p2.display_name}: ${14-missing2}/14`);
+    if(!p15Ready)waiting.push("Pleno al 15 pendiente");
+    return {
+      ready:false,
+      p1,p2,rows,p15a,p15b,e8Numbers,
+      title:"Propuesta pendiente",
+      reason:waiting.join(" · ")||"Esperando pronósticos",
+      badge:"Esperando"
+    };
+  }
+
+  const QUINIELA_PRICE=.75;
+  const E8_PRICE=.50;
+  const e8Ready=e8Numbers.length===8;
+  let mode="two-columns";
+  if(differences.length===1 && e8Differences.length===0 && !p15Different) mode="one-double";
+  else if(differences.length===0 && !p15Different) mode="common";
+
+  let quinielaBets=mode==="common"?1:2;
+  let e8Bets=1;
+  let total=quinielaBets*QUINIELA_PRICE+(e8Ready?e8Bets*E8_PRICE:0);
+  let title="",reason="",badge="";
+
+  if(mode==="one-double"){
+    const d=differences[0];
+    title="1 bloque con 1 doble + Elige 8";
+    badge="1 doble";
+    reason=`Solo diferís en el partido ${d.n} y no está en vuestro Elige 8. Un doble cubre las dos opiniones sin encarecer el Elige 8.`;
+  }else if(mode==="common"){
+    title="1 columna común + Elige 8";
+    badge="Coincidís";
+    reason="Coincidís en los 14 partidos y en el Pleno al 15. No añado un doble inventado sin información vuestra.";
+  }else{
+    title="2 columnas + Elige 8";
+    badge=`${differences.length} diferencia${differences.length===1?"":"s"}`;
+    if(e8Differences.length){
+      reason=`Tenéis ${differences.length} diferencia${differences.length===1?"":"s"}. Pongo a ${p2.display_name} en la primera columna para que el Elige 8 use su signo cuando discrepáis.`;
+    }else if(p15Different){
+      reason=`Tenéis ${differences.length} diferencia${differences.length===1?"":"s"} y también cambia el Pleno al 15. Dos columnas conservan exactamente las dos quinielas.`;
+    }else{
+      const multiBets=Math.pow(2,differences.length);
+      reason=`Tenéis ${differences.length} diferencias. Hacerlas todas dobles generaría ${multiBets} apuestas; con dos columnas mantenéis una de ${p2.display_name} y otra de ${p1.display_name} por mucho menos.`;
+    }
+  }
+
+  const multipleBets=Math.pow(2,differences.length);
+  const multipleE8Bets=Math.pow(2,e8Differences.length);
+  const multipleCost=multipleBets*QUINIELA_PRICE+(e8Ready?multipleE8Bets*E8_PRICE:0);
+
+  return {
+    ready:true,p1,p2,rows,p15a,p15b,e8Numbers,e8Set,differences,e8Differences,
+    mode,title,reason,badge,quinielaBets,e8Bets,total,e8Ready,multipleBets,multipleCost
+  };
+}
+function jointPlanGrid(rows,which,e8Set){
+  return `<div class="joint-plan-grid">${rows.map(r=>{
+    const sign=which==="double"&&r.diff?normalizeJointSelection((r.b||"")+(r.a||"")):(which==="p2"?r.b:r.a);
+    return `<div class="joint-plan-cell ${e8Set?.has(r.n)?"is-e8":""}"><span>${r.n}${e8Set?.has(r.n)?'<i>★</i>':""}</span><strong>${escapeHtml(sign||"—")}</strong></div>`;
+  }).join("")}</div>`;
+}
+function renderJointPlan(summary,j){
+  const plan=jointBetRecommendation(j);
+  if(!plan.ready){
+    summary.innerHTML=`<section class="joint-plan-card pending"><div class="joint-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>${escapeHtml(plan.title)}</h3></div><b>${escapeHtml(plan.badge||"Pendiente")}</b></div><p>${escapeHtml(plan.reason)}</p></section>`;
+    return;
+  }
+
+  const e8Text=plan.e8Ready
+    ? `Elige 8: partidos ${plan.e8Numbers.join(", ")}`
+    : `Elige 8 conjunto: ${plan.e8Numbers.length}/8 seleccionados`;
+  const totalText=plan.e8Ready?euro(plan.total):euro(plan.quinielaBets*.75)+" + Elige 8";
+  let detail="";
+
+  if(plan.mode==="one-double"){
+    detail=`
+      <div class="joint-plan-block">
+        <div class="joint-plan-block-head"><div><span>BLOQUE MÚLTIPLE</span><strong>Base ${escapeHtml(plan.p2.display_name)} · doble en P${plan.differences[0].n}</strong></div><b>2 apuestas</b></div>
+        ${jointPlanGrid(plan.rows,"double",plan.e8Set)}
+        <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15b)}</strong></div>
+      </div>`;
+  }else if(plan.mode==="common"){
+    detail=`
+      <div class="joint-plan-block">
+        <div class="joint-plan-block-head"><div><span>COLUMNA COMÚN</span><strong>${escapeHtml(plan.p1.display_name)} = ${escapeHtml(plan.p2.display_name)}</strong></div><b>1 apuesta</b></div>
+        ${jointPlanGrid(plan.rows,"p2",plan.e8Set)}
+        <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15b)}</strong></div>
+      </div>`;
+  }else{
+    detail=`
+      <div class="joint-plan-columns">
+        <div class="joint-plan-block player-two-plan">
+          <div class="joint-plan-block-head"><div><span>COLUMNA 1 · BASE DEL ELIGE 8</span><strong>${escapeHtml(plan.p2.display_name)}</strong></div><b>1</b></div>
+          ${jointPlanGrid(plan.rows,"p2",plan.e8Set)}
+          <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15b)}</strong></div>
+        </div>
+        <div class="joint-plan-block player-one-plan">
+          <div class="joint-plan-block-head"><div><span>COLUMNA 2</span><strong>${escapeHtml(plan.p1.display_name)}</strong></div><b>2</b></div>
+          ${jointPlanGrid(plan.rows,"p1",plan.e8Set)}
+          <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15a)}</strong></div>
+        </div>
+      </div>`;
+  }
+
+  const alt=plan.differences.length>=2
+    ? `<p class="joint-plan-alt">Si convirtierais las ${plan.differences.length} diferencias en dobles: <strong>${plan.multipleBets} apuestas</strong>${plan.e8Ready?` · aprox. <strong>${euro(plan.multipleCost)}</strong> con Elige 8`:""}.</p>`
+    :"";
+
+  summary.innerHTML=`
+    <section class="joint-plan-card">
+      <div class="joint-plan-top">
+        <div><span>PROPUESTA DE APUESTA</span><h3>${escapeHtml(plan.title)}</h3></div>
+        <div class="joint-plan-price"><strong>${escapeHtml(totalText)}</strong><small>${escapeHtml(plan.badge)}</small></div>
+      </div>
+      <p>${escapeHtml(plan.reason)}</p>
+      <div class="joint-plan-e8">${escapeHtml(e8Text)}${plan.e8Ready?'<b>0,50 €</b>':""}</div>
+      <details class="joint-plan-details">
+        <summary><span>Ver exactamente qué marcar</span><b>⌄</b></summary>
+        <div class="joint-plan-detail-body">
+          ${detail}
+          <div class="joint-plan-cost">
+            <span>Quiniela</span><strong>${plan.quinielaBets} × 0,75 € = ${euro(plan.quinielaBets*.75)}</strong>
+            <span>Elige 8</span><strong>${plan.e8Ready?euro(.5):"Pendiente"}</strong>
+            <span>Total</span><strong>${escapeHtml(totalText)}</strong>
+          </div>
+          ${alt}
+        </div>
+      </details>
+    </section>`;
+}
 function renderJoint(){
   const summary=$("#jointSummary"),list=$("#jointList");if(!summary||!list||!journey)return;
-  const p1=memberBySlot(1),p2=memberBySlot(2);let singles=0,doubles=0,triples=0,pending=0;
-  for(let n=1;n<=14;n++){const len=effectiveJointSelection(n).length;if(!len)pending++;else if(len===1)singles++;else if(len===2)doubles++;else triples++}
-  const combinations=Math.pow(2,doubles)*Math.pow(3,triples);
-  summary.innerHTML=`<div class="joint-summary-grid"><div><span>Simples</span><strong>${singles}</strong></div><div><span>Dobles</span><strong>${doubles}</strong></div><div><span>Triples</span><strong>${triples}</strong></div><div><span>Pendientes</span><strong>${pending}</strong></div></div><p>${pending?"Aún faltan pronósticos para cerrar la conjunta.":`${combinations.toLocaleString("es-ES")} combinación${combinations===1?"":"es"} resultante${combinations===1?"":"s"}.`}</p>`;
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  renderJointPlan(summary,journey);
   const locked=!journeyCanEdit(journey),normal=matches.filter(m=>m.number<=14);
   list.innerHTML=normal.map(m=>{
     const sel=effectiveJointSelection(m.number),override=jointOverrideFor(m.number),kind=jointSelectionKind(m.number);
