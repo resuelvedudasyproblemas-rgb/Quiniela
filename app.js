@@ -721,22 +721,24 @@ function jointBetRecommendation(j=journey){
   }
   const p15a=displayPickForJourney(p1.user_id,j.id,15);
   const p15b=displayPickForJourney(p2.user_id,j.id,15);
-  const p15Ready=p15a!=="—"&&p15b!=="—";
+  const p15InputsReady=p15a!=="—"&&p15b!=="—";
+  const p15Joint=effectiveJointPlenoSelection(j.id);
+  const p15Ready=Boolean(p15Joint);
   const e8Numbers=jointElige8Selections(j.id).map(e=>e.match_number);
   const e8Set=new Set(e8Numbers);
   const differences=rows.filter(r=>r.diff);
   const e8Differences=differences.filter(r=>e8Set.has(r.n));
-  const p15Different=p15Ready&&p15a!==p15b;
-  const ready=!missing1&&!missing2&&p15Ready;
+  const ready=!missing1&&!missing2&&p15InputsReady&&p15Ready;
 
   if(!ready){
     const waiting=[];
     if(missing1)waiting.push(`${p1.display_name}: ${14-missing1}/14`);
     if(missing2)waiting.push(`${p2.display_name}: ${14-missing2}/14`);
-    if(!p15Ready)waiting.push("Pleno al 15 pendiente");
+    if(!p15InputsReady)waiting.push("Falta completar el Pleno al 15");
+    else if(!p15Ready)waiting.push("Elegid el Pleno al 15 conjunto");
     return {
       ready:false,
-      p1,p2,rows,p15a,p15b,e8Numbers,
+      p1,p2,rows,p15a,p15b,p15Joint,e8Numbers,
       title:"Propuesta pendiente",
       reason:waiting.join(" · ")||"Esperando pronósticos",
       badge:"Esperando"
@@ -747,8 +749,8 @@ function jointBetRecommendation(j=journey){
   const E8_PRICE=.50;
   const e8Ready=e8Numbers.length===8;
   let mode="two-columns";
-  if(differences.length===1 && e8Differences.length===0 && !p15Different) mode="one-double";
-  else if(differences.length===0 && !p15Different) mode="common";
+  if(differences.length===1 && e8Differences.length===0) mode="one-double";
+  else if(differences.length===0) mode="common";
 
   let quinielaBets=mode==="common"?1:2;
   let e8Bets=1;
@@ -763,26 +765,23 @@ function jointBetRecommendation(j=journey){
   }else if(mode==="common"){
     title="1 columna común + Elige 8";
     badge="Coincidís";
-    reason="Coincidís en los 14 partidos y en el Pleno al 15. No añado un doble inventado sin información vuestra.";
+    reason="Coincidís en los 14 partidos. El Pleno al 15 se juega una sola vez para todo el boleto.";
   }else{
     title="2 columnas + Elige 8";
     badge=`${differences.length} diferencia${differences.length===1?"":"s"}`;
     if(e8Differences.length){
-      reason=`Tenéis ${differences.length} diferencia${differences.length===1?"":"s"}. Pongo a ${p2.display_name} en la primera columna para que el Elige 8 use su signo cuando discrepáis.`;
-    }else if(p15Different){
-      reason=`Tenéis ${differences.length} diferencia${differences.length===1?"":"s"} y también cambia el Pleno al 15. Dos columnas conservan exactamente las dos quinielas.`;
+      reason=`Tenéis ${differences.length} diferencia${differences.length===1?"":"s"}. Pongo a ${p2.display_name} en la primera columna para que el Elige 8 use su signo cuando discrepáis. El Pleno al 15 es único para las dos columnas.`;
     }else{
       const multiBets=Math.pow(2,differences.length);
-      reason=`Tenéis ${differences.length} diferencias. Hacerlas todas dobles generaría ${multiBets} apuestas; con dos columnas mantenéis una de ${p2.display_name} y otra de ${p1.display_name} por mucho menos.`;
+      reason=`Tenéis ${differences.length} diferencias. Hacerlas todas dobles generaría ${multiBets} apuestas; con dos columnas mantenéis una de ${p2.display_name} y otra de ${p1.display_name} por mucho menos. El Pleno al 15 es común.`;
     }
   }
 
   const multipleBets=Math.pow(2,differences.length);
-  const multipleE8Bets=Math.pow(2,e8Differences.length);
-  const multipleCost=multipleBets*QUINIELA_PRICE+(e8Ready?multipleE8Bets*E8_PRICE:0);
+  const multipleCost=multipleBets*QUINIELA_PRICE+(e8Ready?E8_PRICE:0);
 
   return {
-    ready:true,p1,p2,rows,p15a,p15b,e8Numbers,e8Set,differences,e8Differences,
+    ready:true,p1,p2,rows,p15a,p15b,p15Joint,e8Numbers,e8Set,differences,e8Differences,
     mode,title,reason,badge,quinielaBets,e8Bets,total,e8Ready,multipleBets,multipleCost
   };
 }
@@ -810,14 +809,12 @@ function renderJointPlan(summary,j){
       <div class="joint-plan-block">
         <div class="joint-plan-block-head"><div><span>BLOQUE MÚLTIPLE</span><strong>Base ${escapeHtml(plan.p2.display_name)} · doble en P${plan.differences[0].n}</strong></div><b>2 apuestas</b></div>
         ${jointPlanGrid(plan.rows,"double",plan.e8Set)}
-        <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15b)}</strong></div>
       </div>`;
   }else if(plan.mode==="common"){
     detail=`
       <div class="joint-plan-block">
         <div class="joint-plan-block-head"><div><span>COLUMNA COMÚN</span><strong>${escapeHtml(plan.p1.display_name)} = ${escapeHtml(plan.p2.display_name)}</strong></div><b>1 apuesta</b></div>
         ${jointPlanGrid(plan.rows,"p2",plan.e8Set)}
-        <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15b)}</strong></div>
       </div>`;
   }else{
     detail=`
@@ -825,12 +822,10 @@ function renderJointPlan(summary,j){
         <div class="joint-plan-block player-two-plan">
           <div class="joint-plan-block-head"><div><span>COLUMNA 1 · BASE DEL ELIGE 8</span><strong>${escapeHtml(plan.p2.display_name)}</strong></div><b>1</b></div>
           ${jointPlanGrid(plan.rows,"p2",plan.e8Set)}
-          <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15b)}</strong></div>
         </div>
         <div class="joint-plan-block player-one-plan">
           <div class="joint-plan-block-head"><div><span>COLUMNA 2</span><strong>${escapeHtml(plan.p1.display_name)}</strong></div><b>2</b></div>
           ${jointPlanGrid(plan.rows,"p1",plan.e8Set)}
-          <div class="joint-plan-p15"><span>Pleno al 15</span><strong>${escapeHtml(plan.p15a)}</strong></div>
         </div>
       </div>`;
   }
@@ -851,6 +846,7 @@ function renderJointPlan(summary,j){
         <summary><span>Ver exactamente qué marcar</span><b>⌄</b></summary>
         <div class="joint-plan-detail-body">
           ${detail}
+          <div class="joint-plan-p15 joint-plan-p15-shared"><span>Pleno al 15 · único para todo el boleto</span><strong>${escapeHtml(plan.p15Joint)}</strong></div>
           <div class="joint-plan-cost">
             <span>Quiniela</span><strong>${plan.quinielaBets} × 0,75 € = ${euro(plan.quinielaBets*.75)}</strong>
             <span>Elige 8</span><strong>${plan.e8Ready?euro(.5):"Pendiente"}</strong>

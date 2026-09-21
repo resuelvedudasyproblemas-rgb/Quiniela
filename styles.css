@@ -4426,3 +4426,20 @@ html[data-theme="dark"] .joint-plan-cell.is-e8{
     justify-content:flex-start;
   }
 }
+
+
+/* Pleno único en propuesta v78 */
+.joint-plan-p15-shared{
+  margin-top:8px!important;
+  padding:9px 10px!important;
+  border:1px solid color-mix(in srgb,var(--joint-color) 28%,var(--border))!important;
+  background:var(--joint-soft)!important;
+}
+.joint-plan-p15-shared span{
+  color:var(--joint-color)!important;
+  font-weight:900!important;
+}
+.joint-plan-p15-shared strong{
+  color:var(--joint-color)!important;
+  font-size:.78rem!important;
+}
