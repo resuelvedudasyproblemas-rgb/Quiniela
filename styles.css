@@ -5233,3 +5233,146 @@ html[data-game="quinigol"] #qgRoot{
     margin-top:6px!important;
   }
 }
+
+
+/* Quinigol propuesta y TV compacta v88 */
+.qg-card-head{
+  grid-template-columns:31px minmax(0,1fr) auto auto!important;
+}
+.qg-card-head>.qg-tv{
+  margin:0!important;
+  padding:4px 5px!important;
+  min-height:26px;
+  align-self:center;
+  border-radius:9px!important;
+  box-shadow:none!important;
+  white-space:nowrap;
+}
+.qg-card-head>.qg-tv .tv-icon{
+  font-size:.5rem!important;
+}
+.qg-card-head>.qg-tv .tv-title{
+  font-size:.43rem!important;
+}
+.qg-card-head>.qg-tv .tv-channel,
+.qg-card-head>.qg-tv .tv-pending{
+  max-width:150px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.43rem!important;
+}
+.qg-card-head>.qg-tv .tv-more{
+  max-width:none;
+}
+.qg-plan-block{
+  margin-top:9px;
+  padding:8px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:var(--surface);
+}
+.qg-plan-block-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:6px;
+}
+.qg-plan-block-head span{
+  color:var(--muted);
+  font-size:.43rem;
+  font-weight:950;
+  letter-spacing:.08em;
+}
+.qg-plan-block-head strong{
+  font-size:.58rem;
+}
+.qg-plan-columns{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+.qg-plan-columns .qg-plan-grid{
+  margin-top:0;
+}
+.qg-plan-block.player-one{
+  border-top:3px solid var(--player-one);
+}
+.qg-plan-block.player-two{
+  border-top:3px solid var(--player-two);
+}
+.qg-plan-cell.multiple{
+  border-color:color-mix(in srgb,var(--joint-color) 35%,var(--border));
+  background:var(--joint-soft);
+}
+.qg-plan-cell.multiple span{
+  color:var(--joint-color);
+}
+.qg-plan-cell.multiple strong{
+  white-space:nowrap;
+  font-size:.58rem;
+}
+.qg-plan-cell.multiple strong b{
+  color:var(--muted);
+  font-weight:700;
+}
+.qg-plan-alternative{
+  margin-top:8px;
+  padding:7px 9px;
+  border-radius:10px;
+  background:var(--surface-3);
+  color:var(--muted);
+  font-size:.5rem;
+  line-height:1.35;
+}
+.qg-plan-alternative strong{
+  color:var(--text);
+}
+.qg-joint-reset{
+  padding-top:2px!important;
+  font-size:.47rem!important;
+}
+@media(max-width:650px){
+  .qg-card-head{
+    grid-template-columns:31px minmax(0,1fr) auto!important;
+  }
+  .qg-card-head>.qg-tv{
+    grid-column:2;
+    grid-row:2;
+    justify-self:start;
+    max-width:100%;
+    margin-top:3px!important;
+  }
+  .qg-card-head>.qg-card-kickoff{
+    grid-column:3;
+    grid-row:1/3;
+    align-self:center;
+  }
+  .qg-card-head>.qg-mode{
+    grid-column:3;
+    grid-row:1/3;
+    align-self:center;
+  }
+  .qg-plan-columns{
+    grid-template-columns:1fr;
+    gap:0;
+  }
+}
+@media(max-width:430px){
+  .qg-card-head>.qg-tv{
+    padding:3px 5px!important;
+    min-height:23px;
+  }
+  .qg-card-head>.qg-tv .tv-title,
+  .qg-card-head>.qg-tv .tv-channel,
+  .qg-card-head>.qg-tv .tv-pending{
+    font-size:.4rem!important;
+  }
+  .qg-plan-block{
+    padding:7px;
+  }
+  .qg-plan-cell.multiple strong{
+    font-size:.53rem;
+  }
+}
