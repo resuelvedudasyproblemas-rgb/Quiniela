@@ -191,10 +191,18 @@ function normalizedGoalScore(score){
   return score>=3?"M":String(score);
 }
 function journeyResolvedCount(j){
+  if(!j)return 0;
+  if(!loadedJourneyIds.has(j.id))return j.status==="finished"?15:0;
   const ms=matchesForJourney(j.id);
   return ms.filter(matchResolved).length;
 }
 function journeyDisplayState(j){
+  if(!j)return "closed";
+  if(!loadedJourneyIds.has(j.id)){
+    if(j.status==="finished")return "finished";
+    if(j.status==="open")return "open";
+    return "closed";
+  }
   const resolved=journeyResolvedCount(j);
   const total=matchesForJourney(j.id).length;
   if(total===15 && resolved===15) return "finished";
@@ -293,6 +301,7 @@ function resultBarHtml(m,p){
 }
 function finishedJourneyPrizeState(j){
   if(!j||journeyDisplayState(j)!=="finished")return "";
+  if(!loadedJourneyIds.has(j.id))return journeySummaries.get(Number(j.id))?.prize_state||"miss";
   const normal=identityUserId?scoreUserJourney(identityUserId,j):{correct:0,resolved:0};
   const e8=scoreJointElige8(j);
   const normalPrize=normal.resolved===15&&normal.correct>=10;
@@ -334,11 +343,19 @@ function renderJourneySwitcher(){
   el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
     archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
   }`;
-  $$("#journeySwitcher [data-journey-id]").forEach(btn=>btn.addEventListener("click",()=>{
-    selectedJourneyId=Number(btn.dataset.journeyId);
-    saveSelectedJourneyId(selectedJourneyId);
-    selectActiveJourney();
-    renderAll();
+  $$("#journeySwitcher [data-journey-id]").forEach(btn=>btn.addEventListener("click",async()=>{
+    const id=Number(btn.dataset.journeyId);
+    try{
+      await ensureJourneyLoaded(id);
+      selectedJourneyId=id;
+      saveSelectedJourneyId(selectedJourneyId);
+      selectActiveJourney();
+      renderAll();
+    }catch(e){
+      console.error(e);
+      setSync("error","Error");
+      toast("No se pudo cargar la jornada");
+    }
   }));
 }
 
@@ -1310,9 +1327,13 @@ function openMatchDetail(n,jid=journey?.id){
   $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>FINAL</small><strong>${m.home_score}–${m.away_score}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"✓ Acierto":"✕ Fallo"):""}${n<=14&&p1&&isElige8(p1.user_id,n,jid)?" · ★ E8":""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"✓ Acierto":"✕ Fallo"):""}${n<=14&&p2&&isElige8(p2.user_id,n,jid)?" · ★ E8":""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
   $("#matchDetailDialog").showModal();
 }
-function activateView(view){
+async function activateView(view){
   const allowed=["play","joint","compare","stats","history"],next=allowed.includes(view)?view:"play";
-  $$(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));$$(".view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
+  if((next==="stats"||next==="history")&&!historyFullyLoaded){
+    try{await ensureAllJourneysLoaded()}catch(e){console.error(e);toast("No se pudo cargar todo el historial")}
+  }
+  $$("#quinielaTabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));
+  $$("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
   if(next==="joint")renderJoint();if(next==="compare")renderCompare();if(next==="stats")renderStats();if(next==="history")renderHistory();
 }
 function roomSummaryText(){
@@ -2302,7 +2323,7 @@ async function shareRoom(){
 applyTheme(currentTheme(),false);
 $("#themeToggle")?.addEventListener("click",toggleTheme);
 
-$$(".tab").forEach(tab=>tab.addEventListener("click",()=>activateView(tab.dataset.view)));
+$$("#quinielaTabs .tab").forEach(tab=>tab.addEventListener("click",()=>activateView(tab.dataset.view)));
 $$(".match-filter").forEach(btn=>btn.addEventListener("click",()=>setMatchFilter(btn.dataset.matchFilter)));
 $("#createRoomBtn")?.addEventListener("click",createRoom);
 $("#joinRoomBtn").addEventListener("click",joinRoom);
