@@ -6547,3 +6547,12 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     width:100%!important;
   }
 }
+
+
+/* Colores propios del selector de juego */
+.game-choice[data-game="quiniela"]>strong{
+  color:#e5484d!important;
+}
+.game-choice[data-game="quinigol"]>strong{
+  color:#3b82f6!important;
+}
