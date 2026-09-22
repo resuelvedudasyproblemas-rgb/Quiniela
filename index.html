@@ -512,20 +512,67 @@ function selectJourney(){
   journey=saved||open[0]||playing[0]||[...journeys].sort((a,b)=>b.number-a.number)[0];
   selectedJourneyId=journey.id;savePref("quinigol-journey",journey.id);matches=msFor(journey.id);
 }
+function qgMergeRows(base,incoming,keyFn){
+  const map=new Map((base||[]).map(x=>[keyFn(x),x]));
+  for(const row of incoming||[])map.set(keyFn(row),row);
+  return [...map.values()];
+}
+function qgInitialJourneyIds(){
+  const ids=journeys.slice(0,3).map(j=>j.id);
+  const saved=Number(readPref("quinigol-journey",""));
+  if(Number.isFinite(saved)&&saved>0&&journeys.some(j=>j.id===saved)&&!ids.includes(saved))ids.push(saved);
+  return ids;
+}
+async function qgLoadSummaries(){
+  const {data,error}=await sb.rpc("get_qg_journey_summaries",{p_room_id:roomId});
+  if(error){console.warn("Resumen Quinigol:",error);return}
+  qgJourneySummaries=new Map((data||[]).map(x=>[Number(x.journey_id),x]));
+}
+async function qgLoadBundle(ids,{replace=false}={}){
+  const clean=[...new Set((ids||[]).map(Number).filter(Boolean))];
+  if(!clean.length)return;
+  const [mr,pr,jpr]=await Promise.all([
+    sb.from("qg_matches").select("*").in("journey_id",clean).order("number"),
+    sb.from("qg_picks").select("*").eq("room_id",roomId).in("journey_id",clean),
+    sb.from("qg_joint_picks").select("*").eq("room_id",roomId).in("journey_id",clean)
+  ]);
+  for(const r of [mr,pr,jpr])if(r.error)throw r.error;
+  if(replace){
+    allMatches=allMatches.filter(x=>!clean.includes(x.journey_id));
+    allPicks=allPicks.filter(x=>!clean.includes(x.journey_id));
+    allJoint=allJoint.filter(x=>!clean.includes(x.journey_id));
+  }
+  allMatches=qgMergeRows(allMatches,mr.data||[],x=>`${x.journey_id}:${x.number}`);
+  allPicks=qgMergeRows(allPicks,pr.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  allJoint=qgMergeRows(allJoint,jpr.data||[],x=>`${x.journey_id}:${x.match_number}`);
+  clean.forEach(id=>qgLoadedJourneyIds.add(id));
+}
+async function ensureQGJourneyLoaded(jid,{quiet=false}={}){
+  const id=Number(jid);
+  if(qgLoadedJourneyIds.has(id)&&msFor(id).length)return;
+  if(!quiet)toast("Cargando jornada completa…");
+  await qgLoadBundle([id]);
+}
+async function ensureAllQGJourneysLoaded(){
+  if(qgHistoryFullyLoaded)return;
+  const missing=journeys.map(j=>j.id).filter(id=>!qgLoadedJourneyIds.has(id));
+  for(let i=0;i<missing.length;i+=16)await qgLoadBundle(missing.slice(i,i+16));
+  qgHistoryFullyLoaded=true;
+  if(journey)matches=msFor(journey.id);
+}
 async function load(){
-  const [jr,mr,pr,jpr,mem]=await Promise.all([
+  const [jr,mem]=await Promise.all([
     sb.from("qg_journeys").select("*").order("number",{ascending:false}),
-    sb.from("qg_matches").select("*").order("number"),
-    sb.from("qg_picks").select("*").eq("room_id",roomId),
-    sb.from("qg_joint_picks").select("*").eq("room_id",roomId),
     sb.from("members").select("room_id,user_id,slot,display_name").eq("room_id",roomId).order("slot")
   ]);
-  for(const r of [jr,mr,pr,jpr,mem])if(r.error)throw r.error;
-  journeys=jr.data||[];allMatches=mr.data||[];allPicks=pr.data||[];allJoint=jpr.data||[];members=mem.data||[];
+  for(const r of [jr,mem])if(r.error)throw r.error;
+  journeys=jr.data||[];members=mem.data||[];
   const saved=Number(readPref("quinigol-journey",""));selectedJourneyId=Number.isFinite(saved)&&saved>0?saved:null;
   const v=readPref("quinigol-view","play");activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
   const f=readPref("quinigol-filter","all");activeFilter=["all","pending","correct","wrong"].includes(f)?f:"all";
   const g=readPref("quiniela-active-game","quiniela");activeGame=g==="quinigol"?"quinigol":"quiniela";
+  for(const id of qgInitialJourneyIds())qgLoadedJourneyIds.add(id);
+  await Promise.all([qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),qgLoadSummaries()]);
   selectJourney();
 }
 function currentDraft(n){
