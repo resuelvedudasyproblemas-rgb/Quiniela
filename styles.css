@@ -6641,3 +6641,42 @@ label{
 .qg-card-head>.match-competition-badge{
   margin:0;
 }
+
+
+/* Competicion visible tambien en conjunta y comparar */
+.match-competition-badge{
+  position:relative;
+}
+.match-competition-fallback{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  font-size:.43rem;
+  line-height:1;
+  font-weight:950;
+  color:var(--muted);
+  background:var(--surface-2);
+}
+.match-competition-badge img{
+  position:relative;
+  z-index:1;
+}
+.match-index-competition,
+.compare-number-competition{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-width:34px;
+}
+.compare-number-competition .compare-number{
+  width:100%;
+}
+.joint-builder-head>.match-index-competition{
+  justify-self:center;
+}
+.compare-card-head>.compare-number-competition{
+  justify-self:center;
+}

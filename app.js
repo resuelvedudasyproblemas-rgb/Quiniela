@@ -1102,7 +1102,7 @@ function renderJoint(){
     const p1pick=p1?pickForJourney(p1.user_id,journey.id,m.number)?.pick:null,p2pick=p2?pickForJourney(p2.user_id,journey.id,m.number)?.pick:null;
     return `<article class="joint-builder-card">
       <div class="joint-builder-head">
-        <span class="match-index">${String(m.number).padStart(2,"0")}</span>
+        <div class="match-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div>
         <div class="joint-builder-fixture">${fixtureMiniHtml(m)}</div>
         <span class="joint-kickoff" title="${escapeHtml(formatKickoff(m.kickoff))}">◷ ${escapeHtml(formatJointKickoff(m.kickoff))}</span>
         <div class="joint-builder-tools"><span class="joint-mode ${override?"manual":""}">${kind}</span></div>
@@ -1134,7 +1134,7 @@ function renderJoint(){
     const p15kind=jointPlenoKind(journey.id);
     list.insertAdjacentHTML("beforeend",`<article class="joint-builder-card p15-joint">
       <div class="joint-builder-head">
-        <span class="match-index">15</span>
+        <div class="match-index-competition"><span class="match-index">15</span>${matchCompetitionBadgeHtml(p15)}</div>
         <div class="joint-builder-fixture">${fixtureMiniHtml(p15)}</div>
         <span class="joint-kickoff" title="${escapeHtml(formatKickoff(p15.kickoff))}">◷ ${escapeHtml(formatJointKickoff(p15.kickoff))}</span>
         <div class="joint-builder-tools"><span class="joint-mode ${p15override?"manual":""}">${escapeHtml(p15kind)}</span></div>
@@ -1872,7 +1872,7 @@ function matchCompetitionBadgeHtml(m){
   if(!name||!logo)return "";
   const primary=logoStorageUrl(logo);
   const fallback=logoProxyUrl(logo);
-  return `<span class="match-competition-badge" title="${escapeHtml(name)}" aria-label="${escapeHtml(name)}"><img src="${escapeHtml(primary)}" data-logo-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.parentElement.remove()"></span>`;
+  return `<span class="match-competition-badge" title="${escapeHtml(name)}" aria-label="${escapeHtml(name)}"><b class="match-competition-fallback">${escapeHtml(leagueShortLabel(name))}</b><img src="${escapeHtml(primary)}" data-logo-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
 }
 function journeyCompetitions(j=journey){
   if(!j) return [];
@@ -2224,7 +2224,7 @@ function renderCompare(){
       ? jointReadonlySignsHtml(projectedResult,"result-signs compare-readonly")
       : `<strong class="compare-real-score">${rawScore}</strong>`;
     return `<article class="compare-card ${state} ${ej?"compare-joint-e8":""}">
-      <div class="compare-card-head"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div>
+      <div class="compare-card-head"><div class="compare-number-competition"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div>
       ${official?"":tvBroadcastHtml(m,true)}
       <div class="compare-picks">
         <div class="compare-pick-box player-one"><span><i class="player-dot"></i>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${aVisual}${aMark}</div></div>
