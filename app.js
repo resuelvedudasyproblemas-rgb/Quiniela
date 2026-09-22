@@ -1866,6 +1866,14 @@ async function refreshData(){
   renderAll();
 }
 
+function matchCompetitionBadgeHtml(m){
+  const name=String(m?.competition_name||"").trim();
+  const logo=String(m?.competition_logo_url||"").trim();
+  if(!name||!logo)return "";
+  const primary=logoStorageUrl(logo);
+  const fallback=logoProxyUrl(logo);
+  return `<span class="match-competition-badge" title="${escapeHtml(name)}" aria-label="${escapeHtml(name)}"><img src="${escapeHtml(primary)}" data-logo-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.parentElement.remove()"></span>`;
+}
 function journeyCompetitions(j=journey){
   if(!j) return [];
   const seen=new Map();
@@ -1942,7 +1950,7 @@ function renderMatches(){
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
     return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"}" data-resolved="${matchResolved(m)}" data-outcome="${outcome}" data-e8="${e8}">
-      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span></div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${matchResolved(m)?`<button class="detail-btn" data-detail-match="${m.number}" type="button">Detalles</button>`:""}<button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div></div>
+      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span></div>${matchCompetitionBadgeHtml(m)}<div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${matchResolved(m)?`<button class="detail-btn" data-detail-match="${m.number}" type="button">Detalles</button>`:""}<button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div></div>
       <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>${mp?.pick?`<div class="pick-owner-track" aria-label="Pronósticos de los jugadores">${["1","X","2"].map(v=>`<div class="pick-owner-cell">${mp?.pick===v?`<span class="pick-owner-chip ${myOwnerClass}" title="${myLabel}" aria-label="${myLabel}">${myInitial}</span>`:""}${reveal&&oppPick?.pick===v?`<span class="pick-owner-chip ${opponentOwnerClass}" title="${opponentLabel}" aria-label="${opponentLabel}">${opponentInitial}</span>`:""}</div>`).join("")}</div>`:""}
@@ -1961,7 +1969,7 @@ function renderPleno(){
   const m=matches.find(x=>x.number===15);if(!m){$("#plenoCard").classList.add("hidden");return}
   $("#plenoCard").classList.remove("hidden");$("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
-  $("#plenoKickoff").innerHTML=`◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
+  $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
   const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></div>`:tvBroadcastHtml(m);
   const mp=myPickFor(15),locked=!journeyCanEdit(journey);
   $$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
