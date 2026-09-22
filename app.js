@@ -1673,8 +1673,10 @@ function renderAll(){
   }
   renderJourneyLeagues();
   const opponent=members.find(m=>m.user_id!==identityUserId);
-  if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
-  else $("#opponentStatus").textContent="Esperando al segundo jugador";
+  if(document.documentElement.dataset.game!=="quinigol"){
+    if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
+    else $("#opponentStatus").textContent="Esperando al segundo jugador";
+  }
   renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
 }
 

@@ -380,7 +380,7 @@ const GOALS=["0","1","2","M"];
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],allJoint=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
-let saving=false,jointSaving=false,channel=null;
+let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
 const drafts=new Map(),jointDrafts=new Map();
 
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
@@ -672,6 +672,14 @@ function setGame(g,persist=true){
   activeGame=g==="quinigol"?"quinigol":"quiniela";if(persist)savePref("quiniela-active-game",activeGame);
   $$(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
   const q=activeGame==="quinigol";
+  const opponentEl=$("#opponentStatus");
+  if(q){
+    if(opponentEl&&document.documentElement.dataset.game!=="quinigol")quinielaOpponentText=opponentEl.textContent||"";
+    document.documentElement.dataset.game="quinigol";
+  }else{
+    document.documentElement.dataset.game="quiniela";
+    if(opponentEl&&quinielaOpponentText)opponentEl.textContent=quinielaOpponentText;
+  }
   $("#qgRoot")?.classList.toggle("hidden",!q);$("#journeyCard")?.classList.toggle("hidden",q);$("#journeySwitcher")?.classList.toggle("hidden",q);$("#quinielaTabs")?.classList.toggle("hidden",q);$("#quinielaMain")?.classList.toggle("hidden",q);
   if(q)renderAll();
 }
