@@ -6283,3 +6283,188 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     font-size:.47rem!important;
   }
 }
+
+
+/* Monedero ampliado v110 */
+.wallet-dialog-card{
+  width:min(900px,calc(100vw - 24px));
+  max-height:min(88vh,900px);
+  overflow:auto;
+}
+.wallet-overview-grid{
+  display:grid;
+  grid-template-columns:1.35fr 1fr 1fr;
+  gap:10px;
+}
+.wallet-kpi{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  justify-content:center;
+  padding:14px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:var(--surface-2);
+}
+.wallet-kpi>span{
+  color:var(--muted);
+  font-size:.5rem;
+  font-weight:950;
+  letter-spacing:.08em;
+}
+.wallet-kpi>strong{
+  margin-top:6px;
+  color:var(--text);
+  font-size:1.25rem;
+  line-height:1;
+}
+.wallet-kpi>small{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:.5rem;
+}
+.wallet-section{
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid var(--border);
+}
+.wallet-bet-list,.wallet-prize-list{
+  display:grid;
+  gap:7px;
+  margin-top:8px;
+}
+.wallet-bet-row{
+  display:grid;
+  grid-template-columns:minmax(150px,1.4fr) minmax(110px,.8fr) auto;
+  align-items:center;
+  gap:10px;
+  padding:10px 11px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--surface);
+}
+.wallet-bet-main,.wallet-bet-cost{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+}
+.wallet-bet-main>span,.wallet-prize-row>div>span{
+  color:var(--text);
+  font-size:.62rem;
+  font-weight:900;
+}
+.wallet-bet-main>small,.wallet-bet-cost>small,.wallet-prize-row small{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:.48rem;
+}
+.wallet-bet-cost>strong{
+  color:var(--text);
+  font-size:.76rem;
+}
+.wallet-bet-state{
+  justify-self:end;
+  padding:5px 8px;
+  border-radius:999px;
+  background:var(--surface-3);
+  color:var(--muted);
+  font-size:.48rem;
+  font-weight:900;
+  white-space:nowrap;
+}
+.wallet-bet-state.prize{
+  background:color-mix(in srgb,#d9a514 16%,var(--surface));
+  color:#8a6500;
+}
+.wallet-bet-state.credited{
+  background:color-mix(in srgb,var(--brand) 12%,var(--surface));
+  color:var(--brand);
+}
+.wallet-prize-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 11px;
+  border:1px solid color-mix(in srgb,#d9a514 28%,var(--border));
+  border-radius:12px;
+  background:color-mix(in srgb,#d9a514 6%,var(--surface));
+}
+.wallet-prize-row>div:first-child{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+}
+.wallet-prize-credit{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.wallet-prize-credit input{
+  width:125px;
+  height:36px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  padding:0 8px;
+  font-size:.58rem;
+  font-weight:800;
+}
+.wallet-prize-credit button{
+  height:36px;
+  border:0;
+  border-radius:9px;
+  background:var(--brand);
+  color:#fff;
+  padding:0 10px;
+  font-size:.52rem;
+  font-weight:900;
+  cursor:pointer;
+}
+.wallet-confirm-summary{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+  margin:7px 0 2px;
+}
+.wallet-confirm-summary>div{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  padding:7px 8px;
+  border-radius:9px;
+  background:var(--surface-3);
+}
+.wallet-confirm-summary span{
+  color:var(--muted);
+  font-size:.43rem;
+  font-weight:850;
+}
+.wallet-confirm-summary strong{
+  margin-top:2px;
+  color:var(--text);
+  font-size:.61rem;
+}
+.wallet-confirm-summary .negative strong{
+  color:#aa3e46;
+}
+.wallet-cost-hint{
+  color:var(--muted);
+  font-size:.47rem;
+}
+@media(max-width:720px){
+  .wallet-overview-grid{grid-template-columns:1fr 1fr}
+  .global-wallet-balance{grid-column:1/-1}
+  .wallet-bet-row{grid-template-columns:1fr auto}
+  .wallet-bet-state{grid-column:1/-1;justify-self:start}
+}
+@media(max-width:480px){
+  .wallet-dialog-card{width:calc(100vw - 12px)}
+  .wallet-overview-grid{grid-template-columns:1fr}
+  .global-wallet-balance{grid-column:auto}
+  .wallet-prize-row{align-items:stretch;flex-direction:column}
+  .wallet-prize-credit{display:grid;grid-template-columns:1fr}
+  .wallet-prize-credit input{width:100%}
+  .wallet-confirm-summary{grid-template-columns:1fr}
+}
