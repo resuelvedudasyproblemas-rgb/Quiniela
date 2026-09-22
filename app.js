@@ -1336,6 +1336,23 @@ async function activateView(view){
   $$("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
   if(next==="joint")renderJoint();if(next==="compare")renderCompare();if(next==="stats")renderStats();if(next==="history")renderHistory();
 }
+window.addEventListener("quiniela:show",async()=>{
+  try{
+    document.documentElement.dataset.game="quiniela";
+    if(selectedJourneyId==null)selectedJourneyId=loadSavedJourneyId();
+    const target=journeys.find(j=>j.id===selectedJourneyId);
+    if(target&&!loadedJourneyIds.has(target.id))await ensureJourneyLoaded(target.id,{quiet:true});
+    selectActiveJourney();
+    $("#journeySwitcher")?.classList.remove("hidden");
+    renderAll();
+    setSync("online","Sincronizado");
+  }catch(e){
+    console.error("Restaurar Quiniela:",e);
+    $("#journeySwitcher")?.classList.remove("hidden");
+    renderJourneySwitcher();
+  }
+});
+
 function roomSummaryText(){
   const ordered=[...members].sort((a,b)=>a.slot-b.slot).map(m=>m.display_name).filter(Boolean);
   return ordered.length?ordered.join(" ↔ "):"Vosotros dos";

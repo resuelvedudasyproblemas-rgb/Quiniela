@@ -874,6 +874,7 @@ function setGame(g,persist=true){
   }else{
     document.documentElement.dataset.game="quiniela";
     if(opponentEl&&quinielaOpponentText)opponentEl.textContent=quinielaOpponentText;
+    window.dispatchEvent(new CustomEvent("quiniela:show"));
   }
   $("#qgRoot")?.classList.toggle("hidden",!q);$("#journeyCard")?.classList.toggle("hidden",q);$("#journeySwitcher")?.classList.toggle("hidden",q);$("#quinielaTabs")?.classList.toggle("hidden",q);$("#quinielaMain")?.classList.toggle("hidden",q);
   if(q)renderAll();
