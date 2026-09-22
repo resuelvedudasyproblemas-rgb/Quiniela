@@ -11,7 +11,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 let sb, user, identityUserId, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
-let walletBalance=0, walletTransactions=[], betConfirmations=[], walletPrizes=[], walletJourneyLabels=new Map();
+let walletBalance=0, walletTransactions=[], betConfirmations=[], walletPrizes=[], walletJourneyLabels=new Map(), officialPrizeRows=[];
 let channel = null;
 let saving = false;
 let elige8Saving = false;
@@ -836,19 +836,21 @@ function euro(value){
 }
 async function loadWalletData(){
   if(!roomId)return;
-  const [wr,tr,cr,pr,qj,gg]=await Promise.all([
+  const [wr,tr,cr,pr,qj,gg,op]=await Promise.all([
     sb.from("room_wallets").select("balance,updated_at").eq("room_id",roomId).maybeSingle(),
     sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(30),
     sb.from("bet_confirmations").select("*").eq("room_id",roomId),
     sb.from("bet_prizes").select("*").eq("room_id",roomId),
     sb.from("journeys").select("id,number,draw_date"),
-    sb.from("qg_journeys").select("id,number,draw_date")
+    sb.from("qg_journeys").select("id,number,draw_date"),
+    sb.from("official_prizes").select("*")
   ]);
-  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;if(pr.error)throw pr.error;
+  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;if(pr.error)throw pr.error;if(op.error)throw op.error;
   walletBalance=Number(wr.data?.balance||0);
   walletTransactions=tr.data||[];
   betConfirmations=cr.data||[];
   walletPrizes=pr.data||[];
+  officialPrizeRows=op.data||[];
   walletJourneyLabels=new Map();
   for(const j of qj.data||[])walletJourneyLabels.set(`quiniela:${j.id}`,{number:j.number,date:j.draw_date});
   for(const j of gg.data||[])walletJourneyLabels.set(`quinigol:${j.id}`,{number:j.number,date:j.draw_date});
@@ -907,7 +909,7 @@ function walletPrizeCandidatesHtml(){
     const info=walletJourneyLabels.get(`${p.game}:${p.journey_id}`);
     const label=`${walletGameLabel(p.game)} · J${info?.number??p.journey_id}`;
     return `<div class="wallet-prize-row"><div><span>★ ${escapeHtml(label)}</span><small>${escapeHtml(p.category||"Premio detectado")}</small></div>
-      ${walletCanManage()?`<div class="wallet-prize-credit"><input data-prize-amount="${p.game}:${p.journey_id}" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Importe oficial"><button type="button" data-credit-prize="${p.game}:${p.journey_id}">Añadir al monedero</button></div>`:'<strong>Pendiente de confirmar por Salva</strong>'}</div>`;
+      ${walletCanManage()?`<div class="wallet-prize-credit"><input data-prize-amount="${p.game}:${p.journey_id}" type="number" min="0.01" step="0.01" inputmode="decimal" value="${p.amount!=null?escapeHtml(Number(p.amount).toFixed(2)):""}" placeholder="Importe oficial"><button type="button" data-credit-prize="${p.game}:${p.journey_id}">Añadir al monedero</button></div>`:'<strong>Pendiente de confirmar por Salva</strong>'}</div>`;
   }).join("");
 }
 function renderGlobalWallet(){
@@ -1004,22 +1006,43 @@ async function addWalletCredit(kind){
 }
 
 const detectingQuinielaPrizes=new Set();
+function officialPrizeAmount(game,journeyNumber,key){
+  const row=officialPrizeRows.find(x=>x.game===game&&Number(x.journey_number)===Number(journeyNumber)&&String(x.category_key)===String(key));
+  return row?Number(row.unit_amount):null;
+}
+function quinielaColumnPrize(uid,j){
+  let signs=0;
+  for(const m of matchesForJourney(j.id).filter(x=>x.number<=14)){
+    const actual=resultSignForMatch(m),p=pickForJourney(uid,j.id,m.number)?.pick;
+    if(actual&&p===actual)signs++;
+  }
+  const p15=matchesForJourney(j.id).find(x=>x.number===15);
+  const pick15=pickForJourney(uid,j.id,15);
+  const plenoOk=Boolean(p15&&matchResolved(p15)&&pick15?.home_goals&&pick15?.away_goals&&pick15.home_goals===normalizedGoalScore(p15.home_score)&&pick15.away_goals===normalizedGoalScore(p15.away_score));
+  const key=signs===14&&plenoOk?"pleno15":signs>=10?String(signs):null;
+  return {signs,plenoOk,key,amount:key?officialPrizeAmount("quiniela",j.number,key):0};
+}
 async function detectQuinielaPrizeIfNeeded(j=journey){
   if(!j||journeyDisplayState(j)!=="finished"||!walletConfirmation("quiniela",j.id))return;
   if(walletPrizes.some(p=>p.game==="quiniela"&&Number(p.journey_id)===Number(j.id)))return;
-  const key=String(j.id);if(detectingQuinielaPrizes.has(key))return;
+  const lock=String(j.id);if(detectingQuinielaPrizes.has(lock))return;
   const p1=memberBySlot(1),p2=memberBySlot(2);if(!p1||!p2)return;
-  const s1=scoreUserJourney(p1.user_id,j),s2=scoreUserJourney(p2.user_id,j),e8=scoreJointElige8(j);
-  const best=Math.max(Number(s1.correct||0),Number(s2.correct||0));
-  const e8Prize=e8.selected===8&&e8.resolved===8&&e8.correct===8;
-  if(best<10&&!e8Prize)return;
-  const category=e8Prize&&best<10?"Elige 8 · 8/8":e8Prize?`${best} aciertos + Elige 8 · 8/8`:`${best} aciertos`;
-  detectingQuinielaPrizes.add(key);
+  const plan=jointBetRecommendation(j),a=quinielaColumnPrize(p1.user_id,j),b=quinielaColumnPrize(p2.user_id,j);
+  const columns=plan?.mode==="common"?[a]:[a,b];
+  const e8=scoreJointElige8(j),e8Prize=e8.selected===8&&e8.resolved===8&&e8.correct===8;
+  const winning=columns.filter(x=>x.key);
+  if(!winning.length&&!e8Prize)return;
+  const labels=winning.map(x=>x.key==="pleno15"?"Pleno al 15":`${x.key} aciertos`);
+  if(e8Prize)labels.push("Elige 8 · 8/8");
+  const amounts=winning.map(x=>x.amount).filter(x=>Number.isFinite(x));
+  if(e8Prize){const ea=officialPrizeAmount("quiniela",j.number,"e8");if(ea!=null)amounts.push(ea)}
+  const suggested=amounts.length===winning.length+(e8Prize?1:0)?amounts.reduce((s,x)=>s+Number(x||0),0):null;
+  detectingQuinielaPrizes.add(lock);
   try{
-    const {error}=await sb.rpc("wallet_detect_prize",{p_room_id:roomId,p_game:"quiniela",p_journey_id:j.id,p_category:category});
+    const {error}=await sb.rpc("wallet_detect_prize_v2",{p_room_id:roomId,p_game:"quiniela",p_journey_id:j.id,p_category:labels.join(" + "),p_amount:suggested});
     if(!error){await loadWalletData();renderGlobalWallet();renderJoint()}
   }catch(e){console.warn("Premio Quiniela:",e)}
-  finally{detectingQuinielaPrizes.delete(key)}
+  finally{detectingQuinielaPrizes.delete(lock)}
 }
 function jointBetRecommendation(j=journey){
   const p1=memberBySlot(1),p2=memberBySlot(2);
