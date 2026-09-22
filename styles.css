@@ -6359,3 +6359,105 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     font-size:.68rem!important;
   }
 }
+
+
+/* Menús Quiniela/Quinigol uniformes y completos en móvil v118 */
+#quinielaTabs,
+.qg-tabs{
+  width:min(620px,calc(100% - 8px))!important;
+  max-width:620px!important;
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:4px!important;
+  overflow:visible!important;
+  padding:4px!important;
+  box-sizing:border-box!important;
+}
+#quinielaTabs .tab,
+.qg-tabs .qg-tab{
+  min-width:0!important;
+  width:100%!important;
+  height:44px!important;
+  padding:0 2px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  font-size:clamp(.44rem,2.25vw,.57rem)!important;
+  line-height:1!important;
+}
+@media(max-width:430px){
+  #quinielaTabs,
+  .qg-tabs{
+    width:calc(100% - 6px)!important;
+    gap:3px!important;
+    padding:4px!important;
+  }
+  #quinielaTabs .tab,
+  .qg-tabs .qg-tab{
+    height:42px!important;
+    font-size:clamp(.42rem,2.05vw,.52rem)!important;
+    padding:0 1px!important;
+  }
+}
+
+/* Monedero completo en móvil v118 */
+#walletDialog{
+  border:0!important;
+  background:transparent!important;
+  padding:0!important;
+  width:min(94vw,900px)!important;
+  max-width:94vw!important;
+  max-height:92dvh!important;
+  overflow:visible!important;
+}
+#walletDialog::backdrop{
+  background:rgba(4,18,12,.58);
+  backdrop-filter:blur(4px);
+}
+#walletDialog .wallet-dialog-card{
+  width:100%!important;
+  max-width:100%!important;
+  max-height:92dvh!important;
+  box-sizing:border-box!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  margin:0!important;
+  padding:16px!important;
+}
+#walletDialogContent,
+#walletDialogContent *{
+  min-width:0;
+  box-sizing:border-box;
+}
+@media(max-width:430px){
+  #walletDialog{
+    width:calc(100vw - 12px)!important;
+    max-width:calc(100vw - 12px)!important;
+    max-height:94dvh!important;
+  }
+  #walletDialog .wallet-dialog-card{
+    max-height:94dvh!important;
+    padding:12px!important;
+    border-radius:18px!important;
+  }
+  #walletDialog .global-wallet-add{
+    grid-template-columns:1fr!important;
+  }
+  #walletDialog .global-wallet-add .wallet-credit-actions{
+    grid-column:1!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    width:100%!important;
+  }
+  #walletDialog .wallet-credit-actions button{
+    min-width:0!important;
+    width:100%!important;
+  }
+  #walletDialog .wallet-move{
+    gap:8px!important;
+  }
+}
