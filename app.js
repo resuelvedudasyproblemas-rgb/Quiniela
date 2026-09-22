@@ -310,7 +310,17 @@ function renderJourneySwitcher(){
   const available=[...journeys].sort((a,b)=>b.number-a.number);
   if(!available.length){ el.classList.add("hidden"); el.innerHTML=""; return; }
   el.classList.remove("hidden");
-  el.innerHTML=available.map(j=>{
+  const active=available.find(j=>j.id===journey.id);
+  const primary=[];
+  if(active)primary.push(active);
+  for(const j of available){
+    if(primary.length>=3)break;
+    if(!primary.some(x=>x.id===j.id))primary.push(j);
+  }
+  primary.sort((a,b)=>b.number-a.number);
+  const archived=available.filter(j=>!primary.some(x=>x.id===j.id));
+
+  const buttonHtml=j=>{
     const state=journeyDisplayState(j);
     const resolved=journeyResolvedCount(j);
     const prizeState=state==="finished"?finishedJourneyPrizeState(j):"";
@@ -319,8 +329,12 @@ function renderJourneySwitcher(){
     return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-id="${j.id}">
       <span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small>
     </button>`;
-  }).join("");
-  $$(".journey-choice").forEach(btn=>btn.addEventListener("click",()=>{
+  };
+
+  el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
+    archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
+  }`;
+  $$("#journeySwitcher [data-journey-id]").forEach(btn=>btn.addEventListener("click",()=>{
     selectedJourneyId=Number(btn.dataset.journeyId);
     saveSelectedJourneyId(selectedJourneyId);
     selectActiveJourney();

@@ -586,13 +586,26 @@ function renderHero(){
 }
 function renderSwitcher(){
   const el=$("#qgJourneySwitcher");if(!el)return;
-  el.innerHTML=[...journeys].sort((a,b)=>b.number-a.number).map(j=>{
+  const available=[...journeys].sort((a,b)=>b.number-a.number);
+  const active=available.find(j=>j.id===journey?.id);
+  const primary=[];
+  if(active)primary.push(active);
+  for(const j of available){
+    if(primary.length>=3)break;
+    if(!primary.some(x=>x.id===j.id))primary.push(j);
+  }
+  primary.sort((a,b)=>b.number-a.number);
+  const archived=available.filter(j=>!primary.some(x=>x.id===j.id));
+  const buttonHtml=j=>{
     const st=state(j);
     const prizeState=st==="finished"?qgPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
     return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados · finalizada":fullDate(j.close_at)}</small></button>`;
-  }).join("");
-  $$("[data-qg-journey]").forEach(b=>b.addEventListener("click",()=>{selectedJourneyId=Number(b.dataset.qgJourney);savePref("quinigol-journey",selectedJourneyId);selectJourney();renderAll()}));
+  };
+  el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
+    archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
+  }`;
+  $$("#qgJourneySwitcher [data-qg-journey]").forEach(b=>b.addEventListener("click",()=>{selectedJourneyId=Number(b.dataset.qgJourney);savePref("quinigol-journey",selectedJourneyId);selectJourney();renderAll()}));
 }
 function dashCard(name,done,s,cls){
   const finished=state(journey)==="finished",prize=prizeLabel(s.correct,s.resolved),gold=finished&&s.correct>=2;
