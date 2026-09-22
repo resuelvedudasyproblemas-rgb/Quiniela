@@ -1874,6 +1874,10 @@ function matchCompetitionBadgeHtml(m){
   const fallback=logoProxyUrl(logo);
   return `<span class="match-competition-badge" title="${escapeHtml(name)}" aria-label="${escapeHtml(name)}"><b class="match-competition-fallback">${escapeHtml(leagueShortLabel(name))}</b><img src="${escapeHtml(primary)}" data-logo-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
 }
+function historyFixtureHtml(m){
+  const row=(name,logo,position,side)=>`<span class="history-fixture-team ${side}">${teamCrestHtml(name,"xs",logo)}<span class="history-team-pos">${Number(position)>0?Number(position)+".º":""}</span><span class="history-team-name">${escapeHtml(name)}</span></span>`;
+  return `<span class="history-fixture-grid">${row(m.home,m.home_logo_url,m.home_position,"home")}${row(m.away,m.away_logo_url,m.away_position,"away")}</span>`;
+}
 function journeyCompetitions(j=journey){
   if(!j) return [];
   const seen=new Map();
@@ -2312,8 +2316,27 @@ function renderHistory(){
   const historic=journeys.filter(j=>journeyResolvedCount(j)===15).sort((a,b)=>b.number-a.number);$("#historyCount").textContent=historic.length;
   if(!historic.length){$("#historyList").innerHTML=`<div class="history-empty">Todavía no hay jornadas con los 15 resultados oficiales. Las jornadas en juego se mantienen arriba hasta completarse.</div>`;return}
   const p1=memberBySlot(1),p2=memberBySlot(2);
-  $("#historyList").innerHTML=historic.map(j=>{const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0},s2=p2?scoreUserJourney(p2.user_id,j):{correct:0},e1=p1?scoreElige8(p1.user_id,j):{selected:0,correct:0,resolved:0},e2=p2?scoreElige8(p2.user_id,j):{selected:0,correct:0,resolved:0},winner=!p1||!p2?"":s1.correct>s2.correct?p1.display_name:s2.correct>s1.correct?p2.display_name:"Empate";
-    return `<button class="history-card" data-history-id="${j.id}"><div class="history-card-top"><div><div class="history-card-title">Jornada ${j.number}</div><div class="history-card-date">${escapeHtml(formatDate(j.draw_date))}</div></div><span class="history-card-badge finished">${winner==="Empate"?"Empate":winner?`Gana ${escapeHtml(winner)}`:"Finalizada"}</span></div><div class="history-versus"><div><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${s1.correct}</strong></div><b>–</b><div><strong>${s2.correct}</strong><span>${escapeHtml(p2?.display_name||"J2")}</span></div></div><div class="history-card-stats"><div class="history-stat ${e1.selected===8&&e1.resolved===8&&e1.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p1?.display_name||"J1")}</span><strong>${e1.selected?`${e1.correct}/${e1.resolved}`:"—"}</strong></div><div class="history-stat ${e2.selected===8&&e2.resolved===8&&e2.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p2?.display_name||"J2")}</span><strong>${e2.selected?`${e2.correct}/${e2.resolved}`:"—"}</strong></div></div></button>`}).join("");
+  $("#historyList").innerHTML=historic.map(j=>{
+    const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0},s2=p2?scoreUserJourney(p2.user_id,j):{correct:0};
+    const e1=p1?scoreElige8(p1.user_id,j):{selected:0,correct:0,resolved:0},e2=p2?scoreElige8(p2.user_id,j):{selected:0,correct:0,resolved:0};
+    const winnerSide=!p1||!p2?"tie":s1.correct>s2.correct?"one":s2.correct>s1.correct?"two":"tie";
+    const winnerText=winnerSide==="one"?`Gana ${escapeHtml(p1.display_name)}`:winnerSide==="two"?`Gana ${escapeHtml(p2.display_name)}`:"Empate";
+    return `<button class="history-card history-winner-${winnerSide}" data-history-id="${j.id}">
+      <div class="history-card-top">
+        <div><div class="history-card-title">Jornada ${j.number}</div><div class="history-card-date">${escapeHtml(formatDate(j.draw_date))}</div></div>
+        <span class="history-card-badge history-winner-badge ${winnerSide}">${winnerText}</span>
+      </div>
+      <div class="history-versus">
+        <div class="player-one ${winnerSide==="one"?"is-winner":""}"><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${s1.correct}</strong></div>
+        <b>–</b>
+        <div class="player-two ${winnerSide==="two"?"is-winner":""}"><strong>${s2.correct}</strong><span>${escapeHtml(p2?.display_name||"J2")}</span></div>
+      </div>
+      <div class="history-card-stats">
+        <div class="history-stat player-one ${e1.selected===8&&e1.resolved===8&&e1.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p1?.display_name||"J1")}</span><strong>${e1.selected?`${e1.correct}/${e1.resolved}`:"—"}</strong></div>
+        <div class="history-stat player-two ${e2.selected===8&&e2.resolved===8&&e2.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p2?.display_name||"J2")}</span><strong>${e2.selected?`${e2.correct}/${e2.resolved}`:"—"}</strong></div>
+      </div>
+    </button>`;
+  }).join("");
   $$(".history-card").forEach(btn=>btn.addEventListener("click",()=>openHistory(Number(btn.dataset.historyId))));
 }
 
@@ -2325,6 +2348,7 @@ function openHistory(jid){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0,resolved:0};
   const s2=p2?scoreUserJourney(p2.user_id,j):{correct:0,resolved:0};
+  const historyWinnerSide=!p1||!p2?"tie":s1.correct>s2.correct?"one":s2.correct>s1.correct?"two":"tie";
   const e1=p1?scoreElige8(p1.user_id,j):{selected:0,correct:0,resolved:0};
   const e2=p2?scoreElige8(p2.user_id,j):{selected:0,correct:0,resolved:0};
   const jointE8Score=scoreJointElige8(j);
@@ -2336,12 +2360,12 @@ function openHistory(jid){
   $("#historyDialogTitle").textContent=`Jornada ${j.number} · ${formatDate(j.draw_date)}`;
 
   $("#historyDialogSummary").innerHTML=`
-    <div class="history-summary-player player-one">
+    <div class="history-summary-player player-one ${historyWinnerSide==="one"?"history-summary-winner":""}">
       <span>${escapeHtml(p1?.display_name||"Jugador 1")}</span>
       <strong>${s1.correct}/15</strong>
       <small class="${e1Prize?"e8-prize-inline":""}">★ Elige 8 · ${e1.selected?`${e1.correct}/${e1.selected}`:"—"}</small>
     </div>
-    <div class="history-summary-player player-two">
+    <div class="history-summary-player player-two ${historyWinnerSide==="two"?"history-summary-winner":""}">
       <span>${escapeHtml(p2?.display_name||"Jugador 2")}</span>
       <strong>${s2.correct}/15</strong>
       <small class="${e2Prize?"e8-prize-inline":""}">★ Elige 8 · ${e2.selected?`${e2.correct}/${e2.selected}`:"—"}</small>
@@ -2364,8 +2388,8 @@ function openHistory(jid){
     const cb=r==="—"?"":b===r?"ok":"bad";
     return `<article class="history-detail-match" data-history-jid="${j.id}" data-history-match="${m.number}">
       <div class="history-detail-head">
-        <span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>
-        <div class="history-detail-fixture">${fixtureMiniHtml(m)}</div>
+        <div class="history-match-meta"><span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div>
+        <div class="history-detail-fixture">${historyFixtureHtml(m)}</div>
         <div class="history-real-result">
           <span>Resultado</span>
           <strong>${exactScore}</strong>

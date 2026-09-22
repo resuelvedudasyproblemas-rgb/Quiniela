@@ -7108,3 +7108,461 @@ html[data-theme="dark"] #compareView .compare-pick-box.result-box.live{
     grid-template-columns:repeat(3,36px);
   }
 }
+
+
+/* Historial Quiniela + Quinigol refinado v137 */
+.history-card{
+  position:relative;
+  overflow:hidden;
+  padding:15px;
+  border-radius:20px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.history-card::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:4px;
+  background:var(--border);
+}
+.history-card.history-winner-one::before{background:var(--player-one)}
+.history-card.history-winner-two::before{background:var(--player-two)}
+.history-card.history-winner-one{border-color:color-mix(in srgb,var(--player-one) 28%,var(--border))}
+.history-card.history-winner-two{border-color:color-mix(in srgb,var(--player-two) 28%,var(--border))}
+.history-card-top{
+  justify-content:space-between;
+  flex-wrap:nowrap;
+  text-align:left;
+}
+.history-card-title{font-size:.88rem;font-weight:950}
+.history-card-date{font-size:.61rem}
+.history-winner-badge{
+  border:1px solid var(--border);
+  background:var(--surface-3)!important;
+}
+.history-winner-badge.one{
+  color:var(--player-one)!important;
+  background:var(--player-one-soft)!important;
+  border-color:var(--player-one-border);
+}
+.history-winner-badge.two{
+  color:var(--player-two)!important;
+  background:var(--player-two-soft)!important;
+  border-color:var(--player-two-border);
+}
+.history-versus{
+  gap:9px;
+  margin:12px auto 6px;
+}
+.history-versus>div{
+  min-width:112px;
+  justify-content:center;
+  padding:7px 10px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--surface-2);
+}
+.history-versus>div.player-one{border-color:var(--player-one-border)}
+.history-versus>div.player-two{border-color:var(--player-two-border)}
+.history-versus>div.player-one span,.history-versus>div.player-one strong{color:var(--player-one)}
+.history-versus>div.player-two span,.history-versus>div.player-two strong{color:var(--player-two)}
+.history-versus>div.is-winner{
+  box-shadow:0 0 0 2px color-mix(in srgb,currentColor 12%,transparent);
+}
+.history-versus>div.player-one.is-winner{background:var(--player-one-soft)}
+.history-versus>div.player-two.is-winner{background:var(--player-two-soft)}
+.history-card-stats{margin-top:9px}
+.history-stat.player-one{
+  background:var(--player-one-soft);
+  border:1px solid var(--player-one-border);
+}
+.history-stat.player-two{
+  background:var(--player-two-soft);
+  border:1px solid var(--player-two-border);
+}
+.history-stat.player-one span,.history-stat.player-one strong{color:var(--player-one)}
+.history-stat.player-two span,.history-stat.player-two strong{color:var(--player-two)}
+
+.history-summary-player.history-summary-winner{
+  position:relative;
+  box-shadow:0 0 0 2px color-mix(in srgb,currentColor 16%,transparent);
+}
+.history-summary-player.history-summary-winner::after{
+  content:"GANADOR";
+  position:absolute;
+  right:8px;
+  top:8px;
+  padding:2px 5px;
+  border-radius:999px;
+  font-size:.39rem;
+  font-weight:950;
+  letter-spacing:.06em;
+  color:currentColor;
+  background:color-mix(in srgb,currentColor 10%,var(--surface));
+}
+
+.history-detail-head{
+  grid-template-columns:38px minmax(0,1fr) auto;
+  gap:9px;
+}
+.history-match-meta{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+}
+.history-match-meta .history-match-number{
+  margin:0;
+  min-width:31px;
+}
+.history-match-meta .match-competition-badge{
+  width:22px;
+  height:22px;
+  min-width:22px;
+}
+.history-match-meta .match-competition-badge img{
+  width:18px;
+  height:18px;
+}
+.history-detail-fixture{
+  text-align:left;
+}
+.history-fixture-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:5px;
+  width:100%;
+}
+.history-fixture-team{
+  display:grid;
+  grid-template-columns:23px 30px minmax(0,1fr);
+  align-items:center;
+  gap:6px;
+  min-width:0;
+}
+.history-fixture-team .team-crest{
+  margin:0;
+}
+.history-team-pos{
+  width:30px;
+  text-align:center;
+  font-size:.5rem;
+  font-weight:900;
+  color:var(--muted);
+}
+.history-team-name{
+  min-width:0;
+  font-size:.66rem;
+  font-weight:850;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.history-real-result{
+  min-width:58px;
+  padding:6px 8px;
+}
+.history-detail-match{
+  border-radius:17px;
+  box-shadow:0 5px 15px rgba(8,52,34,.045);
+}
+
+/* Quinigol historial */
+.qg-history-item{
+  position:relative;
+  border-radius:18px;
+  box-shadow:0 5px 16px rgba(8,52,34,.045);
+}
+.qg-history-item::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:4px;
+  background:var(--border);
+  z-index:1;
+}
+.qg-history-item.qg-history-winner-one::before{background:var(--player-one)}
+.qg-history-item.qg-history-winner-two::before{background:var(--player-two)}
+.qg-history-item.qg-history-winner-one{border-color:color-mix(in srgb,var(--player-one) 28%,var(--border))}
+.qg-history-item.qg-history-winner-two{border-color:color-mix(in srgb,var(--player-two) 28%,var(--border))}
+.qg-history-item>summary{
+  grid-template-columns:auto minmax(0,1fr) auto;
+  padding:11px 12px 11px 14px;
+  gap:10px;
+}
+.qg-history-title{min-width:0}
+.qg-history-title strong{font-size:.7rem}
+.qg-history-title small{font-size:.48rem}
+.qg-history-winner{
+  display:inline-flex;
+  width:max-content;
+  max-width:100%;
+  margin-top:5px;
+  padding:3px 6px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:var(--surface-3);
+  color:var(--muted);
+  font-size:.46rem;
+  font-weight:950;
+}
+.qg-history-winner.one{
+  color:var(--player-one);
+  background:var(--player-one-soft);
+  border-color:var(--player-one-border);
+}
+.qg-history-winner.two{
+  color:var(--player-two);
+  background:var(--player-two-soft);
+  border-color:var(--player-two-border);
+}
+.qg-history-score{
+  align-items:stretch;
+}
+.qg-history-score span{
+  min-width:48px;
+  padding:5px 6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:1px;
+  border:1px solid var(--border);
+}
+.qg-history-score span small{
+  display:block;
+  max-width:48px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.39rem;
+  font-weight:850;
+  color:var(--muted);
+}
+.qg-history-score span b{
+  font-size:.54rem;
+}
+.qg-history-score .p1{
+  color:var(--player-one);
+  border-color:var(--player-one-border);
+  background:color-mix(in srgb,var(--player-one-soft) 75%,var(--surface));
+}
+.qg-history-score .p2{
+  color:var(--player-two);
+  border-color:var(--player-two-border);
+  background:color-mix(in srgb,var(--player-two-soft) 75%,var(--surface));
+}
+.qg-history-score .pj{
+  color:var(--joint-color);
+  border-color:color-mix(in srgb,var(--joint-color) 28%,var(--border));
+  background:var(--joint-soft);
+}
+.qg-history-score .is-winner{
+  box-shadow:inset 0 0 0 1px currentColor;
+}
+.qg-history-body{
+  padding:4px 11px 10px 14px;
+}
+.qg-history-match{
+  grid-template-columns:34px minmax(0,1fr) auto;
+  gap:9px;
+  padding:9px 0;
+}
+.qg-history-match-meta{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.qg-history-match-meta>span:first-child{
+  font-size:.48rem;
+  color:var(--muted);
+  font-weight:950;
+}
+.qg-history-match-meta .match-competition-badge{
+  width:21px;
+  height:21px;
+  min-width:21px;
+}
+.qg-history-match-meta .match-competition-badge img{
+  width:17px;
+  height:17px;
+}
+.qg-history-fixture-grid{
+  display:grid;
+  gap:5px;
+  min-width:0;
+}
+.qg-history-team{
+  display:grid;
+  grid-template-columns:23px 30px minmax(0,1fr);
+  align-items:center;
+  gap:5px;
+  min-width:0;
+}
+.qg-history-team .team-crest{
+  margin:0;
+}
+.qg-history-team-pos{
+  width:30px;
+  text-align:center;
+  color:var(--muted);
+  font-size:.47rem;
+  font-weight:900;
+}
+.qg-history-team-name{
+  min-width:0;
+  font-size:.57rem;
+  line-height:1.15;
+  font-weight:850;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.qg-history-picks{
+  align-items:center;
+}
+.qg-history-picks span{
+  min-width:27px;
+  text-align:center;
+  border:1px solid var(--border);
+}
+.qg-history-picks .p1{
+  background:var(--player-one-soft);
+  border-color:var(--player-one-border);
+}
+.qg-history-picks .p2{
+  background:var(--player-two-soft);
+  border-color:var(--player-two-border);
+}
+.qg-history-picks .pj{
+  background:var(--joint-soft);
+  border-color:color-mix(in srgb,var(--joint-color) 28%,var(--border));
+}
+
+/* Historial: modo oscuro */
+html[data-theme="dark"] .history-card,
+html[data-theme="dark"] .history-detail-match,
+html[data-theme="dark"] .qg-history-item{
+  background:#0f1d17;
+  border-color:#2a4035;
+  box-shadow:0 7px 22px rgba(0,0,0,.25);
+}
+html[data-theme="dark"] .history-card.history-winner-one,
+html[data-theme="dark"] .qg-history-item.qg-history-winner-one{
+  border-color:#34558c;
+}
+html[data-theme="dark"] .history-card.history-winner-two,
+html[data-theme="dark"] .qg-history-item.qg-history-winner-two{
+  border-color:#74502a;
+}
+html[data-theme="dark"] .history-versus>div{
+  background:#13241c;
+  border-color:#30463a;
+}
+html[data-theme="dark"] .history-versus>div.player-one,
+html[data-theme="dark"] .history-stat.player-one{
+  background:#15233f;
+  border-color:#34558c;
+}
+html[data-theme="dark"] .history-versus>div.player-two,
+html[data-theme="dark"] .history-stat.player-two{
+  background:#382718;
+  border-color:#74502a;
+}
+html[data-theme="dark"] .history-winner-badge.one,
+html[data-theme="dark"] .qg-history-winner.one{
+  background:#15233f!important;
+  border-color:#34558c;
+  color:#8cb2ff!important;
+}
+html[data-theme="dark"] .history-winner-badge.two,
+html[data-theme="dark"] .qg-history-winner.two{
+  background:#382718!important;
+  border-color:#74502a;
+  color:#ffc070!important;
+}
+html[data-theme="dark"] .history-summary-player.history-summary-winner{
+  box-shadow:0 0 0 2px color-mix(in srgb,currentColor 22%,transparent);
+}
+html[data-theme="dark"] .history-detail-head{
+  border-color:#263b31;
+}
+html[data-theme="dark"] .history-team-pos,
+html[data-theme="dark"] .qg-history-team-pos{
+  color:#93a69c;
+}
+html[data-theme="dark"] .qg-history-body{
+  border-top-color:#263b31;
+}
+html[data-theme="dark"] .qg-history-match{
+  border-bottom-color:#263b31;
+}
+html[data-theme="dark"] .qg-history-score .p1,
+html[data-theme="dark"] .qg-history-picks .p1{
+  background:#15233f;
+  border-color:#34558c;
+}
+html[data-theme="dark"] .qg-history-score .p2,
+html[data-theme="dark"] .qg-history-picks .p2{
+  background:#382718;
+  border-color:#74502a;
+}
+html[data-theme="dark"] .qg-history-score .pj,
+html[data-theme="dark"] .qg-history-picks .pj{
+  background:#142b20;
+  border-color:#2d5b43;
+}
+html[data-theme="dark"] .qg-history-picks .real{
+  background:#172921;
+  border-color:#344a3e;
+  color:#e6f2eb;
+}
+
+@media(max-width:520px){
+  .history-card{padding:12px}
+  .history-card-top{align-items:flex-start}
+  .history-winner-badge{font-size:.55rem;padding:5px 7px}
+  .history-versus>div{
+    min-width:0;
+    flex:1;
+    padding:7px 6px;
+  }
+  .history-detail-head{
+    grid-template-columns:34px minmax(0,1fr) auto;
+    gap:7px;
+  }
+  .history-fixture-team{
+    grid-template-columns:23px 27px minmax(0,1fr);
+    gap:5px;
+  }
+  .history-team-pos{width:27px}
+  .history-team-name{font-size:.61rem}
+  .qg-history-item>summary{
+    grid-template-columns:34px minmax(0,1fr);
+  }
+  .qg-history-score{
+    grid-column:1/-1;
+    justify-content:center;
+    width:100%;
+    margin-top:3px;
+  }
+  .qg-history-score span{
+    flex:1;
+    max-width:100px;
+  }
+  .qg-history-match{
+    grid-template-columns:31px minmax(0,1fr);
+  }
+  .qg-history-picks{
+    grid-column:1/-1;
+    justify-content:flex-end;
+    padding-left:40px;
+  }
+  .qg-history-team{
+    grid-template-columns:23px 27px minmax(0,1fr);
+  }
+  .qg-history-team-pos{width:27px}
+  .qg-history-team-name{font-size:.55rem}
+}

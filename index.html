@@ -966,16 +966,47 @@ function renderStats(){
   const card=(name,s,cls)=>`<div class="qg-stat-card ${cls}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con premio</small></div>`;
   el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. En la app se considera jornada con premio visual cuando hay 2 o más aciertos.</div>`;
 }
+function qgHistoryFixtureHtml(m){
+  const row=(name,logo,position,side)=>`<span class="qg-history-team ${side}">${crest(name,logo)}<span class="qg-history-team-pos">${Number(position)>0?Number(position)+".º":""}</span><span class="qg-history-team-name">${esc(stripTeam(name))}</span></span>`;
+  return `<div class="qg-history-fixture-grid">${row(m.home,m.home_logo_url,m.home_position,"home")}${row(m.away,m.away_logo_url,m.away_position,"away")}</div>`;
+}
 function renderHistory(){
   const el=$("#qgHistory");if(!el)return;
   const p1=member(1),p2=member(2),done=[...journeys].filter(j=>state(j)==="finished").sort((a,b)=>b.number-a.number);
   if(!done.length){el.innerHTML='<div class="empty-card"><div class="empty-icon">⚽</div><h2>Aún no hay historial</h2><p>La primera jornada finalizada aparecerá aquí con los seis marcadores.</p></div>';return}
   el.innerHTML=done.map(j=>{
     const s1=p1?score(p1.user_id,j):{correct:0},s2=p2?score(p2.user_id,j):{correct:0},sj=jointScore(j);
-    const rows=msFor(j.id).map(m=>`<div class="qg-history-match"><span>P${m.number}</span><div class="qg-history-fixture">${esc(stripTeam(m.home))} · ${esc(stripTeam(m.away))}</div><div class="qg-history-picks"><span class="p1">${esc(p1?pickText(pick(p1.user_id,m.number,j.id)):"—")}</span><span class="p2">${esc(p2?pickText(pick(p2.user_id,m.number,j.id)):"—")}</span><span class="pj">${esc(jointText(m.number,j.id))}</span><span class="real">${esc(actual(m))}</span></div></div>`).join("");
-    return `<details class="qg-history-item"><summary><span class="qg-history-num">J${j.number}</span><div class="qg-history-title"><strong>${esc(new Intl.DateTimeFormat("es-ES",{day:"numeric",month:"short",year:"numeric"}).format(new Date(j.draw_date+"T12:00:00")))}</strong><small>${prizeLabel(sj.correct,6)||"Resultados oficiales"}</small></div><div class="qg-history-score"><span>${s1.correct}/6</span><span>${s2.correct}/6</span><span>${sj.correct}/6</span></div></summary><div class="qg-history-body">${rows}</div></details>`;
+    const winnerSide=!p1||!p2?"tie":s1.correct>s2.correct?"one":s2.correct>s1.correct?"two":"tie";
+    const winnerText=winnerSide==="one"?`Gana ${esc(p1.display_name)}`:winnerSide==="two"?`Gana ${esc(p2.display_name)}`:"Empate";
+    const rows=msFor(j.id).map(m=>`<div class="qg-history-match">
+      <div class="qg-history-match-meta"><span>P${m.number}</span>${qgMatchCompetitionBadgeHtml(m)}</div>
+      ${qgHistoryFixtureHtml(m)}
+      <div class="qg-history-picks">
+        <span class="p1" title="${esc(p1?.display_name||"J1")}">${esc(p1?pickText(pick(p1.user_id,m.number,j.id)):"—")}</span>
+        <span class="p2" title="${esc(p2?.display_name||"J2")}">${esc(p2?pickText(pick(p2.user_id,m.number,j.id)):"—")}</span>
+        <span class="pj" title="Conjunta">${esc(jointText(m.number,j.id))}</span>
+        <span class="real" title="Resultado">${esc(actual(m))}</span>
+      </div>
+    </div>`).join("");
+    return `<details class="qg-history-item qg-history-winner-${winnerSide}">
+      <summary>
+        <span class="qg-history-num">J${j.number}</span>
+        <div class="qg-history-title">
+          <strong>${esc(new Intl.DateTimeFormat("es-ES",{day:"numeric",month:"short",year:"numeric"}).format(new Date(j.draw_date+"T12:00:00")))}</strong>
+          <small>${prizeLabel(sj.correct,6)||"Resultados oficiales"}</small>
+          <span class="qg-history-winner ${winnerSide}">${winnerText}</span>
+        </div>
+        <div class="qg-history-score">
+          <span class="p1 ${winnerSide==="one"?"is-winner":""}"><small>${esc(p1?.display_name||"J1")}</small><b>${s1.correct}/6</b></span>
+          <span class="p2 ${winnerSide==="two"?"is-winner":""}"><small>${esc(p2?.display_name||"J2")}</small><b>${s2.correct}/6</b></span>
+          <span class="pj"><small>Conj.</small><b>${sj.correct}/6</b></span>
+        </div>
+      </summary>
+      <div class="qg-history-body">${rows}</div>
+    </details>`;
   }).join("");
 }
+
 function setView(v,persist=true){
   activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
   if(persist)savePref("quinigol-view",activeView);
