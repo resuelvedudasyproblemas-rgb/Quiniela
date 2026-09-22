@@ -11,6 +11,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 let sb, user, identityUserId, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
+let walletBalance=0, walletTransactions=[], betConfirmations=[];
 let channel = null;
 let saving = false;
 let elige8Saving = false;
@@ -829,6 +830,98 @@ async function resetJointPlenoSelection(){
 function euro(value){
   return Number(value||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 }
+
+async function loadWalletData(){
+  if(!roomId)return;
+  const [wr,tr,cr]=await Promise.all([
+    sb.from("room_wallets").select("balance,updated_at").eq("room_id",roomId).maybeSingle(),
+    sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(12),
+    sb.from("bet_confirmations").select("*").eq("room_id",roomId)
+  ]);
+  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;
+  walletBalance=Number(wr.data?.balance||0);
+  walletTransactions=tr.data||[];
+  betConfirmations=cr.data||[];
+}
+function walletCanManage(){return Number(myMember?.slot)===1}
+function walletConfirmation(game="quiniela",jid=journey?.id){
+  return betConfirmations.find(x=>x.game===game&&Number(x.journey_id)===Number(jid))||null;
+}
+function walletMovementLabel(t){
+  const labels={opening:"Saldo inicial",funds:"Fondos añadidos",prize:"Premio añadido",bet:"Apuesta confirmada",bet_adjustment:"Ajuste de apuesta",refund:"Apuesta anulada"};
+  return t?.note||labels[t?.kind]||"Movimiento";
+}
+function walletDate(v){
+  if(!v)return "";
+  return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
+}
+function estimatedQuinielaWalletCost(){
+  const plan=jointBetRecommendation(journey);
+  if(!plan?.ready)return null;
+  return Number(plan.e8Ready?plan.total:plan.quinielaBets*.75);
+}
+function renderJointWallet(){
+  const el=$("#jointWallet");if(!el||!journey)return;
+  const manager=walletCanManage(),conf=walletConfirmation("quiniela",journey.id),estimated=estimatedQuinielaWalletCost();
+  const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
+  const movements=walletTransactions.slice(0,8).map(t=>`<div class="wallet-move"><div><strong>${escapeHtml(walletMovementLabel(t))}</strong><small>${escapeHtml(walletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${escapeHtml(euro(Number(t.amount)))}</b></div>`).join("");
+  const status=conf
+    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>`
+    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
+  const controls=manager?`
+    <div class="wallet-confirm-controls">
+      <label><span>Coste de esta apuesta</span><div><input id="walletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${escapeHtml(costValue)}" placeholder="0,00"><b>€</b></div></label>
+      <button id="walletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
+      ${conf?'<button id="walletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
+    </div>
+    <div class="wallet-credit-controls">
+      <label><span>Añadir al monedero</span><div><input id="walletCreditAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label>
+      <input id="walletCreditNote" class="wallet-note" type="text" maxlength="80" placeholder="Nota opcional">
+      <div class="wallet-credit-actions"><button id="walletAddFundsBtn" type="button">+ Fondos</button><button id="walletAddPrizeBtn" type="button">+ Premio</button></div>
+    </div>`
+    : `<p class="wallet-readonly">Solo Salva puede confirmar apuestas y modificar el dinero. Ferran tiene acceso de solo lectura.</p>`;
+  el.innerHTML=`<section class="wallet-card">
+    <div class="wallet-top"><div><span>MONEDERO CONJUNTO</span><small>Saldo disponible</small></div><strong>${escapeHtml(euro(walletBalance))}</strong></div>
+    <div class="wallet-confirmation">${status}${controls}</div>
+    <details class="wallet-history"><summary>Movimientos <b>${walletTransactions.length}</b></summary><div class="wallet-moves">${movements||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></details>
+  </section>`;
+  if(!manager)return;
+  $("#walletConfirmBtn")?.addEventListener("click",confirmQuinielaWalletBet);
+  $("#walletUnconfirmBtn")?.addEventListener("click",unconfirmQuinielaWalletBet);
+  $("#walletAddFundsBtn")?.addEventListener("click",()=>addWalletCredit("funds"));
+  $("#walletAddPrizeBtn")?.addEventListener("click",()=>addWalletCredit("prize"));
+}
+async function confirmQuinielaWalletBet(){
+  const raw=String($("#walletBetCost")?.value||"").replace(",",".");
+  const cost=Number(raw);
+  if(!Number.isFinite(cost)||cost<=0){toast("Introduce un coste válido");return}
+  try{
+    setSync("","Guardando");
+    const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id,p_cost:cost});
+    if(error)throw error;
+    await loadWalletData();renderJoint();setSync("online","Sincronizado");toast("✓ Apuesta confirmada y descontada del monedero");
+  }catch(e){console.error(e);setSync("error","Error");toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
+}
+async function unconfirmQuinielaWalletBet(){
+  try{
+    setSync("","Guardando");
+    const {error}=await sb.rpc("wallet_unconfirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id});
+    if(error)throw error;
+    await loadWalletData();renderJoint();setSync("online","Sincronizado");toast("Confirmación anulada · importe devuelto");
+  }catch(e){console.error(e);setSync("error","Error");toast("No se pudo anular")}
+}
+async function addWalletCredit(kind){
+  const raw=String($("#walletCreditAmount")?.value||"").replace(",",".");
+  const amount=Number(raw),note=$("#walletCreditNote")?.value?.trim()||null;
+  if(!Number.isFinite(amount)||amount<=0){toast("Introduce un importe válido");return}
+  try{
+    setSync("","Guardando");
+    const {error}=await sb.rpc("wallet_add_credit",{p_room_id:roomId,p_kind:kind,p_amount:amount,p_note:note});
+    if(error)throw error;
+    await loadWalletData();renderJoint();setSync("online","Sincronizado");toast(kind==="prize"?"Premio añadido al monedero":"Fondos añadidos al monedero");
+  }catch(e){console.error(e);setSync("error","Error");toast("No se pudo actualizar el monedero")}
+}
+
 function jointBetRecommendation(j=journey){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   if(!j||!p1||!p2)return {ready:false,reason:"Faltan jugadores"};
@@ -983,6 +1076,7 @@ function renderJoint(){
   const summary=$("#jointSummary"),list=$("#jointList");if(!summary||!list||!journey)return;
   const p1=memberBySlot(1),p2=memberBySlot(2);
   renderJointPlan(summary,journey);
+  renderJointWallet();
   const locked=!journeyCanEdit(journey),normal=matches.filter(m=>m.number<=14);
   list.innerHTML=normal.map(m=>{
     const sel=effectiveJointSelection(m.number),override=jointOverrideFor(m.number),kind=jointSelectionKind(m.number);
@@ -1593,7 +1687,7 @@ async function enterApp(){
   $("#myName").textContent=myMember.display_name;
   setSync("","Cargando");
   await Promise.all([loadAllJourneys(),loadMembers()]);
-  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries()]);
+  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries(),loadWalletData()]);
   await loadNotices();
   selectActiveJourney();
   renderAll();
@@ -2277,6 +2371,9 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllElige8();renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_picks",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointPicks();renderJoint();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await Promise.all([loadAllJointElige8(),loadJourneySummaries()]);renderJoint();setSync("online","Sincronizado")})
+    .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==identityUserId);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{const before=allMatches.map(m=>({...m}));await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();detectNewResults(before);renderAll()})
