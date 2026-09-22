@@ -7566,3 +7566,164 @@ html[data-theme="dark"] .qg-history-picks .real{
   .qg-history-team-pos{width:27px}
   .qg-history-team-name{font-size:.55rem}
 }
+
+
+/* Comparar movil + pulido oscuro general v138 */
+@media(max-width:520px){
+  #compareView .compare-card-head{
+    grid-template-columns:36px minmax(0,1fr)!important;
+    grid-template-rows:auto auto!important;
+    column-gap:8px!important;
+    row-gap:8px!important;
+    align-items:center!important;
+  }
+  #compareView .compare-number-competition{
+    grid-column:1!important;
+    grid-row:1!important;
+    align-self:start;
+  }
+  #compareView .compare-state{
+    grid-column:2!important;
+    grid-row:1!important;
+    justify-self:end!important;
+    align-self:center!important;
+    margin:0!important;
+  }
+  #compareView .compare-fixture{
+    grid-column:1/-1!important;
+    grid-row:2!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  #compareView .fixture-mini{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr)!important;
+    align-items:center!important;
+    width:100%!important;
+    min-width:0!important;
+    gap:5px!important;
+    flex-wrap:nowrap!important;
+  }
+  #compareView .fixture-mini-team{
+    min-width:0!important;
+    display:flex!important;
+    align-items:center!important;
+    flex-wrap:nowrap!important;
+    gap:3px!important;
+    font-size:clamp(.50rem,2.25vw,.58rem)!important;
+    line-height:1!important;
+  }
+  #compareView .fixture-mini-team:first-child{
+    flex-direction:row-reverse!important;
+    justify-content:flex-start!important;
+    text-align:right!important;
+  }
+  #compareView .fixture-mini-team:last-child{
+    justify-content:flex-start!important;
+    text-align:left!important;
+  }
+  #compareView .fixture-mini-team>span:last-child{
+    min-width:0!important;
+    max-width:none!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    font-weight:900!important;
+  }
+  #compareView .fixture-mini-team .team-crest{
+    width:21px!important;
+    height:21px!important;
+    min-width:21px!important;
+    border-radius:7px!important;
+  }
+  #compareView .fixture-mini-team .team-position{
+    min-width:20px!important;
+    height:17px!important;
+    padding:0 2px!important;
+    font-size:.42rem!important;
+  }
+  #compareView .fixture-mini-sep{
+    width:10px!important;
+    text-align:center!important;
+    justify-self:center!important;
+  }
+}
+
+/* Modo oscuro: evitar superficies blancas demasiado brillantes */
+html[data-theme="dark"] .tv-broadcast,
+html[data-theme="dark"] .tv-broadcast.compact,
+html[data-theme="dark"] .tv-broadcast.pending-tv{
+  background:#13241c!important;
+  border-color:#30463a!important;
+  color:#dce9e2!important;
+  box-shadow:none!important;
+}
+html[data-theme="dark"] .tv-channel{
+  background:#0c1813!important;
+  border-color:#30463a!important;
+  color:#e4eee8!important;
+}
+html[data-theme="dark"] .tv-icon{
+  background:#182b22!important;
+  color:#63d9a6!important;
+}
+html[data-theme="dark"] .tv-title,
+html[data-theme="dark"] .tv-pending{
+  color:#9db0a6!important;
+}
+html[data-theme="dark"] .team-crest{
+  background:#16271f!important;
+  border-color:#30463a!important;
+}
+html[data-theme="dark"] .team-crest.flag-crest{
+  background:#16271f!important;
+}
+html[data-theme="dark"] .team-crest-img{
+  background:#dbe4df!important;
+}
+html[data-theme="dark"] .team-crest-img.high-quality{
+  background:transparent!important;
+}
+html[data-theme="dark"] .crest-fallback{
+  color:#74dcae!important;
+}
+html[data-theme="dark"] .secondary-btn,
+html[data-theme="dark"] .room-strip,
+html[data-theme="dark"] .player-banner,
+html[data-theme="dark"] .empty-card,
+html[data-theme="dark"] .history-empty,
+html[data-theme="dark"] .compare-table-wrap{
+  background:var(--surface)!important;
+  border-color:var(--border)!important;
+  color:var(--text)!important;
+}
+html[data-theme="dark"] .goal-row,
+html[data-theme="dark"] .opponent-pick,
+html[data-theme="dark"] .match-detail-picks>div{
+  background:var(--surface-2)!important;
+  border-color:var(--border)!important;
+}
+html[data-theme="dark"] .goal,
+html[data-theme="dark"] .pick:not(.selected),
+html[data-theme="dark"] .joint-sign:not(.selected){
+  background:#102018!important;
+  border-color:#30463a!important;
+  color:#dbe8e1!important;
+}
+html[data-theme="dark"] .team-position{
+  background:#173126!important;
+  border-color:#315443!important;
+  color:#71d9a8!important;
+}
+html[data-theme="dark"] .qg-tv-inline{
+  color:#a8bab0!important;
+}
+html[data-theme="dark"] .qg-tv-icon{
+  color:#65d9a5!important;
+}
+html[data-theme="dark"] .qg-goal:not(.selected),
+html[data-theme="dark"] .qg-joint-side button:not(.selected){
+  background:#102018!important;
+  border-color:#30463a!important;
+  color:#dbe8e1!important;
+}
