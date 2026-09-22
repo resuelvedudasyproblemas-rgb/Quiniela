@@ -5187,3 +5187,14 @@ html[data-theme="dark"] .qg-result.wrong{background:#462020;color:#ffaaaa}
   .qg-plan-cell{padding:6px 2px}
   .qg-compare-box{padding:7px 3px}
 }
+
+
+/* Quinigol finalizadas v83 */
+.qg-journey-card.qg-prize{
+  background:linear-gradient(135deg,#8a6715,#c69a25 58%,#e0ba47)!important;
+}
+.qg-journey-card.qg-miss{
+  background:linear-gradient(135deg,#762d33,#a64047 62%,#bd5258)!important;
+}
+.qg-journey-card.qg-prize .status-dot{background:#fff0a7!important}
+.qg-journey-card.qg-miss .status-dot{background:#ffb9be!important}
