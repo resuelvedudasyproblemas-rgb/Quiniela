@@ -1,5 +1,5 @@
 const CACHE="quiniela-v82";
-const CORE=["./","index.html","styles.css","app.js","quinigol.js","config.js","manifest.webmanifest","icon-192.svg","icon-512.svg"];
+const CORE=["./","index.html","styles.css","app.js","config.js","manifest.webmanifest","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install",event=>{
   event.waitUntil(

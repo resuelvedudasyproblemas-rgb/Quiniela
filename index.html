@@ -369,6 +369,349 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js"></script>\n  <script type="module" src="quinigol.js"></script>
+  <script type="module" src="app.js"></script>\n  <script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
+
+const cfg=window.QUINIELA_CONFIG||{};
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const GOALS=["0","1","2","M"];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],allJoint=[];
+let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
+let saving=false,jointSaving=false,channel=null;
+const drafts=new Map(),jointDrafts=new Map();
+
+function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function toast(msg){
+  const el=$("#toast");if(!el)return;
+  el.textContent=msg;el.classList.add("show");
+  clearTimeout(window.__qgToast);window.__qgToast=setTimeout(()=>el.classList.remove("show"),1800);
+}
+function key(prefix){return identityUserId&&roomId?`${prefix}:${roomId}:${identityUserId}`:""}
+function readPref(prefix,fallback=""){const k=key(prefix);return k?(localStorage.getItem(k)||fallback):fallback}
+function savePref(prefix,value){const k=key(prefix);if(k)localStorage.setItem(k,String(value))}
+function member(slot){return members.find(m=>m.slot===slot)}
+function stripTeam(name=""){return String(name).replace(/\s*\([MF]\)\s*$/i,"").trim()}
+function norm(name=""){return stripTeam(name).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\./g,"").replace(/\s+/g," ").trim()}
+const FLAGS={
+  "ESPANA":"🇪🇸","INGLATERRA":"🏴","FRANCIA":"🇫🇷","ITALIA":"🇮🇹","ALEMANIA":"🇩🇪","PORTUGAL":"🇵🇹",
+  "PAISES BAJOS":"🇳🇱","GALES":"🏴","NORUEGA":"🇳🇴","DINAMARCA":"🇩🇰","BELGICA":"🇧🇪","TURQUIA":"🇹🇷",
+  "SUECIA":"🇸🇪","RUMANIA":"🇷🇴"
+};
+function initials(name=""){
+  const p=norm(name).replace(/\b(CLUB|FUTBOL|FOOTBALL|CF|FC|CD|UD|SAD|R)\b/g,"").trim().split(/\s+/).filter(Boolean);
+  return p.length===1?p[0].slice(0,2):((p[0]?.[0]||"")+(p[1]?.[0]||"")).slice(0,2);
+}
+function logoUrl(raw=""){
+  const m=String(raw).match(/(?:api|img)\.sofascore\.app\/api\/v1\/team\/(\d+)\/image/i);
+  return m?`${cfg.SUPABASE_URL}/storage/v1/object/public/quiniela-web/logos/team/${m[1]}.webp`:raw;
+}
+function crest(name,url=""){
+  const direct=logoUrl(url),flag=FLAGS[norm(name)],label=esc(stripTeam(name));
+  if(direct)return `<span class="team-crest xs" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span><img class="team-crest-img high-quality" src="${esc(direct)}" alt="" loading="lazy" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
+  if(flag)return `<span class="team-crest xs flag-crest" title="${label}">${flag}</span>`;
+  return `<span class="team-crest xs fallback-only" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span></span>`;
+}
+function pos(n){return Number.isInteger(Number(n))&&Number(n)>0?`<span class="team-position compact">${Number(n)}.º</span>`:""}
+function teamHtml(name,url,p){return `${crest(name,url)}${pos(p)}<span>${esc(stripTeam(name))}</span>`}
+function formatKickoff(v){
+  if(!v)return "Horario pendiente";
+  return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(".","");
+}
+function fullDate(v){
+  if(!v)return "Fecha pendiente";
+  return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
+}
+function timeLeft(v){
+  const diff=new Date(v).getTime()-Date.now();
+  if(!Number.isFinite(diff)||diff<=0)return "Cerrado";
+  const min=Math.max(1,Math.floor(diff/60000)),d=Math.floor(min/1440),h=Math.floor((min%1440)/60),m=min%60;
+  return [d?`${d} d`:"",h||d?`${h} h`:"",`${m} min`].filter(Boolean).join(" ");
+}
+function msFor(jid){return allMatches.filter(m=>m.journey_id===jid).sort((a,b)=>a.number-b.number)}
+function resolved(m){return m?.home_score!=null&&m?.away_score!=null}
+function state(j){
+  if(!j)return "closed";
+  const ms=msFor(j.id);
+  if(ms.length===6&&ms.every(resolved))return "finished";
+  if(j.status==="open"&&Date.now()<new Date(j.close_at).getTime())return "open";
+  return ms.some(m=>m.kickoff&&Date.now()>=new Date(m.kickoff).getTime())?"playing":"closed";
+}
+function canEdit(j=journey){return Boolean(j&&j.status==="open"&&Date.now()<new Date(j.close_at).getTime())}
+function pick(uid,n,jid=journey?.id){return allPicks.find(p=>p.user_id===uid&&p.journey_id===jid&&p.match_number===n)||null}
+function jointOverride(n,jid=journey?.id){return allJoint.find(p=>p.journey_id===jid&&p.match_number===n)||null}
+function pickText(p){return p?.home_goals&&p?.away_goals?`${p.home_goals}-${p.away_goals}`:"—"}
+function goalNum(v){return v==="M"?3:Number(v)}
+function goalToken(v){const n=Math.max(0,Math.min(3,Math.round(Number(v)||0)));return n>=3?"M":String(n)}
+function actual(m){return resolved(m)?`${m.home_score>=3?"M":m.home_score}-${m.away_score>=3?"M":m.away_score}`:"—"}
+function projected(m){
+  if(resolved(m))return actual(m);
+  if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
+    return `${m.live_home_score>=3?"M":m.live_home_score}-${m.live_away_score>=3?"M":m.live_away_score}`;
+  }
+  return "—";
+}
+function completed(uid,jid=journey?.id){return allPicks.filter(p=>p.user_id===uid&&p.journey_id===jid&&p.home_goals&&p.away_goals).length}
+function score(uid,j=journey){
+  let correct=0,count=0;if(!j)return {correct,resolved:count};
+  for(const m of msFor(j.id)){const r=actual(m);if(r==="—")continue;count++;if(pickText(pick(uid,m.number,j.id))===r)correct++}
+  return {correct,resolved:count};
+}
+function autoJoint(n,jid=journey?.id){
+  const a=member(1)?pick(member(1).user_id,n,jid):null,b=member(2)?pick(member(2).user_id,n,jid):null;
+  if(!a&&!b)return null;
+  if(a&&!b)return {home_goals:a.home_goals,away_goals:a.away_goals,kind:"Provisional"};
+  if(!a&&b)return {home_goals:b.home_goals,away_goals:b.away_goals,kind:"Provisional"};
+  if(pickText(a)===pickText(b))return {home_goals:a.home_goals,away_goals:a.away_goals,kind:"Coincidís"};
+  let home=(goalNum(a.home_goals)+goalNum(b.home_goals))/2,away=(goalNum(a.away_goals)+goalNum(b.away_goals))/2;
+  const m=msFor(jid).find(x=>x.number===n),hp=Number(m?.home_position),ap=Number(m?.away_position);
+  if(Number.isFinite(hp)&&Number.isFinite(ap)&&hp>0&&ap>0){const bias=Math.max(-.18,Math.min(.18,(ap-hp)/45));home+=bias;away-=bias}
+  return {home_goals:goalToken(home),away_goals:goalToken(away),kind:"Recomendado"};
+}
+function effectiveJoint(n,jid=journey?.id){
+  const man=jointOverride(n,jid);
+  return man?{home_goals:man.home_goals,away_goals:man.away_goals,kind:"Manual"}:autoJoint(n,jid);
+}
+function jointText(n,jid=journey?.id){return pickText(effectiveJoint(n,jid))}
+function jointScore(j=journey){
+  let correct=0,count=0;if(!j)return {correct,resolved:count};
+  for(const m of msFor(j.id)){const r=actual(m);if(r==="—")continue;count++;if(jointText(m.number,j.id)===r)correct++}
+  return {correct,resolved:count};
+}
+function prizeLabel(n,res=6){if(res!==6||n<2)return "";return ({6:"1ª categoría",5:"2ª categoría",4:"3ª categoría",3:"4ª categoría",2:"5ª categoría"})[n]||""}
+function selectJourney(){
+  if(!journeys.length){journey=null;matches=[];return}
+  const saved=journeys.find(j=>j.id===selectedJourneyId);
+  const open=[...journeys].filter(j=>state(j)==="open").sort((a,b)=>new Date(a.close_at)-new Date(b.close_at));
+  const playing=[...journeys].filter(j=>state(j)==="playing").sort((a,b)=>b.number-a.number);
+  journey=saved||open[0]||playing[0]||[...journeys].sort((a,b)=>b.number-a.number)[0];
+  selectedJourneyId=journey.id;savePref("quinigol-journey",journey.id);matches=msFor(journey.id);
+}
+async function load(){
+  const [jr,mr,pr,jpr,mem]=await Promise.all([
+    sb.from("qg_journeys").select("*").order("number",{ascending:false}),
+    sb.from("qg_matches").select("*").order("number"),
+    sb.from("qg_picks").select("*").eq("room_id",roomId),
+    sb.from("qg_joint_picks").select("*").eq("room_id",roomId),
+    sb.from("members").select("room_id,user_id,slot,display_name").eq("room_id",roomId).order("slot")
+  ]);
+  for(const r of [jr,mr,pr,jpr,mem])if(r.error)throw r.error;
+  journeys=jr.data||[];allMatches=mr.data||[];allPicks=pr.data||[];allJoint=jpr.data||[];members=mem.data||[];
+  const saved=Number(readPref("quinigol-journey",""));selectedJourneyId=Number.isFinite(saved)&&saved>0?saved:null;
+  const v=readPref("quinigol-view","play");activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
+  const f=readPref("quinigol-filter","all");activeFilter=["all","pending","correct","wrong"].includes(f)?f:"all";
+  const g=readPref("quiniela-active-game","quiniela");activeGame=g==="quinigol"?"quinigol":"quiniela";
+  selectJourney();
+}
+function currentDraft(n){
+  const k=`${journey?.id}:${n}`,p=pick(identityUserId,n),d=drafts.get(k)||{};
+  return {home_goals:d.home_goals??p?.home_goals??null,away_goals:d.away_goals??p?.away_goals??null};
+}
+function currentJointDraft(n){
+  const k=`${journey?.id}:${n}`,e=effectiveJoint(n)||{},d=jointDrafts.get(k)||{};
+  return {home_goals:d.home_goals??e.home_goals??null,away_goals:d.away_goals??e.away_goals??null};
+}
+async function saveGoal(n,side,val){
+  if(!canEdit()){toast("Esta jornada de Quinigol ya está cerrada");return}
+  if(saving)return;
+  const k=`${journey.id}:${n}`,cur=currentDraft(n),next={home_goals:side==="home"?val:cur.home_goals,away_goals:side==="away"?val:cur.away_goals};
+  drafts.set(k,next);renderPlay();
+  if(!next.home_goals||!next.away_goals)return;
+  saving=true;
+  try{
+    const row={room_id:roomId,journey_id:journey.id,match_number:n,user_id:identityUserId,home_goals:next.home_goals,away_goals:next.away_goals,updated_at:new Date().toISOString()};
+    const {data,error}=await sb.from("qg_picks").upsert(row,{onConflict:"room_id,journey_id,match_number,user_id"}).select().single();
+    if(error)throw error;
+    allPicks=allPicks.filter(p=>!(p.journey_id===journey.id&&p.match_number===n&&p.user_id===identityUserId));allPicks.push(data);drafts.delete(k);renderAll();
+    if(completed(identityUserId)===6)toast("✓ Quinigol completo");
+  }catch(e){console.error(e);toast("No se pudo guardar")}finally{saving=false}
+}
+async function deletePick(n){
+  if(!canEdit())return;
+  const {error}=await sb.from("qg_picks").delete().eq("room_id",roomId).eq("journey_id",journey.id).eq("match_number",n).eq("user_id",identityUserId);
+  if(error){toast("No se pudo borrar");return}
+  allPicks=allPicks.filter(p=>!(p.journey_id===journey.id&&p.match_number===n&&p.user_id===identityUserId));drafts.delete(`${journey.id}:${n}`);renderAll();
+}
+async function saveJointGoal(n,side,val){
+  if(!canEdit()){toast("Esta jornada de Quinigol ya está cerrada");return}
+  if(jointSaving)return;
+  const k=`${journey.id}:${n}`,cur=currentJointDraft(n),next={home_goals:side==="home"?val:cur.home_goals,away_goals:side==="away"?val:cur.away_goals};
+  jointDrafts.set(k,next);renderJoint();
+  if(!next.home_goals||!next.away_goals)return;
+  jointSaving=true;
+  try{
+    const row={room_id:roomId,journey_id:journey.id,match_number:n,home_goals:next.home_goals,away_goals:next.away_goals,updated_by:identityUserId,updated_at:new Date().toISOString()};
+    const {data,error}=await sb.from("qg_joint_picks").upsert(row,{onConflict:"room_id,journey_id,match_number"}).select().single();
+    if(error)throw error;
+    allJoint=allJoint.filter(p=>!(p.journey_id===journey.id&&p.match_number===n));allJoint.push(data);jointDrafts.delete(k);renderAll();
+  }catch(e){console.error(e);toast("No se pudo guardar la conjunta")}finally{jointSaving=false}
+}
+async function resetJoint(n){
+  if(!canEdit())return;
+  const {error}=await sb.from("qg_joint_picks").delete().eq("room_id",roomId).eq("journey_id",journey.id).eq("match_number",n);
+  if(error){toast("No se pudo volver a recomendado");return}
+  allJoint=allJoint.filter(p=>!(p.journey_id===journey.id&&p.match_number===n));jointDrafts.delete(`${journey.id}:${n}`);renderAll();toast("Vuelve al cálculo automático");
+}
+function goalButtons(n,side,selected,locked,attrs=""){
+  return GOALS.map(v=>`<button type="button" class="qg-goal ${selected===v?"selected":""}" data-qg-match="${n}" data-qg-side="${side}" data-qg-goal="${v}" ${attrs} ${locked?"disabled":""}>${v}</button>`).join("");
+}
+function renderHero(){
+  if(!journey)return;
+  const st=state(journey),res=msFor(journey.id).filter(resolved).length;
+  $("#qgJourneyNumber").textContent=`Jornada ${journey.number}`;
+  $("#qgJourneyKicker").textContent=st==="open"?"PRÓXIMO QUINIGOL":st==="playing"?"SEGUIMIENTO DE RESULTADOS":st==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
+  $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="playing"?`En juego · ${res}/6 resultados`:st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
+  $("#qgJourneyDate").textContent=`Cierre · ${fullDate(journey.close_at)}`;
+  $("#qgJourneyCountdown").textContent=st==="open"?`Empieza en ${timeLeft(journey.close_at)}`:st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
+  const mine=score(identityUserId),js=jointScore(),card=$("#qgJourneyCard");
+  const prize=st==="finished"&&(mine.correct>=2||js.correct>=2);
+  card.classList.toggle("qg-prize",prize);card.classList.toggle("qg-miss",st==="finished"&&!prize);
+}
+function renderSwitcher(){
+  const el=$("#qgJourneySwitcher");if(!el)return;
+  el.innerHTML=[...journeys].sort((a,b)=>b.number-a.number).map(j=>{
+    const st=state(j),mine=score(identityUserId,j),js=jointScore(j),prize=st==="finished"&&(mine.correct>=2||js.correct>=2);
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st} ${st==="finished"?(prize?"finished-prize":"finished-miss"):""}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados":fullDate(j.close_at)}</small></button>`;
+  }).join("");
+  $$("[data-qg-journey]").forEach(b=>b.addEventListener("click",()=>{selectedJourneyId=Number(b.dataset.qgJourney);savePref("quinigol-journey",selectedJourneyId);selectJourney();renderAll()}));
+}
+function dashCard(name,done,s,cls){
+  const finished=state(journey)==="finished",prize=prizeLabel(s.correct,s.resolved);
+  return `<div class="qg-dashboard-card ${cls} ${prize?"prize":""}"><span>${esc(name)}</span><strong>${finished?`${s.correct}/6`:`${done}/6`}</strong><small>${finished?(prize||"Sin premio"):"completados"}</small></div>`;
+}
+function renderDashboard(){
+  const el=$("#qgDashboard");if(!el)return;
+  const p1=member(1),p2=member(2),s1=p1?score(p1.user_id):{correct:0,resolved:0},s2=p2?score(p2.user_id):{correct:0,resolved:0},js=jointScore(),finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved);
+  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,"player-two")+`<div class="qg-dashboard-card joint ${jp?"prize":""}"><span>Conjunta</span><strong>${finished?`${js.correct}/6`:`${matches.filter(m=>effectiveJoint(m.number)).length}/6`}</strong><small>${finished?(jp||"Sin premio"):"marcadores"}</small></div>`;
+}
+function renderFilters(){
+  const c={all:matches.length,pending:0,correct:0,wrong:0};
+  matches.forEach(m=>{const r=actual(m),p=pick(identityUserId,m.number);if(r==="—")c.pending++;else if(p&&pickText(p)===r)c.correct++;else c.wrong++});
+  $("#qgFilterAll").textContent=c.all;$("#qgFilterPending").textContent=c.pending;$("#qgFilterCorrect").textContent=c.correct;$("#qgFilterWrong").textContent=c.wrong;
+  $$(".qg-filter").forEach(b=>b.classList.toggle("active",b.dataset.qgFilter===activeFilter));
+}
+function renderPlay(){
+  const el=$("#qgMatches");if(!el||!journey)return;
+  const locked=!canEdit(),opp=members.find(m=>m.user_id!==identityUserId);
+  el.innerHTML=matches.map(m=>{
+    const cur=currentDraft(m.number),saved=pick(identityUserId,m.number),r=actual(m),proj=projected(m),ok=saved&&r!=="—"&&pickText(saved)===r;
+    const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—")||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
+    let result="";
+    if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"✓ Acierto":saved?"✕ Fallo":"Sin pronóstico"}</strong></div>`;
+    else if(proj!=="—")result=`<div class="qg-result live"><span>En directo · provisional</span><strong>${esc(proj)}</strong></div>`;
+    return `<article class="qg-match-card ${show?"":"hidden"}"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}</article>`;
+  }).join("");
+  $$(".qg-goal").forEach(b=>b.addEventListener("click",()=>saveGoal(Number(b.dataset.qgMatch),b.dataset.qgSide,b.dataset.qgGoal)));
+  $$("[data-qg-clear]").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.qgClear))));
+  renderFilters();
+  const n=completed(identityUserId);$("#qgProgressText").textContent=`${n} de 6 completados`;$("#qgProgressBar").style.width=`${n/6*100}%`;
+}
+function jointEditor(n,sel,locked){
+  const side=(s,v)=>`<div class="qg-joint-side">${GOALS.map(x=>`<button type="button" class="${v===x?"selected":""}" data-qg-joint-match="${n}" data-qg-joint-side="${s}" data-qg-joint-goal="${x}" ${locked?"disabled":""}>${x}</button>`).join("")}</div>`;
+  return `<div class="qg-joint-goal-pair">${side("home",sel.home_goals)}<span class="qg-joint-dash">–</span>${side("away",sel.away_goals)}</div>`;
+}
+function renderPlan(){
+  const el=$("#qgJointPlan");if(!el)return;
+  const p1=member(1),p2=member(2),c1=p1?completed(p1.user_id):0,c2=p2?completed(p2.user_id):0,ready=c1===6&&c2===6;
+  const grid=matches.map(m=>`<div class="qg-plan-cell"><span>P${m.number}</span><strong>${esc(jointText(m.number))}</strong></div>`).join("");
+  el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>${ready?"1 Quinigol conjunto":"Propuesta pendiente"}</h3></div><div class="qg-plan-price"><strong>${ready?"1,00 €":"—"}</strong><small>${ready?"1 apuesta":"Esperando"}</small></div></div><p>${ready?"Los seis marcadores verdes forman la apuesta conjunta recomendada. Podéis cambiar cualquiera manualmente.":`Faltan pronósticos · ${esc(p1?.display_name||"Salva")} ${c1}/6 · ${esc(p2?.display_name||"Ferran")} ${c2}/6.`}</p><div class="qg-plan-grid">${grid}</div></section>`;
+}
+function renderJoint(){
+  const el=$("#qgJointList");if(!el||!journey)return;renderPlan();
+  const p1=member(1),p2=member(2),locked=!canEdit();
+  el.innerHTML=matches.map(m=>{
+    const a=p1?pick(p1.user_id,m.number):null,b=p2?pick(p2.user_id,m.number):null,man=jointOverride(m.number),auto=autoJoint(m.number),kind=man?"Manual":auto?.kind||"Pendiente",sel=currentJointDraft(m.number);
+    return `<article class="qg-joint-card"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-mode ${man?"manual":""}">${esc(kind)}</span></div><div class="qg-joint-rows"><div class="qg-joint-row player-one"><div class="qg-joint-name"><i></i><span>${esc(p1?.display_name||"Salva")}</span></div><strong class="qg-score-pill">${esc(pickText(a))}</strong></div><div class="qg-joint-row player-two"><div class="qg-joint-name"><i></i><span>${esc(p2?.display_name||"Ferran")}</span></div><strong class="qg-score-pill">${esc(pickText(b))}</strong></div><div class="qg-joint-row joint"><div class="qg-joint-name"><i></i><span>Conjunta</span></div><div class="qg-joint-edit">${jointEditor(m.number,sel,locked)}<small>${kind==="Recomendado"?"Recomendado a partir de los dos":kind==="Provisional"?"Falta el pronóstico del otro":kind}</small>${man&&canEdit()?`<button type="button" class="qg-joint-reset" data-qg-reset="${m.number}">↺ Volver a recomendado</button>`:""}</div></div></div></article>`;
+  }).join("");
+  $$("[data-qg-joint-goal]").forEach(b=>b.addEventListener("click",()=>saveJointGoal(Number(b.dataset.qgJointMatch),b.dataset.qgJointSide,b.dataset.qgJointGoal)));
+  $$("[data-qg-reset]").forEach(b=>b.addEventListener("click",()=>resetJoint(Number(b.dataset.qgReset))));
+}
+function renderCompare(){
+  const el=$("#qgCompareList");if(!el||!journey)return;
+  const p1=member(1),p2=member(2);
+  el.innerHTML=matches.map(m=>{
+    const r=projected(m);
+    return `<article class="qg-compare-card"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div></div><div class="qg-compare-result"><span>${resolved(m)?"Resultado oficial":r!=="—"?"Resultado provisional":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
+  }).join("");
+}
+function stat(uid){
+  const done=journeys.filter(j=>state(j)==="finished"),scores=done.map(j=>score(uid,j));
+  return {best:scores.length?Math.max(...scores.map(s=>s.correct)):0,prizes:scores.filter(s=>s.correct>=2).length,total:scores.reduce((a,s)=>a+s.correct,0),journeys:done.length};
+}
+function jstat(){
+  const done=journeys.filter(j=>state(j)==="finished"),scores=done.map(j=>jointScore(j));
+  return {best:scores.length?Math.max(...scores.map(s=>s.correct)):0,prizes:scores.filter(s=>s.correct>=2).length,total:scores.reduce((a,s)=>a+s.correct,0),journeys:done.length};
+}
+function renderStats(){
+  const el=$("#qgStats");if(!el)return;
+  const p1=member(1),p2=member(2),s1=p1?stat(p1.user_id):{best:0,prizes:0},s2=p2?stat(p2.user_id):{best:0,prizes:0},sj=jstat();
+  const card=(name,s,cls)=>`<div class="qg-stat-card ${cls} ${s.prizes?"prize":""}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con premio</small></div>`;
+  el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. El importe final depende del escrutinio oficial de SELAE.</div>`;
+}
+function renderHistory(){
+  const el=$("#qgHistory");if(!el)return;
+  const p1=member(1),p2=member(2),done=[...journeys].filter(j=>state(j)==="finished").sort((a,b)=>b.number-a.number);
+  if(!done.length){el.innerHTML='<div class="empty-card"><div class="empty-icon">⚽</div><h2>Aún no hay historial</h2><p>La primera jornada finalizada aparecerá aquí con los seis marcadores.</p></div>';return}
+  el.innerHTML=done.map(j=>{
+    const s1=p1?score(p1.user_id,j):{correct:0},s2=p2?score(p2.user_id,j):{correct:0},sj=jointScore(j);
+    const rows=msFor(j.id).map(m=>`<div class="qg-history-match"><span>P${m.number}</span><div class="qg-history-fixture">${esc(stripTeam(m.home))} · ${esc(stripTeam(m.away))}</div><div class="qg-history-picks"><span class="p1">${esc(p1?pickText(pick(p1.user_id,m.number,j.id)):"—")}</span><span class="p2">${esc(p2?pickText(pick(p2.user_id,m.number,j.id)):"—")}</span><span class="pj">${esc(jointText(m.number,j.id))}</span><span class="real">${esc(actual(m))}</span></div></div>`).join("");
+    return `<details class="qg-history-item"><summary><span class="qg-history-num">J${j.number}</span><div class="qg-history-title"><strong>${esc(new Intl.DateTimeFormat("es-ES",{day:"numeric",month:"short",year:"numeric"}).format(new Date(j.draw_date+"T12:00:00")))}</strong><small>${prizeLabel(sj.correct,6)||"Resultados oficiales"}</small></div><div class="qg-history-score"><span>${s1.correct}/6</span><span>${s2.correct}/6</span><span>${sj.correct}/6</span></div></summary><div class="qg-history-body">${rows}</div></details>`;
+  }).join("");
+}
+function setView(v,persist=true){
+  activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
+  if(persist)savePref("quinigol-view",activeView);
+  $$(".qg-tab").forEach(b=>b.classList.toggle("active",b.dataset.qgView===activeView));
+  $$(".qg-view").forEach(x=>x.classList.toggle("active",x.id===`qg${activeView.charAt(0).toUpperCase()+activeView.slice(1)}View`));
+  if(activeView==="joint")renderJoint();if(activeView==="compare")renderCompare();if(activeView==="stats")renderStats();if(activeView==="history")renderHistory();
+}
+function setFilter(f){activeFilter=["all","pending","correct","wrong"].includes(f)?f:"all";savePref("quinigol-filter",activeFilter);renderPlay()}
+function setGame(g,persist=true){
+  activeGame=g==="quinigol"?"quinigol":"quiniela";if(persist)savePref("quiniela-active-game",activeGame);
+  $$(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
+  const q=activeGame==="quinigol";
+  $("#qgRoot")?.classList.toggle("hidden",!q);$("#journeyCard")?.classList.toggle("hidden",q);$("#journeySwitcher")?.classList.toggle("hidden",q);$("#quinielaTabs")?.classList.toggle("hidden",q);$("#quinielaMain")?.classList.toggle("hidden",q);
+  if(q)renderAll();
+}
+function renderAll(){
+  if(!journey)return;
+  renderHero();renderSwitcher();renderDashboard();renderPlay();renderJoint();renderCompare();renderStats();renderHistory();setView(activeView,false);
+}
+function bind(){
+  $$(".game-choice").forEach(b=>b.addEventListener("click",()=>setGame(b.dataset.game)));
+  $$(".qg-tab").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.qgView)));
+  $$(".qg-filter").forEach(b=>b.addEventListener("click",()=>setFilter(b.dataset.qgFilter)));
+}
+function subscribe(){
+  if(channel)sb.removeChannel(channel);
+  channel=sb.channel(`quinigol-${roomId}`)
+    .on("postgres_changes",{event:"*",schema:"public",table:"qg_picks",filter:`room_id=eq.${roomId}`},async()=>{const r=await sb.from("qg_picks").select("*").eq("room_id",roomId);if(!r.error){allPicks=r.data||[];renderAll()}})
+    .on("postgres_changes",{event:"*",schema:"public",table:"qg_joint_picks",filter:`room_id=eq.${roomId}`},async()=>{const r=await sb.from("qg_joint_picks").select("*").eq("room_id",roomId);if(!r.error){allJoint=r.data||[];renderAll()}})
+    .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},async()=>{const r=await sb.from("qg_matches").select("*").order("number");if(!r.error){allMatches=r.data||[];matches=msFor(journey.id);renderAll()}})
+    .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{const r=await sb.from("qg_journeys").select("*").order("number",{ascending:false});if(!r.error){journeys=r.data||[];selectJourney();renderAll()}})
+    .subscribe();
+}
+async function init(){
+  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_PUBLISHABLE_KEY)return;
+  sb=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  let mine=null;
+  for(let i=0;i<40&&!mine;i++){
+    const {data:{session}}=await sb.auth.getSession();
+    if(session){
+      const r=await sb.rpc("get_my_identity");
+      if(!r.error){const x=Array.isArray(r.data)?r.data[0]:r.data;if(x){mine=x;break}}
+    }
+    await wait(250);
+  }
+  if(!mine)return;
+  roomId=mine.room_id;identityUserId=mine.member_user_id;
+  try{
+    await load();bind();renderAll();setGame(activeGame,false);subscribe();
+    setInterval(()=>{if(journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Empieza en ${timeLeft(journey.close_at)}`}},30000);
+  }catch(e){console.error("Quinigol:",e)}
+}
+init();
+  </script>
 </body>
 </html>
