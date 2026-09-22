@@ -5996,3 +5996,21 @@ html[data-game="quiniela"] #qgJourneySwitcher{
   .qg-card-team .qg-head-score{font-size:.61rem;min-width:19px;padding:2px 4px}
   .qg-head-score-label{font-size:.34rem;margin-right:23px}
 }
+
+
+/* Escudos Quinigol uniformes v99 */
+.qg-flag-image img{
+  object-fit:contain!important;
+  padding:2px!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+}
+.qg-card-team .team-crest,
+.qg-goal-team .team-crest{
+  flex:0 0 23px;
+}
+.qg-card-team .team-crest-img,
+.qg-goal-team .team-crest-img{
+  object-fit:contain!important;
+  background:#fff!important;
+}

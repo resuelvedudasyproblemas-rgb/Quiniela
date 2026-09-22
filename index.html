@@ -413,9 +413,17 @@ function initials(name=""){
   const p=norm(name).replace(/\b(CLUB|FUTBOL|FOOTBALL|CF|FC|CD|UD|SAD|R)\b/g,"").trim().split(/\s+/).filter(Boolean);
   return p.length===1?p[0].slice(0,2):((p[0]?.[0]||"")+(p[1]?.[0]||"")).slice(0,2);
 }
+function sofaTeamLogoInfo(raw=""){
+  const m=String(raw||"").trim().match(/(?:api|img)\.sofascore\.app\/api\/v1\/team\/(\d+)\/image/i);
+  return m?{id:m[1]}:null;
+}
 function logoUrl(raw=""){
-  const m=String(raw).match(/(?:api|img)\.sofascore\.app\/api\/v1\/team\/(\d+)\/image/i);
-  return m?`${cfg.SUPABASE_URL}/storage/v1/object/public/quiniela-web/logos/team/${m[1]}.webp`:raw;
+  const info=sofaTeamLogoInfo(raw);
+  return info?`${cfg.SUPABASE_URL}/storage/v1/object/public/quiniela-web/logos/team/${info.id}.webp`:String(raw||"").trim();
+}
+function logoFallbackUrl(raw=""){
+  const info=sofaTeamLogoInfo(raw);
+  return info?`${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=team&id=${info.id}&v=3`:String(raw||"").trim();
 }
 function competitionLogoUrl(raw=""){
   const m=String(raw).match(/(?:api|img)\.sofascore\.app\/api\/v1\/unique-tournament\/(\d+)\/image/i);
@@ -426,9 +434,11 @@ function competitionLogoFallback(raw=""){
   return m?`${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=tournament&id=${m[1]}`:raw;
 }
 function crest(name,url=""){
-  const keyName=norm(name),direct=logoUrl(url),flag=FLAGS[keyName],flagImage=FLAG_IMAGES[keyName],label=esc(stripTeam(name));
+  const keyName=norm(name),direct=logoUrl(url),fallback=logoFallbackUrl(url),flag=FLAGS[keyName],flagImage=FLAG_IMAGES[keyName],label=esc(stripTeam(name));
+  if(direct){
+    return `<span class="team-crest xs" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span><img class="team-crest-img high-quality" src="${esc(direct)}" data-logo-fallback="${esc(fallback)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
+  }
   if(flagImage)return `<span class="team-crest xs flag-crest qg-flag-image" title="${label}"><img src="${esc(flagImage)}" alt="${label}" loading="lazy" referrerpolicy="no-referrer"></span>`;
-  if(direct)return `<span class="team-crest xs" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span><img class="team-crest-img high-quality" src="${esc(direct)}" alt="" loading="lazy" onload="if(this.previousElementSibling)this.previousElementSibling.style.display=\'none\'" onerror="this.remove()"></span>`;
   if(flag)return `<span class="team-crest xs flag-crest" title="${label}">${flag}</span>`;
   return `<span class="team-crest xs fallback-only" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span></span>`;
 }
