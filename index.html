@@ -400,8 +400,11 @@ function stripTeam(name=""){return String(name).replace(/\s*\([MF]\)\s*$/i,"").t
 function norm(name=""){return stripTeam(name).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\./g,"").replace(/\s+/g," ").trim()}
 const FLAGS={
   "ESPANA":"🇪🇸","INGLATERRA":"🏴","FRANCIA":"🇫🇷","ITALIA":"🇮🇹","ALEMANIA":"🇩🇪","PORTUGAL":"🇵🇹",
-  "PAISES BAJOS":"🇳🇱","GALES":"🏴","NORUEGA":"🇳🇴","DINAMARCA":"🇩🇰","BELGICA":"🇧🇪","TURQUIA":"🇹🇷",
+  "PAISES BAJOS":"🇳🇱","NORUEGA":"🇳🇴","DINAMARCA":"🇩🇰","BELGICA":"🇧🇪","TURQUIA":"🇹🇷",
   "SUECIA":"🇸🇪","RUMANIA":"🇷🇴"
+};
+const FLAG_IMAGES={
+  "GALES":"https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/svg/1f3f4-e0067-e0062-e0077-e006c-e0073-e007f.svg"
 };
 function initials(name=""){
   const p=norm(name).replace(/\b(CLUB|FUTBOL|FOOTBALL|CF|FC|CD|UD|SAD|R)\b/g,"").trim().split(/\s+/).filter(Boolean);
@@ -420,8 +423,9 @@ function competitionLogoFallback(raw=""){
   return m?`${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=tournament&id=${m[1]}`:raw;
 }
 function crest(name,url=""){
-  const direct=logoUrl(url),flag=FLAGS[norm(name)],label=esc(stripTeam(name));
-  if(direct)return `<span class="team-crest xs" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span><img class="team-crest-img high-quality" src="${esc(direct)}" alt="" loading="lazy" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
+  const keyName=norm(name),direct=logoUrl(url),flag=FLAGS[keyName],flagImage=FLAG_IMAGES[keyName],label=esc(stripTeam(name));
+  if(flagImage)return `<span class="team-crest xs flag-crest qg-flag-image" title="${label}"><img src="${esc(flagImage)}" alt="${label}" loading="lazy" referrerpolicy="no-referrer"></span>`;
+  if(direct)return `<span class="team-crest xs" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span><img class="team-crest-img high-quality" src="${esc(direct)}" alt="" loading="lazy" onload="if(this.previousElementSibling)this.previousElementSibling.style.display=\'none\'" onerror="this.remove()"></span>`;
   if(flag)return `<span class="team-crest xs flag-crest" title="${label}">${flag}</span>`;
   return `<span class="team-crest xs fallback-only" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span></span>`;
 }
@@ -433,10 +437,11 @@ function formatKickoff(v){
 }
 function tvHtml(m){
   const channels=Array.isArray(m?.tv_channels)?m.tv_channels.filter(Boolean):[];
-  if(!channels.length)return `<div class="tv-broadcast compact pending-tv qg-tv"><span class="tv-icon" aria-hidden="true">▣</span><span class="tv-title">TV</span><span class="tv-pending">Por confirmar</span></div>`;
+  if(!channels.length)return `<div class="qg-tv-inline pending" title="TV · Por confirmar"><span class="qg-tv-icon" aria-hidden="true">▣</span><span class="qg-tv-text">Por confirmar</span></div>`;
   const clean=[...new Set(channels.map(ch=>String(ch).trim()).filter(Boolean))];
   const visible=clean.slice(0,2),extra=Math.max(0,clean.length-2);
-  return `<div class="tv-broadcast compact qg-tv"><span class="tv-icon" aria-hidden="true">▣</span><span class="tv-title">TV</span><div class="tv-channels">${visible.map(ch=>`<span class="tv-channel">${esc(ch)}</span>`).join("")}${extra?`<span class="tv-channel tv-more">+${extra}</span>`:""}</div></div>`;
+  const text=visible.join(" · ")+(extra?` · +${extra}`:"");
+  return `<div class="qg-tv-inline" title="TV · ${esc(clean.join(" · "))}"><span class="qg-tv-icon" aria-hidden="true">▣</span><span class="qg-tv-text">${esc(text)}</span></div>`;
 }
 function fullDate(v){
   if(!v)return "Fecha pendiente";

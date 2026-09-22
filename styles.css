@@ -5575,3 +5575,100 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     padding:7px;
   }
 }
+
+
+/* Quinigol TV horizontal y bandera Gales v96 */
+.qg-flag-image{
+  padding:0!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+.qg-flag-image img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+}
+.qg-match-card .qg-card-head{
+  grid-template-columns:31px minmax(0,1fr) minmax(92px,max-content) auto!important;
+  column-gap:8px!important;
+  row-gap:0!important;
+  align-items:center!important;
+}
+.qg-match-card .qg-card-head>.qg-tv-inline{
+  grid-column:3!important;
+  grid-row:1!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  min-width:0!important;
+  max-width:170px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--muted)!important;
+  white-space:nowrap!important;
+}
+.qg-tv-icon{
+  flex:0 0 auto;
+  margin-right:4px;
+  color:var(--brand);
+  font-size:.48rem;
+  line-height:1;
+}
+.qg-tv-text{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.47rem;
+  font-weight:800;
+  line-height:1.2;
+}
+.qg-tv-inline.pending .qg-tv-text{
+  color:var(--muted);
+}
+.qg-match-card .qg-card-head>.qg-card-kickoff{
+  grid-column:4!important;
+  grid-row:1!important;
+  align-self:center!important;
+  white-space:nowrap!important;
+}
+@media(max-width:650px){
+  .qg-match-card .qg-card-head{
+    grid-template-columns:31px minmax(0,1fr) minmax(82px,115px) auto!important;
+    column-gap:6px!important;
+  }
+  .qg-match-card .qg-card-head>.qg-tv-inline{
+    grid-column:3!important;
+    grid-row:1!important;
+    justify-self:stretch!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .qg-match-card .qg-card-head>.qg-card-kickoff{
+    grid-column:4!important;
+    grid-row:1!important;
+  }
+}
+@media(max-width:430px){
+  .qg-match-card .qg-card-head{
+    grid-template-columns:31px minmax(0,1fr) minmax(68px,96px) auto!important;
+    column-gap:5px!important;
+  }
+  .qg-tv-icon{
+    margin-right:3px;
+    font-size:.43rem;
+  }
+  .qg-tv-text{
+    font-size:.41rem;
+  }
+  .qg-match-card .qg-card-kickoff{
+    font-size:.48rem!important;
+  }
+}
