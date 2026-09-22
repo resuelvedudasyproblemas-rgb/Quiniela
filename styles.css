@@ -6386,7 +6386,7 @@ html[data-game="quiniela"] #qgJourneySwitcher{
   white-space:nowrap!important;
   overflow:visible!important;
   text-overflow:clip!important;
-  font-size:clamp(.44rem,2.25vw,.57rem)!important;
+  font-size:clamp(.48rem,2.45vw,.62rem)!important;
   line-height:1!important;
 }
 @media(max-width:430px){
@@ -6399,7 +6399,65 @@ html[data-game="quiniela"] #qgJourneySwitcher{
   #quinielaTabs .tab,
   .qg-tabs .qg-tab{
     height:42px!important;
-    font-size:clamp(.42rem,2.05vw,.52rem)!important;
+    font-size:clamp(.46rem,2.25vw,.57rem)!important;
     padding:0 1px!important;
+  }
+}
+
+/* Monedero completo en móvil v118 */
+#walletDialog{
+  border:0!important;
+  background:transparent!important;
+  padding:0!important;
+  width:min(94vw,900px)!important;
+  max-width:94vw!important;
+  max-height:92dvh!important;
+  overflow:visible!important;
+}
+#walletDialog::backdrop{
+  background:rgba(4,18,12,.58);
+  backdrop-filter:blur(4px);
+}
+#walletDialog .wallet-dialog-card{
+  width:100%!important;
+  max-width:100%!important;
+  max-height:92dvh!important;
+  box-sizing:border-box!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  margin:0!important;
+  padding:16px!important;
+}
+#walletDialogContent,
+#walletDialogContent *{
+  min-width:0;
+  box-sizing:border-box;
+}
+@media(max-width:430px){
+  #walletDialog{
+    width:calc(100vw - 12px)!important;
+    max-width:calc(100vw - 12px)!important;
+    max-height:94dvh!important;
+  }
+  #walletDialog .wallet-dialog-card{
+    max-height:94dvh!important;
+    padding:12px!important;
+    border-radius:18px!important;
+  }
+  #walletDialog .global-wallet-add{
+    grid-template-columns:1fr!important;
+  }
+  #walletDialog .global-wallet-add .wallet-credit-actions{
+    grid-column:1!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    width:100%!important;
+  }
+  #walletDialog .wallet-credit-actions button{
+    min-width:0!important;
+    width:100%!important;
+  }
+  #walletDialog .wallet-move{
+    gap:8px!important;
   }
 }
