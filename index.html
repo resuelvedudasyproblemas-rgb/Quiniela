@@ -643,7 +643,6 @@ function renderQGWallet(){
   const manager=qgWalletCanManage(),conf=qgWalletConfirmation(journey.id),plan=planData();
   const estimated=plan?.ready?Number(plan.cost):null;
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
-  const movements=qgWalletTransactions.slice(0,8).map(t=>`<div class="wallet-move"><div><strong>${esc(qgWalletMovementLabel(t))}</strong><small>${esc(qgWalletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${esc(qgEuro(Number(t.amount)))}</b></div>`).join("");
   const status=conf
     ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))}</small></div>`
     : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${esc(qgEuro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
@@ -652,23 +651,17 @@ function renderQGWallet(){
       <label><span>Coste de este Quinigol</span><div><input id="qgWalletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${esc(costValue)}" placeholder="0,00"><b>€</b></div></label>
       <button id="qgWalletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
       ${conf?'<button id="qgWalletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
-    </div>
-    <div class="wallet-credit-controls">
-      <label><span>Añadir al monedero</span><div><input id="qgWalletCreditAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label>
-      <input id="qgWalletCreditNote" class="wallet-note" type="text" maxlength="80" placeholder="Nota opcional">
-      <div class="wallet-credit-actions"><button id="qgWalletAddFundsBtn" type="button">+ Fondos</button><button id="qgWalletAddPrizeBtn" type="button">+ Premio</button></div>
     </div>`
-    : `<p class="wallet-readonly">Solo Salva puede confirmar apuestas y modificar el dinero. Ferran tiene acceso de solo lectura.</p>`;
-  el.innerHTML=`<section class="wallet-card">
-    <div class="wallet-top"><div><span>MONEDERO CONJUNTO</span><small>Saldo disponible</small></div><strong>${esc(qgEuro(qgWalletBalance))}</strong></div>
+    : `<p class="wallet-readonly">Confirmación gestionada por Salva.</p>`;
+  el.innerHTML=`<section class="bet-confirm-card">
+    <div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>Quinigol · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${esc(qgEuro(qgWalletBalance))}</button></div>
     <div class="wallet-confirmation">${status}${controls}</div>
-    <details class="wallet-history"><summary>Movimientos <b>${qgWalletTransactions.length}</b></summary><div class="wallet-moves">${movements||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></details>
   </section>`;
-  if(!manager)return;
-  $("#qgWalletConfirmBtn")?.addEventListener("click",qgConfirmWalletBet);
-  $("#qgWalletUnconfirmBtn")?.addEventListener("click",qgUnconfirmWalletBet);
-  $("#qgWalletAddFundsBtn")?.addEventListener("click",()=>qgAddWalletCredit("funds"));
-  $("#qgWalletAddPrizeBtn")?.addEventListener("click",()=>qgAddWalletCredit("prize"));
+  if(manager){
+    $("#qgWalletConfirmBtn")?.addEventListener("click",qgConfirmWalletBet);
+    $("#qgWalletUnconfirmBtn")?.addEventListener("click",qgUnconfirmWalletBet);
+  }
+  el.querySelector("[data-open-global-wallet]")?.addEventListener("click",()=>$("#walletBtn")?.click());
 }
 async function qgConfirmWalletBet(){
   const cost=Number(String($("#qgWalletBetCost")?.value||"").replace(",","."));
@@ -676,14 +669,14 @@ async function qgConfirmWalletBet(){
   try{
     const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id,p_cost:cost});
     if(error)throw error;
-    await qgLoadWalletData();renderJoint();toast("✓ Quinigol confirmado y descontado del monedero");
+    await qgLoadWalletData();renderJoint();window.dispatchEvent(new CustomEvent("wallet:refresh"));toast("✓ Quinigol confirmado y descontado del monedero");
   }catch(e){console.error(e);toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
 }
 async function qgUnconfirmWalletBet(){
   try{
     const {error}=await sb.rpc("wallet_unconfirm_bet",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id});
     if(error)throw error;
-    await qgLoadWalletData();renderJoint();toast("Confirmación anulada · importe devuelto");
+    await qgLoadWalletData();renderJoint();window.dispatchEvent(new CustomEvent("wallet:refresh"));toast("Confirmación anulada · importe devuelto");
   }catch(e){console.error(e);toast("No se pudo anular")}
 }
 async function qgAddWalletCredit(kind){
