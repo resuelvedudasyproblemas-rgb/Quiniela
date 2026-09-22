@@ -2234,9 +2234,6 @@ function renderCompare(){
     </article>`;
   }).join("");
   $("#coincidences").textContent=`${same} / 15`;
-  $("#jointDoubles").textContent=String(diffNormal);
-  $("#jointPending").textContent=String(pending);
-  $("#e8BothStat").textContent=String(e8Both);
   const e8=$("#elige8CompareSummary");
   const p1e8=p1?elige8Count(p1.user_id):0;
   const p2e8=p2?elige8Count(p2.user_id):0;
