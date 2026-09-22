@@ -6240,3 +6240,46 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     font-size:.43rem;
   }
 }
+
+
+/* Acceso monedero limpio v101 */
+.room-wallet-pill{
+  gap:4px!important;
+  min-height:22px!important;
+  padding:3px 8px!important;
+  border:1px solid color-mix(in srgb,var(--brand) 18%,var(--border))!important;
+  background:color-mix(in srgb,var(--brand) 4%,var(--surface))!important;
+  box-shadow:none!important;
+}
+.room-wallet-pill>.room-wallet-label{
+  display:inline!important;
+  width:auto!important;
+  height:auto!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:var(--muted)!important;
+  font-size:.46rem!important;
+  font-weight:850!important;
+}
+.room-wallet-pill>i{
+  color:var(--muted);
+  font-size:.48rem;
+  font-style:normal;
+  opacity:.75;
+}
+.room-wallet-pill>strong{
+  color:var(--brand)!important;
+  font-size:.5rem!important;
+  font-weight:950!important;
+}
+@media(max-width:430px){
+  .room-wallet-pill{
+    padding:3px 7px!important;
+  }
+  .room-wallet-pill>.room-wallet-label{
+    font-size:.43rem!important;
+  }
+  .room-wallet-pill>strong{
+    font-size:.47rem!important;
+  }
+}
