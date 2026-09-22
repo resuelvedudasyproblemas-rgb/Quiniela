@@ -6556,3 +6556,16 @@ html[data-game="quiniela"] #qgJourneySwitcher{
 .game-choice[data-game="quinigol"]>strong{
   color:#3b82f6!important;
 }
+
+
+/* Evitar destello azul al tocar controles en movil */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea,
+summary,
+label{
+  -webkit-tap-highlight-color:transparent;
+}
