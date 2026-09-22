@@ -6624,3 +6624,20 @@ label{
     margin-left:3px;
   }
 }
+
+
+/* Ajuste de posicion de iconos de competicion */
+.match-number-wrap>.match-competition-badge{
+  margin-left:1px;
+}
+.qg-index-competition{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:4px;
+  min-width:31px;
+}
+.qg-card-head>.match-competition-badge{
+  margin:0;
+}
