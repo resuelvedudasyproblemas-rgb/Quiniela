@@ -285,6 +285,7 @@ function renderJourneySwitcher(){
   }).join("");
   $$(".journey-choice").forEach(btn=>btn.addEventListener("click",()=>{
     selectedJourneyId=Number(btn.dataset.journeyId);
+    saveSelectedJourneyId(selectedJourneyId);
     selectActiveJourney();
     renderAll();
   }));
@@ -1533,6 +1534,7 @@ function selectActiveJourney(){
   const open=unfinished.find(j=>journeyDisplayState(j)==="open");
   journey=preferred||playing||open||unfinished[0]||journeys[0];
   selectedJourneyId=journey.id;
+  saveSelectedJourneyId(selectedJourneyId);
   matches=matchesForJourney(journey.id);
   picks=allPicks.filter(p=>p.journey_id===journey.id);
 }
