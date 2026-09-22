@@ -558,8 +558,8 @@ async function saveJointGoal(n,side,val){
 async function resetJoint(n){
   if(!canEdit())return;
   const {error}=await sb.from("qg_joint_picks").delete().eq("room_id",roomId).eq("journey_id",journey.id).eq("match_number",n);
-  if(error){toast("No se pudo volver a recomendado");return}
-  allJoint=allJoint.filter(p=>!(p.journey_id===journey.id&&p.match_number===n));jointDrafts.delete(`${journey.id}:${n}`);renderAll();toast("Vuelve al cálculo automático");
+  if(error){toast("No se pudo volver a automática");return}
+  allJoint=allJoint.filter(p=>!(p.journey_id===journey.id&&p.match_number===n));jointDrafts.delete(`${journey.id}:${n}`);renderAll();toast("Modo automático restaurado");
 }
 function goalButtons(n,side,selected,locked,attrs=""){
   return GOALS.map(v=>`<button type="button" class="qg-goal ${selected===v?"selected":""}" data-qg-match="${n}" data-qg-side="${side}" data-qg-goal="${v}" ${attrs} ${locked?"disabled":""}>${v}</button>`).join("");
@@ -607,7 +607,7 @@ function renderPlay(){
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"✓ Acierto":saved?"✕ Fallo":"Sin pronóstico"}</strong></div>`;
     else if(proj!=="—")result=`<div class="qg-result live"><span>En directo · provisional</span><strong>${esc(proj)}</strong></div>`;
-    return `<article class="qg-match-card ${show?"":"hidden"}"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div>${tvHtml(m)}<div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}</article>`;
+    return `<article class="qg-match-card ${show?"":"hidden"}"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}</article>`;
   }).join("");
   $$(".qg-goal").forEach(b=>b.addEventListener("click",()=>saveGoal(Number(b.dataset.qgMatch),b.dataset.qgSide,b.dataset.qgGoal)));
   $$("[data-qg-clear]").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.qgClear))));
@@ -618,18 +618,85 @@ function jointEditor(n,sel,locked){
   const side=(s,v)=>`<div class="qg-joint-side">${GOALS.map(x=>`<button type="button" class="${v===x?"selected":""}" data-qg-joint-match="${n}" data-qg-joint-side="${s}" data-qg-joint-goal="${x}" ${locked?"disabled":""}>${x}</button>`).join("")}</div>`;
   return `<div class="qg-joint-goal-pair">${side("home",sel.home_goals)}<span class="qg-joint-dash">–</span>${side("away",sel.away_goals)}</div>`;
 }
+function resultOutcome(value){
+  const p=String(value||"").match(/^(0|1|2|M)-(0|1|2|M)$/);
+  if(!p)return null;
+  const h=goalNum(p[1]),a=goalNum(p[2]);
+  return h>a?"H":h<a?"A":"D";
+}
+function closeResults(a,b){
+  const pa=String(a||"").match(/^(0|1|2|M)-(0|1|2|M)$/);
+  const pb=String(b||"").match(/^(0|1|2|M)-(0|1|2|M)$/);
+  if(!pa||!pb)return false;
+  const dh=Math.abs(goalNum(pa[1])-goalNum(pb[1]));
+  const da=Math.abs(goalNum(pa[2])-goalNum(pb[2]));
+  return (dh+da<=1)||(resultOutcome(a)===resultOutcome(b)&&dh<=1&&da<=1);
+}
+function planData(){
+  const p1=member(1),p2=member(2);
+  const c1=p1?completed(p1.user_id):0,c2=p2?completed(p2.user_id):0;
+  const rows=matches.map(m=>{
+    const a=p1?pickText(pick(p1.user_id,m.number)):"—";
+    const b=p2?pickText(pick(p2.user_id,m.number)):"—";
+    const manual=Boolean(jointOverride(m.number));
+    const base=jointText(m.number);
+    return {n:m.number,a,b,base,manual,diff:a!=="—"&&b!=="—"&&a!==b,close:closeResults(a,b)};
+  });
+  if(c1<6||c2<6)return {ready:false,p1,p2,c1,c2,rows};
+
+  const diffs=rows.filter(r=>r.diff);
+  const major=diffs.filter(r=>!r.close&&!r.manual);
+  let mode="one",bets=1,title="1 columna conjunta";
+  if(major.length===1){mode="multiple";bets=2;title="1 múltiple · doble resultado"}
+  else if(major.length>=2){mode="two";bets=2;title="2 columnas optimizadas"}
+  else if(diffs.length===0){title="1 columna común"}
+  else title="1 columna optimizada";
+
+  const column1=rows.map(r=>({n:r.n,value:r.manual||r.close?r.base:(mode==="two"&&r.diff?r.a:r.base)}));
+  const column2=mode==="two"?rows.map(r=>({n:r.n,value:r.manual||r.close?r.base:(r.diff?r.b:r.base)})):null;
+  const multipleMatch=mode==="multiple"?major[0]:null;
+  const fullCoverBets=Math.max(1,Math.pow(2,major.length));
+  return {ready:true,p1,p2,c1,c2,rows,diffs,major,mode,bets,cost:bets,fullCoverBets,title,column1,column2,multipleMatch};
+}
+function planGrid(items,multipleMatch=null){
+  return `<div class="qg-plan-grid">${items.map(x=>{
+    if(multipleMatch&&x.n===multipleMatch.n){
+      return `<div class="qg-plan-cell multiple"><span>P${x.n} · 2 resultados</span><strong>${esc(multipleMatch.a)} <b>/</b> ${esc(multipleMatch.b)}</strong></div>`;
+    }
+    return `<div class="qg-plan-cell"><span>P${x.n}</span><strong>${esc(x.value)}</strong></div>`;
+  }).join("")}</div>`;
+}
 function renderPlan(){
   const el=$("#qgJointPlan");if(!el)return;
-  const p1=member(1),p2=member(2),c1=p1?completed(p1.user_id):0,c2=p2?completed(p2.user_id):0,ready=c1===6&&c2===6;
-  const grid=matches.map(m=>`<div class="qg-plan-cell"><span>P${m.number}</span><strong>${esc(jointText(m.number))}</strong></div>`).join("");
-  el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>${ready?"1 Quinigol conjunto":"Propuesta pendiente"}</h3></div><div class="qg-plan-price"><strong>${ready?"1,00 €":"—"}</strong><small>${ready?"1 apuesta":"Esperando"}</small></div></div><p>${ready?"Los seis marcadores verdes forman la apuesta conjunta recomendada. Podéis cambiar cualquiera manualmente.":`Faltan pronósticos · ${esc(p1?.display_name||"Salva")} ${c1}/6 · ${esc(p2?.display_name||"Ferran")} ${c2}/6.`}</p><div class="qg-plan-grid">${grid}</div></section>`;
+  const plan=planData();
+  if(!plan.ready){
+    el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>Propuesta pendiente</h3></div><div class="qg-plan-price"><strong>—</strong><small>Esperando</small></div></div><p>Faltan pronósticos · ${esc(plan.p1?.display_name||"Salva")} ${plan.c1}/6 · ${esc(plan.p2?.display_name||"Ferran")} ${plan.c2}/6.</p></section>`;
+    return;
+  }
+
+  let reason="",detail="";
+  if(plan.mode==="one"){
+    if(plan.diffs.length===0)reason="Coincidís en los seis marcadores: no merece la pena pagar una segunda apuesta.";
+    else reason=`Tenéis ${plan.diffs.length} diferencia${plan.diffs.length===1?"":"s"}, pero son marcadores cercanos o ya los habéis resuelto manualmente. La app concentra la apuesta en una sola columna de 1 €.`;
+    detail=`<div class="qg-plan-block"><div class="qg-plan-block-head"><span>COLUMNA ÚNICA</span><strong>Conjunta</strong></div>${planGrid(plan.column1)}</div>`;
+  }else if(plan.mode==="multiple"){
+    const mm=plan.multipleMatch;
+    reason=`Solo hay una discrepancia importante. En vez de dos columnas completas, se cubren los dos resultados del partido ${mm.n}: genera 2 apuestas y cuesta 2 €.`;
+    detail=`<div class="qg-plan-block"><div class="qg-plan-block-head"><span>APUESTA MÚLTIPLE</span><strong>Doble resultado en P${mm.n}</strong></div>${planGrid(plan.column1,mm)}</div>`;
+  }else{
+    reason=`Hay ${plan.major.length} discrepancias importantes. Dos columnas cuestan 2 € y conservan las dos líneas de pronóstico sin disparar el coste.`;
+    detail=`<div class="qg-plan-columns"><div class="qg-plan-block player-one"><div class="qg-plan-block-head"><span>COLUMNA 1</span><strong>${esc(plan.p1?.display_name||"Salva")}</strong></div>${planGrid(plan.column1)}</div><div class="qg-plan-block player-two"><div class="qg-plan-block-head"><span>COLUMNA 2</span><strong>${esc(plan.p2?.display_name||"Ferran")}</strong></div>${planGrid(plan.column2)}</div></div>`;
+  }
+
+  const alternative=plan.major.length>=2?`<div class="qg-plan-alternative">Cubrir todas las discrepancias como múltiple generaría <strong>${plan.fullCoverBets} apuestas · ${plan.fullCoverBets.toFixed(2).replace(".",",")} €</strong>. Por coste, la app prefiere las 2 columnas.</div>`:"";
+  el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>${esc(plan.title)}</h3></div><div class="qg-plan-price"><strong>${plan.cost.toFixed(2).replace(".",",")} €</strong><small>${plan.bets} apuesta${plan.bets===1?"":"s"} · 1 € cada una</small></div></div><p>${reason}</p>${detail}${alternative}</section>`;
 }
 function renderJoint(){
   const el=$("#qgJointList");if(!el||!journey)return;renderPlan();
   const p1=member(1),p2=member(2),locked=!canEdit();
   el.innerHTML=matches.map(m=>{
-    const a=p1?pick(p1.user_id,m.number):null,b=p2?pick(p2.user_id,m.number):null,man=jointOverride(m.number),auto=autoJoint(m.number),kind=man?"Manual":auto?.kind||"Pendiente",sel=currentJointDraft(m.number);
-    return `<article class="qg-joint-card"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-mode ${man?"manual":""}">${esc(kind)}</span></div><div class="qg-joint-rows"><div class="qg-joint-row player-one"><div class="qg-joint-name"><i></i><span>${esc(p1?.display_name||"Salva")}</span></div><strong class="qg-score-pill">${esc(pickText(a))}</strong></div><div class="qg-joint-row player-two"><div class="qg-joint-name"><i></i><span>${esc(p2?.display_name||"Ferran")}</span></div><strong class="qg-score-pill">${esc(pickText(b))}</strong></div><div class="qg-joint-row joint"><div class="qg-joint-name"><i></i><span>Conjunta</span></div><div class="qg-joint-edit">${jointEditor(m.number,sel,locked)}<small>${kind==="Recomendado"?"Recomendado a partir de los dos":kind==="Provisional"?"Falta el pronóstico del otro":kind}</small>${man&&canEdit()?`<button type="button" class="qg-joint-reset" data-qg-reset="${m.number}">↺ Volver a recomendado</button>`:""}</div></div></div></article>`;
+    const a=p1?pick(p1.user_id,m.number):null,b=p2?pick(p2.user_id,m.number):null,man=jointOverride(m.number),auto=autoJoint(m.number),autoKind=auto?.kind||"Pendiente",sel=currentJointDraft(m.number);
+    return `<article class="qg-joint-card"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-mode ${man?"manual":""}">${man?"Manual":"Automática"}</span></div><div class="qg-joint-rows"><div class="qg-joint-row player-one"><div class="qg-joint-name"><i></i><span>${esc(p1?.display_name||"Salva")}</span></div><strong class="qg-score-pill">${esc(pickText(a))}</strong></div><div class="qg-joint-row player-two"><div class="qg-joint-name"><i></i><span>${esc(p2?.display_name||"Ferran")}</span></div><strong class="qg-score-pill">${esc(pickText(b))}</strong></div><div class="qg-joint-row joint"><div class="qg-joint-name"><i></i><span>Conjunta</span></div><div class="qg-joint-edit">${jointEditor(m.number,sel,locked)}<small>${man?"Marcador conjunto fijado manualmente":autoKind==="Recomendado"?"Recomendado a partir de vuestros dos marcadores":autoKind==="Provisional"?"Falta el pronóstico del otro":autoKind}</small>${man&&canEdit()?`<button type="button" class="qg-joint-reset" data-qg-reset="${m.number}">↺ Automática</button>`:""}</div></div></div></article>`;
   }).join("");
   $$("[data-qg-joint-goal]").forEach(b=>b.addEventListener("click",()=>saveJointGoal(Number(b.dataset.qgJointMatch),b.dataset.qgJointSide,b.dataset.qgJointGoal)));
   $$("[data-qg-reset]").forEach(b=>b.addEventListener("click",()=>resetJoint(Number(b.dataset.qgReset))));
