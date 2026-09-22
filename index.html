@@ -565,26 +565,25 @@ function renderHero(){
   $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="playing"?`En juego · ${res}/6 resultados`:st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
   $("#qgJourneyDate").textContent=`Cierre · ${fullDate(journey.close_at)}`;
   $("#qgJourneyCountdown").textContent=st==="open"?`Empieza en ${timeLeft(journey.close_at)}`:st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
-  const mine=score(identityUserId),js=jointScore(),card=$("#qgJourneyCard");
-  const prize=st==="finished"&&(mine.correct>=2||js.correct>=2);
-  card.classList.toggle("qg-prize",prize);card.classList.toggle("qg-miss",st==="finished"&&!prize);
+  const card=$("#qgJourneyCard");
+  card.classList.remove("qg-prize","qg-miss");
 }
 function renderSwitcher(){
   const el=$("#qgJourneySwitcher");if(!el)return;
   el.innerHTML=[...journeys].sort((a,b)=>b.number-a.number).map(j=>{
-    const st=state(j),mine=score(identityUserId,j),js=jointScore(j),prize=st==="finished"&&(mine.correct>=2||js.correct>=2);
-    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st} ${st==="finished"?(prize?"finished-prize":"finished-miss"):""}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados":fullDate(j.close_at)}</small></button>`;
+    const st=state(j);
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}" data-qg-journey="${j.id}><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados":fullDate(j.close_at)}</small></button>`;
   }).join("");
   $$("[data-qg-journey]").forEach(b=>b.addEventListener("click",()=>{selectedJourneyId=Number(b.dataset.qgJourney);savePref("quinigol-journey",selectedJourneyId);selectJourney();renderAll()}));
 }
 function dashCard(name,done,s,cls){
   const finished=state(journey)==="finished",prize=prizeLabel(s.correct,s.resolved);
-  return `<div class="qg-dashboard-card ${cls} ${prize?"prize":""}"><span>${esc(name)}</span><strong>${finished?`${s.correct}/6`:`${done}/6`}</strong><small>${finished?(prize||"Sin premio"):"completados"}</small></div>`;
+  return `<div class="qg-dashboard-card ${cls}"><span>${esc(name)}</span><strong>${finished?`${s.correct}/6`:`${done}/6`}</strong><small>${finished?(prize||"Sin categoría"):"completados"}</small></div>`;
 }
 function renderDashboard(){
   const el=$("#qgDashboard");if(!el)return;
   const p1=member(1),p2=member(2),s1=p1?score(p1.user_id):{correct:0,resolved:0},s2=p2?score(p2.user_id):{correct:0,resolved:0},js=jointScore(),finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved);
-  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,"player-two")+`<div class="qg-dashboard-card joint ${jp?"prize":""}"><span>Conjunta</span><strong>${finished?`${js.correct}/6`:`${matches.filter(m=>effectiveJoint(m.number)).length}/6`}</strong><small>${finished?(jp||"Sin premio"):"marcadores"}</small></div>`;
+  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,"player-two")+`<div class="qg-dashboard-card joint"><span>Conjunta</span><strong>${finished?`${js.correct}/6`:`${matches.filter(m=>effectiveJoint(m.number)).length}/6`}</strong><small>${finished?(jp||"Sin categoría"):"marcadores"}</small></div>`;
 }
 function renderFilters(){
   const c={all:matches.length,pending:0,correct:0,wrong:0};
@@ -647,8 +646,8 @@ function jstat(){
 function renderStats(){
   const el=$("#qgStats");if(!el)return;
   const p1=member(1),p2=member(2),s1=p1?stat(p1.user_id):{best:0,prizes:0},s2=p2?stat(p2.user_id):{best:0,prizes:0},sj=jstat();
-  const card=(name,s,cls)=>`<div class="qg-stat-card ${cls} ${s.prizes?"prize":""}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con premio</small></div>`;
-  el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. El importe final depende del escrutinio oficial de SELAE.</div>`;
+  const card=(name,s,cls)=>`<div class="qg-stat-card ${cls}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con categoría</small></div>`;
+  el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. Una categoría no implica necesariamente premio económico; el dorado se reservará para premio confirmado por el escrutinio oficial.</div>`;
 }
 function renderHistory(){
   const el=$("#qgHistory");if(!el)return;
