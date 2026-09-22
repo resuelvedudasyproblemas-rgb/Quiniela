@@ -889,20 +889,17 @@ function estimatedQuinielaWalletCost(){
 function renderJointWallet(){
   const el=$("#jointWallet");if(!el||!journey)return;
   const manager=walletCanManage(),conf=walletConfirmation("quiniela",journey.id),estimated=estimatedQuinielaWalletCost();
-  const storedEstimated=conf?.estimated_cost!=null?Number(conf.estimated_cost):estimated;
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
-  const adjusted=Boolean(conf&&storedEstimated!=null&&Math.abs(Number(conf.cost)-Number(storedEstimated))>=0.005);
   const status=conf
-    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}${storedEstimated!=null?` · Calculado: ${escapeHtml(euro(storedEstimated))}`:""}${adjusted?" · Modificado manualmente":""}</small></div>`
-    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste calculado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
+    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>`
+    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
   const controls=manager?`
     <div class="wallet-confirm-controls">
-      <label><span>Coste final de esta apuesta</span><div><input id="walletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${escapeHtml(costValue)}" placeholder="0,00"><b>€</b></div></label>
-      ${estimated!=null?`<small class="wallet-cost-hint">Calculado automáticamente: <strong>${escapeHtml(euro(estimated))}</strong> · Puedes modificarlo antes de confirmar.</small>`:""}
+      <label><span>Coste de esta apuesta</span><div><input id="walletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${escapeHtml(costValue)}" placeholder="0,00"><b>€</b></div></label>
       <button id="walletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
       ${conf?'<button id="walletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
     </div>`
-    : `<p class="wallet-readonly">Confirmación gestionada por Salva.${conf&&storedEstimated!=null?` Coste calculado: ${escapeHtml(euro(storedEstimated))}.`:""}</p>`;
+    : `<p class="wallet-readonly">Confirmación gestionada por Salva.</p>`;
   el.innerHTML=`<section class="bet-confirm-card">
     <div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>La Quiniela · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${escapeHtml(euro(walletBalance))}</button></div>
     <div class="wallet-confirmation">${status}${controls}</div>
@@ -916,11 +913,10 @@ function renderJointWallet(){
 async function confirmQuinielaWalletBet(){
   const raw=String($("#walletBetCost")?.value||"").replace(",",".");
   const cost=Number(raw);
-  const estimated=estimatedQuinielaWalletCost();
   if(!Number.isFinite(cost)||cost<=0){toast("Introduce un coste válido");return}
   try{
     setSync("","Guardando");
-    const {error}=await sb.rpc("wallet_confirm_bet_v2",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id,p_cost:cost,p_estimated_cost:estimated});
+    const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id,p_cost:cost});
     if(error)throw error;
     await loadWalletData();renderJoint();setSync("online","Sincronizado");toast("✓ Apuesta confirmada y descontada del monedero");
   }catch(e){console.error(e);setSync("error","Error");toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
