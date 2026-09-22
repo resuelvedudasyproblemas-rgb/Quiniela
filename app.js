@@ -1526,6 +1526,7 @@ async function loadAllJourneys(){
 }
 
 function selectActiveJourney(){
+  if(selectedJourneyId==null)selectedJourneyId=loadSavedJourneyId();
   const preferred=journeys.find(j=>j.id===selectedJourneyId);
   const unfinished=journeys.filter(j=>journeyDisplayState(j)!=="finished");
   const playing=unfinished.find(j=>journeyDisplayState(j)==="playing");
