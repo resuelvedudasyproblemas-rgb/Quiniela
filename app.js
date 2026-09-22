@@ -214,6 +214,10 @@ function journeyDisplayState(j){
 }
 function journeyDeadline(j){
   if(!j) return null;
+  if(j.close_at){
+    const official=new Date(j.close_at);
+    if(Number.isFinite(official.getTime())) return official;
+  }
   const kickoffs=matchesForJourney(j.id)
     .map(m=>m.kickoff)
     .filter(Boolean)
