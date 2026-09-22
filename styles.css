@@ -7727,3 +7727,99 @@ html[data-theme="dark"] .qg-joint-side button:not(.selected){
   border-color:#30463a!important;
   color:#dbe8e1!important;
 }
+
+
+/* Comparar: cabecera de partido limpia y simétrica v142 */
+#compareView .compare-fixture-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);
+  align-items:center;
+  gap:5px;
+  width:100%;
+  min-width:0;
+}
+#compareView .compare-team{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+  font-size:.66rem;
+  font-weight:850;
+  line-height:1;
+  white-space:nowrap;
+}
+#compareView .compare-team-home{
+  justify-content:flex-end;
+  text-align:right;
+}
+#compareView .compare-team-away{
+  justify-content:flex-start;
+  text-align:left;
+}
+#compareView .compare-team-name{
+  min-width:0;
+  white-space:nowrap;
+}
+#compareView .compare-fixture-sep{
+  display:block;
+  text-align:center;
+  color:var(--muted);
+  font-size:.66rem;
+  opacity:.72;
+}
+#compareView .compare-team .team-crest{
+  flex:0 0 auto;
+}
+#compareView .compare-team .team-position{
+  flex:0 0 auto;
+}
+
+@media(max-width:520px){
+  #compareView .compare-card-head{
+    grid-template-columns:36px minmax(0,1fr)!important;
+    grid-template-rows:auto auto!important;
+    column-gap:8px!important;
+    row-gap:7px!important;
+  }
+  #compareView .compare-number-competition{
+    grid-column:1!important;
+    grid-row:1!important;
+    align-self:center!important;
+  }
+  #compareView .compare-state{
+    grid-column:2!important;
+    grid-row:1!important;
+    justify-self:end!important;
+    align-self:center!important;
+    margin:0!important;
+  }
+  #compareView .compare-fixture{
+    grid-column:1/-1!important;
+    grid-row:2!important;
+    width:100%!important;
+  }
+  #compareView .compare-fixture-row{
+    grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr)!important;
+    gap:4px!important;
+  }
+  #compareView .compare-team{
+    gap:3px!important;
+    font-size:clamp(.48rem,2.35vw,.59rem)!important;
+  }
+  #compareView .compare-team .team-crest{
+    width:20px!important;
+    height:20px!important;
+    min-width:20px!important;
+    border-radius:6px!important;
+  }
+  #compareView .compare-team .team-position{
+    min-width:19px!important;
+    height:16px!important;
+    padding:0 2px!important;
+    font-size:.40rem!important;
+  }
+  #compareView .compare-team-name{
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+}

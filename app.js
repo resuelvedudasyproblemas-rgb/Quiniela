@@ -109,6 +109,21 @@ function teamInlineHtml(name,logoUrl="",position=null){
 function fixtureMiniHtml(m){
   return `<span class="fixture-mini"><span class="fixture-mini-team">${teamCrestHtml(m.home,"xs",m.home_logo_url)}${teamPositionHtml(m.home_position,true)}<span>${escapeHtml(m.home)}</span></span><span class="fixture-mini-sep">–</span><span class="fixture-mini-team">${teamCrestHtml(m.away,"xs",m.away_logo_url)}${teamPositionHtml(m.away_position,true)}<span>${escapeHtml(m.away)}</span></span></span>`;
 }
+function compareFixtureHtml(m){
+  return `<div class="compare-fixture-row">
+    <span class="compare-team compare-team-home">
+      ${teamCrestHtml(m.home,"xs",m.home_logo_url)}
+      ${teamPositionHtml(m.home_position,true)}
+      <span class="compare-team-name">${escapeHtml(m.home)}</span>
+    </span>
+    <span class="compare-fixture-sep">–</span>
+    <span class="compare-team compare-team-away">
+      <span class="compare-team-name">${escapeHtml(m.away)}</span>
+      ${teamPositionHtml(m.away_position,true)}
+      ${teamCrestHtml(m.away,"xs",m.away_logo_url)}
+    </span>
+  </div>`;
+}
 function simplifyTvChannels(channels){
   const clean=(channels||[]).map(ch=>String(ch).replace(/\s*\([^)]*\)\s*$/,"").trim()).filter(Boolean);
   const unique=[...new Set(clean)];
@@ -2240,7 +2255,7 @@ function renderCompare(){
       ? jointReadonlySignsHtml(projectedResult,"result-signs compare-readonly")
       : `<strong class="compare-real-score">${rawScore}</strong>`;
     return `<article class="compare-card ${state} ${ej?"compare-joint-e8":""}">
-      <div class="compare-card-head"><div class="compare-number-competition"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div><div class="compare-fixture">${fixtureMiniHtml(m)}</div><span class="compare-state">${label}</span></div>
+      <div class="compare-card-head"><div class="compare-number-competition"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div><div class="compare-fixture">${compareFixtureHtml(m)}</div><span class="compare-state">${label}</span></div>
       ${official?"":tvBroadcastHtml(m,true)}
       <div class="compare-picks">
         <div class="compare-pick-box player-one"><span><i class="player-dot"></i>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${aVisual}${aMark}</div></div>
