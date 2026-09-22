@@ -11,7 +11,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 let sb, user, identityUserId, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
-let walletBalance=0, walletTransactions=[], betConfirmations=[], walletPrizes=[], walletJourneyLabels=new Map(), officialPrizeRows=[];
+let walletBalance=0, walletTransactions=[], betConfirmations=[];
 let channel = null;
 let saving = false;
 let elige8Saving = false;
@@ -214,10 +214,6 @@ function journeyDisplayState(j){
 }
 function journeyDeadline(j){
   if(!j) return null;
-  if(j.close_at){
-    const official=new Date(j.close_at);
-    if(Number.isFinite(official.getTime())) return official;
-  }
   const kickoffs=matchesForJourney(j.id)
     .map(m=>m.kickoff)
     .filter(Boolean)
@@ -834,26 +830,18 @@ async function resetJointPlenoSelection(){
 function euro(value){
   return Number(value||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 }
+
 async function loadWalletData(){
   if(!roomId)return;
-  const [wr,tr,cr,pr,qj,gg,op]=await Promise.all([
+  const [wr,tr,cr]=await Promise.all([
     sb.from("room_wallets").select("balance,updated_at").eq("room_id",roomId).maybeSingle(),
-    sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(30),
-    sb.from("bet_confirmations").select("*").eq("room_id",roomId),
-    sb.from("bet_prizes").select("*").eq("room_id",roomId),
-    sb.from("journeys").select("id,number,draw_date"),
-    sb.from("qg_journeys").select("id,number,draw_date"),
-    sb.from("official_prizes").select("*")
+    sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(12),
+    sb.from("bet_confirmations").select("*").eq("room_id",roomId)
   ]);
-  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;if(pr.error)throw pr.error;if(op.error)throw op.error;
+  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;
   walletBalance=Number(wr.data?.balance||0);
   walletTransactions=tr.data||[];
   betConfirmations=cr.data||[];
-  walletPrizes=pr.data||[];
-  officialPrizeRows=op.data||[];
-  walletJourneyLabels=new Map();
-  for(const j of qj.data||[])walletJourneyLabels.set(`quiniela:${j.id}`,{number:j.number,date:j.draw_date});
-  for(const j of gg.data||[])walletJourneyLabels.set(`quinigol:${j.id}`,{number:j.number,date:j.draw_date});
 }
 function walletCanManage(){return Number(myMember?.slot)===1}
 function walletConfirmation(game="quiniela",jid=journey?.id){
@@ -867,83 +855,31 @@ function walletDate(v){
   if(!v)return "";
   return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
 }
-function walletGameLabel(game){return game==="quinigol"?"Quinigol":"La Quiniela"}
-function walletBetLabel(conf){
-  const info=walletJourneyLabels.get(`${conf.game}:${conf.journey_id}`);
-  return `${walletGameLabel(conf.game)} · J${info?.number??conf.journey_id}`;
-}
-function walletPrizeFor(conf){
-  return walletPrizes.find(p=>p.game===conf.game&&Number(p.journey_id)===Number(conf.journey_id))||null;
-}
-function walletConfirmationSummaryHtml(estimated,finalCost,currentBalance){
-  const final=Number(finalCost);
-  if(!Number.isFinite(final)||final<=0)return "";
-  const after=Number(currentBalance)-final;
-  return `<div class="wallet-confirm-summary">
-    <div><span>Calculado</span><strong>${estimated!=null?escapeHtml(euro(estimated)):"—"}</strong></div>
-    <div><span>Coste final</span><strong>${escapeHtml(euro(final))}</strong></div>
-    <div class="${after<0?"negative":""}"><span>Saldo después</span><strong>${escapeHtml(euro(after))}</strong></div>
-  </div>`;
-}
-window.SharedWallet={
-  euro,
-  summary:(estimated,finalCost,balance)=>walletConfirmationSummaryHtml(estimated,finalCost,balance),
-  async confirm(sbClient,args){return sbClient.rpc("wallet_confirm_bet_v2",args)}
-};
-function walletBetHistoryHtml(){
-  const rows=[...betConfirmations].sort((a,b)=>new Date(b.confirmed_at)-new Date(a.confirmed_at)).map(conf=>{
-    const p=walletPrizeFor(conf),estimated=conf.estimated_cost==null?null:Number(conf.estimated_cost),cost=Number(conf.cost);
-    const adjusted=estimated!=null&&Math.abs(cost-estimated)>=0.005;
-    return `<div class="wallet-bet-row">
-      <div class="wallet-bet-main"><span>${escapeHtml(walletBetLabel(conf))}</span><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>
-      <div class="wallet-bet-cost"><strong>${escapeHtml(euro(cost))}</strong>${estimated!=null?`<small>Calculado ${escapeHtml(euro(estimated))}${adjusted?" · editado":""}</small>`:""}</div>
-      <div class="wallet-bet-state ${p?.status==="credited"?"credited":p?"prize":"confirmed"}">${p?.status==="credited"?`Premio +${escapeHtml(euro(p.amount))}`:p?"Premio detectado":"Confirmada"}</div>
-    </div>`;
-  }).join("");
-  return rows||'<p class="wallet-empty">Todavía no hay apuestas confirmadas.</p>';
-}
-function walletPrizeCandidatesHtml(){
-  const pending=walletPrizes.filter(p=>p.status!=="credited");
-  if(!pending.length)return '<p class="wallet-empty">No hay premios pendientes de registrar.</p>';
-  return pending.map(p=>{
-    const info=walletJourneyLabels.get(`${p.game}:${p.journey_id}`);
-    const label=`${walletGameLabel(p.game)} · J${info?.number??p.journey_id}`;
-    return `<div class="wallet-prize-row"><div><span>★ ${escapeHtml(label)}</span><small>${escapeHtml(p.category||"Premio detectado")}</small></div>
-      ${walletCanManage()?`<div class="wallet-prize-credit"><input data-prize-amount="${p.game}:${p.journey_id}" type="number" min="0.01" step="0.01" inputmode="decimal" value="${p.amount!=null?escapeHtml(Number(p.amount).toFixed(2)):""}" placeholder="Importe oficial"><button type="button" data-credit-prize="${p.game}:${p.journey_id}">Añadir al monedero</button></div>`:'<strong>Pendiente de confirmar por Salva</strong>'}</div>`;
-  }).join("");
-}
 function renderGlobalWallet(){
-  const balance=$("#walletHeaderBalance");if(balance)balance.textContent=euro(walletBalance);
+  const balance=$("#walletHeaderBalance");
+  if(balance)balance.textContent=euro(walletBalance);
   const el=$("#walletDialogContent");if(!el)return;
   const manager=walletCanManage();
-  const spent=walletTransactions.filter(t=>["bet","bet_adjustment"].includes(t.kind)).reduce((a,t)=>a+Math.max(0,-Number(t.amount||0)),0);
-  const prizes=walletTransactions.filter(t=>t.kind==="prize").reduce((a,t)=>a+Number(t.amount||0),0);
-  const moves=walletTransactions.slice(0,20).map(t=>`<div class="wallet-move"><div><strong>${escapeHtml(walletMovementLabel(t))}</strong><small>${escapeHtml(walletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${escapeHtml(euro(Number(t.amount)))}</b></div>`).join("");
-  const controls=manager?`<div class="global-wallet-add"><label><span>Importe</span><div><input id="globalWalletAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label><input id="globalWalletNote" class="wallet-note" type="text" maxlength="80" placeholder="Nota opcional"><div class="wallet-credit-actions"><button id="globalWalletAddFunds" type="button">+ Fondos</button><button id="globalWalletAddPrize" type="button">+ Premio manual</button></div></div>`
-    : `<p class="wallet-readonly global">Ferran puede consultar todo el monedero. Solo Salva puede añadir fondos, confirmar premios o modificar importes.</p>`;
-  el.innerHTML=`<div class="wallet-overview-grid"><div class="global-wallet-balance"><span>SALDO DISPONIBLE</span><strong>${escapeHtml(euro(walletBalance))}</strong><small>Compartido entre La Quiniela y Quinigol</small></div><div class="wallet-kpi"><span>GASTADO EN APUESTAS</span><strong>${escapeHtml(euro(spent))}</strong><small>Histórico registrado</small></div><div class="wallet-kpi"><span>PREMIOS AÑADIDOS</span><strong>${escapeHtml(euro(prizes))}</strong><small>Importes ya abonados</small></div></div>
+  const moves=walletTransactions.slice(0,12).map(t=>`<div class="wallet-move"><div><strong>${escapeHtml(walletMovementLabel(t))}</strong><small>${escapeHtml(walletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${escapeHtml(euro(Number(t.amount)))}</b></div>`).join("");
+  const controls=manager?`
+    <div class="global-wallet-add">
+      <label><span>Importe</span><div><input id="globalWalletAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label>
+      <input id="globalWalletNote" class="wallet-note" type="text" maxlength="80" placeholder="Nota opcional">
+      <div class="wallet-credit-actions"><button id="globalWalletAddFunds" type="button">+ Fondos</button><button id="globalWalletAddPrize" type="button">+ Premio</button></div>
+    </div>`
+    : `<p class="wallet-readonly global">Solo Salva puede añadir fondos, registrar premios o modificar el saldo.</p>`;
+  el.innerHTML=`
+    <div class="global-wallet-balance"><span>SALDO DISPONIBLE</span><strong>${escapeHtml(euro(walletBalance))}</strong><small>Compartido entre La Quiniela y Quinigol</small></div>
     ${controls}
-    <section class="wallet-section"><div class="global-wallet-history-head"><span>APUESTAS JUGADAS</span><b>${betConfirmations.length}</b></div><div class="wallet-bet-list">${walletBetHistoryHtml()}</div></section>
-    <section class="wallet-section wallet-prizes-section"><div class="global-wallet-history-head"><span>PREMIOS DETECTADOS</span><b>${walletPrizes.filter(p=>p.status!=="credited").length}</b></div><div class="wallet-prize-list">${walletPrizeCandidatesHtml()}</div></section>
-    <section class="wallet-section"><div class="global-wallet-history-head"><span>ÚLTIMOS MOVIMIENTOS</span><b>${walletTransactions.length}</b></div><div class="wallet-moves">${moves||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></section>`;
+    <div class="global-wallet-history"><div class="global-wallet-history-head"><span>ÚLTIMOS MOVIMIENTOS</span><b>${walletTransactions.length}</b></div><div class="wallet-moves">${moves||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></div>`;
   if(manager){
     $("#globalWalletAddFunds")?.addEventListener("click",()=>addWalletCredit("funds"));
     $("#globalWalletAddPrize")?.addEventListener("click",()=>addWalletCredit("prize"));
-    $$("[data-credit-prize]").forEach(btn=>btn.addEventListener("click",()=>creditDetectedPrize(btn.dataset.creditPrize)));
   }
 }
-function openWalletDialog(){renderGlobalWallet();$("#walletDialog")?.showModal()}
-async function creditDetectedPrize(key){
-  const [game,jidRaw]=String(key||"").split(":"),jid=Number(jidRaw);
-  const input=document.querySelector(`[data-prize-amount="${game}:${jid}"]`);
-  const amount=Number(String(input?.value||"").replace(",","."));
-  if(!Number.isFinite(amount)||amount<=0){toast("Introduce el importe oficial del premio");return}
-  try{
-    setSync("","Guardando");
-    const {error}=await sb.rpc("wallet_credit_prize_for_bet",{p_room_id:roomId,p_game:game,p_journey_id:jid,p_amount:amount});
-    if(error)throw error;
-    await loadWalletData();renderGlobalWallet();renderJoint();setSync("online","Sincronizado");toast("★ Premio añadido al monedero");
-  }catch(e){console.error(e);setSync("error","Error");toast(String(e?.message||e).includes("ya está abonado")?"Este premio ya estaba añadido":"No se pudo registrar el premio")}
+function openWalletDialog(){
+  renderGlobalWallet();
+  $("#walletDialog")?.showModal();
 }
 function estimatedQuinielaWalletCost(){
   const plan=jointBetRecommendation(journey);
@@ -953,97 +889,58 @@ function estimatedQuinielaWalletCost(){
 function renderJointWallet(){
   const el=$("#jointWallet");if(!el||!journey)return;
   const manager=walletCanManage(),conf=walletConfirmation("quiniela",journey.id),estimated=estimatedQuinielaWalletCost();
-  const storedEstimated=conf?.estimated_cost!=null?Number(conf.estimated_cost):estimated;
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
-  const adjusted=Boolean(conf&&storedEstimated!=null&&Math.abs(Number(conf.cost)-Number(storedEstimated))>=0.005);
   const status=conf
-    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}${storedEstimated!=null?` · Calculado: ${escapeHtml(euro(storedEstimated))}`:""}${adjusted?" · Modificado manualmente":""}</small></div>`
-    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste calculado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
-  const controls=manager?`<div class="wallet-confirm-controls"><label><span>Coste final de esta apuesta</span><div><input id="walletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${escapeHtml(costValue)}" placeholder="0,00"><b>€</b></div></label>
-      ${estimated!=null?`<small class="wallet-cost-hint">Calculado automáticamente: <strong>${escapeHtml(euro(estimated))}</strong> · Puedes modificarlo antes de confirmar.</small>`:""}
-      ${walletConfirmationSummaryHtml(estimated,Number(costValue||0),walletBalance)}
-      <button id="walletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>${conf?'<button id="walletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}</div>`
-    : `<p class="wallet-readonly">Confirmación gestionada por Salva.${conf&&storedEstimated!=null?` Coste calculado: ${escapeHtml(euro(storedEstimated))}.`:""}</p>`;
-  el.innerHTML=`<section class="bet-confirm-card"><div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>La Quiniela · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${escapeHtml(euro(walletBalance))}</button></div><div class="wallet-confirmation">${status}${controls}</div></section>`;
+    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>`
+    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
+  const controls=manager?`
+    <div class="wallet-confirm-controls">
+      <label><span>Coste de esta apuesta</span><div><input id="walletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${escapeHtml(costValue)}" placeholder="0,00"><b>€</b></div></label>
+      <button id="walletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
+      ${conf?'<button id="walletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
+    </div>`
+    : `<p class="wallet-readonly">Confirmación gestionada por Salva.</p>`;
+  el.innerHTML=`<section class="bet-confirm-card">
+    <div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>La Quiniela · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${escapeHtml(euro(walletBalance))}</button></div>
+    <div class="wallet-confirmation">${status}${controls}</div>
+  </section>`;
   if(manager){
     $("#walletConfirmBtn")?.addEventListener("click",confirmQuinielaWalletBet);
     $("#walletUnconfirmBtn")?.addEventListener("click",unconfirmQuinielaWalletBet);
-    $("#walletBetCost")?.addEventListener("input",e=>{
-      const val=Number(String(e.target.value||"").replace(",","."));
-      const node=el.querySelector(".wallet-confirm-summary");
-      if(node&&Number.isFinite(val)&&val>0){
-        const wrap=document.createElement("div");
-        wrap.innerHTML=walletConfirmationSummaryHtml(estimated,val,walletBalance);
-        if(wrap.firstElementChild)node.replaceWith(wrap.firstElementChild);
-      }
-    });
   }
   el.querySelector("[data-open-global-wallet]")?.addEventListener("click",openWalletDialog);
 }
 async function confirmQuinielaWalletBet(){
-  const raw=String($("#walletBetCost")?.value||"").replace(",",".");const cost=Number(raw),estimated=estimatedQuinielaWalletCost();
+  const raw=String($("#walletBetCost")?.value||"").replace(",",".");
+  const cost=Number(raw);
   if(!Number.isFinite(cost)||cost<=0){toast("Introduce un coste válido");return}
   try{
     setSync("","Guardando");
-    const {error}=await window.SharedWallet.confirm(sb,{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id,p_cost:cost,p_estimated_cost:estimated});
+    const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id,p_cost:cost});
     if(error)throw error;
     await loadWalletData();renderJoint();setSync("online","Sincronizado");toast("✓ Apuesta confirmada y descontada del monedero");
   }catch(e){console.error(e);setSync("error","Error");toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
 }
 async function unconfirmQuinielaWalletBet(){
   try{
-    setSync("","Guardando");const {error}=await sb.rpc("wallet_unconfirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id});if(error)throw error;
+    setSync("","Guardando");
+    const {error}=await sb.rpc("wallet_unconfirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id});
+    if(error)throw error;
     await loadWalletData();renderJoint();setSync("online","Sincronizado");toast("Confirmación anulada · importe devuelto");
   }catch(e){console.error(e);setSync("error","Error");toast("No se pudo anular")}
 }
 async function addWalletCredit(kind){
-  const raw=String($("#globalWalletAmount")?.value||"").replace(",",".");const amount=Number(raw),note=$("#globalWalletNote")?.value?.trim()||null;
+  const raw=String($("#globalWalletAmount")?.value||"").replace(",",".");
+  const amount=Number(raw),note=$("#globalWalletNote")?.value?.trim()||null;
   if(!Number.isFinite(amount)||amount<=0){toast("Introduce un importe válido");return}
   try{
-    setSync("","Guardando");const {error}=await sb.rpc("wallet_add_credit",{p_room_id:roomId,p_kind:kind,p_amount:amount,p_note:note});if(error)throw error;
+    setSync("","Guardando");
+    const {error}=await sb.rpc("wallet_add_credit",{p_room_id:roomId,p_kind:kind,p_amount:amount,p_note:note});
+    if(error)throw error;
     await loadWalletData();renderGlobalWallet();renderJoint();setSync("online","Sincronizado");toast(kind==="prize"?"Premio añadido al monedero":"Fondos añadidos al monedero");
   }catch(e){console.error(e);setSync("error","Error");toast("No se pudo actualizar el monedero")}
 }
 
-const detectingQuinielaPrizes=new Set();
-function officialPrizeAmount(game,journeyNumber,key){
-  const row=officialPrizeRows.find(x=>x.game===game&&Number(x.journey_number)===Number(journeyNumber)&&String(x.category_key)===String(key));
-  return row?Number(row.unit_amount):null;
-}
-function quinielaColumnPrize(uid,j){
-  let signs=0;
-  for(const m of matchesForJourney(j.id).filter(x=>x.number<=14)){
-    const actual=resultSignForMatch(m),p=pickForJourney(uid,j.id,m.number)?.pick;
-    if(actual&&p===actual)signs++;
-  }
-  const p15=matchesForJourney(j.id).find(x=>x.number===15);
-  const pick15=pickForJourney(uid,j.id,15);
-  const plenoOk=Boolean(p15&&matchResolved(p15)&&pick15?.home_goals&&pick15?.away_goals&&pick15.home_goals===normalizedGoalScore(p15.home_score)&&pick15.away_goals===normalizedGoalScore(p15.away_score));
-  const key=signs===14&&plenoOk?"pleno15":signs>=10?String(signs):null;
-  return {signs,plenoOk,key,amount:key?officialPrizeAmount("quiniela",j.number,key):0};
-}
-async function detectQuinielaPrizeIfNeeded(j=journey){
-  if(!j||journeyDisplayState(j)!=="finished"||!walletConfirmation("quiniela",j.id))return;
-  if(walletPrizes.some(p=>p.game==="quiniela"&&Number(p.journey_id)===Number(j.id)))return;
-  const lock=String(j.id);if(detectingQuinielaPrizes.has(lock))return;
-  const p1=memberBySlot(1),p2=memberBySlot(2);if(!p1||!p2)return;
-  const plan=jointBetRecommendation(j),a=quinielaColumnPrize(p1.user_id,j),b=quinielaColumnPrize(p2.user_id,j);
-  const columns=plan?.mode==="common"?[a]:[a,b];
-  const e8=scoreJointElige8(j),e8Prize=e8.selected===8&&e8.resolved===8&&e8.correct===8;
-  const winning=columns.filter(x=>x.key);
-  if(!winning.length&&!e8Prize)return;
-  const labels=winning.map(x=>x.key==="pleno15"?"Pleno al 15":`${x.key} aciertos`);
-  if(e8Prize)labels.push("Elige 8 · 8/8");
-  const amounts=winning.map(x=>x.amount).filter(x=>Number.isFinite(x));
-  if(e8Prize){const ea=officialPrizeAmount("quiniela",j.number,"e8");if(ea!=null)amounts.push(ea)}
-  const suggested=amounts.length===winning.length+(e8Prize?1:0)?amounts.reduce((s,x)=>s+Number(x||0),0):null;
-  detectingQuinielaPrizes.add(lock);
-  try{
-    const {error}=await sb.rpc("wallet_detect_prize_v2",{p_room_id:roomId,p_game:"quiniela",p_journey_id:j.id,p_category:labels.join(" + "),p_amount:suggested});
-    if(!error){await loadWalletData();renderGlobalWallet();renderJoint()}
-  }catch(e){console.warn("Premio Quiniela:",e)}
-  finally{detectingQuinielaPrizes.delete(lock)}
-}
 function jointBetRecommendation(j=journey){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   if(!j||!p1||!p2)return {ready:false,reason:"Faltan jugadores"};
@@ -1815,7 +1712,6 @@ async function enterApp(){
   await loadNotices();
   selectActiveJourney();
   renderAll();
-  detectQuinielaPrizeIfNeeded(journey);
   subscribeRealtime();
   refreshPushSubscription();
   startCountdownTimer();
@@ -2499,10 +2395,9 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"bet_prizes",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==identityUserId);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
-    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async(payload)=>{const before=allMatches.map(m=>({...m}));const row=payload?.new;if(row?.journey_id){allMatches=mergeJourneyRows(allMatches,[row],m=>`${m.journey_id}:${m.number}`);if(journey&&Number(row.journey_id)===Number(journey.id))matches=matchesForJourney(journey.id);detectNewResults(before);renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderCompare();renderJoint();updateCountdowns();detectQuinielaPrizeIfNeeded(journey)}else{await loadAllJourneys();selectActiveJourney();renderAll();detectQuinielaPrizeIfNeeded(journey)}})
+    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{const before=allMatches.map(m=>({...m}));await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();detectNewResults(before);renderAll()})
     .subscribe(status=>{if(status==="SUBSCRIBED")setSync("online","Sincronizado");else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setSync("error","Sin conexión")});
 }
 
