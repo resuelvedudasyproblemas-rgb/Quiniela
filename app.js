@@ -11,7 +11,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 let sb, user, identityUserId, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
-let walletBalance=0, walletTransactions=[], betConfirmations=[];
+let walletBalance=0, walletTransactions=[], betConfirmations=[], betSkips=[];
 let channel = null;
 let saving = false;
 let elige8Saving = false;
@@ -833,19 +833,39 @@ function euro(value){
 
 async function loadWalletData(){
   if(!roomId)return;
-  const [wr,tr,cr]=await Promise.all([
+  const [wr,tr,cr,sr]=await Promise.all([
     sb.from("room_wallets").select("balance,updated_at").eq("room_id",roomId).maybeSingle(),
     sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(12),
-    sb.from("bet_confirmations").select("*").eq("room_id",roomId)
+    sb.from("bet_confirmations").select("*").eq("room_id",roomId),
+    sb.from("bet_skips").select("*").eq("room_id",roomId)
   ]);
-  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;
+  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;if(sr.error)throw sr.error;
   walletBalance=Number(wr.data?.balance||0);
   walletTransactions=tr.data||[];
   betConfirmations=cr.data||[];
+  betSkips=sr.data||[];
 }
 function walletCanManage(){return Number(myMember?.slot)===1}
 function walletConfirmation(game="quiniela",jid=journey?.id){
   return betConfirmations.find(x=>x.game===game&&Number(x.journey_id)===Number(jid))||null;
+}
+function betIsSkipped(game="quiniela",jid=journey?.id){
+  return betSkips.some(x=>x.game===game&&Number(x.journey_id)===Number(jid));
+}
+async function setJourneySkipped(skipped){
+  if(!journey||!walletCanManage()||!journeyCanEdit(journey))return;
+  const question=skipped
+    ? `¿Seguro que esta jornada de La Quiniela no la vais a jugar? No se descontará dinero y quedará como No jugada.`
+    : `¿Volver a participar en la Jornada ${journey.number}?`;
+  if(!confirm(question))return;
+  try{
+    setSync("","Guardando");
+    const {error}=await sb.rpc("set_bet_skipped",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id,p_skipped:skipped});
+    if(error)throw error;
+    await loadWalletData();renderJoint();renderHistory();renderGlobalWallet();
+    setSync("online","Sincronizado");
+    toast(skipped?"Jornada marcada como No jugada":"Volvéis a participar en esta jornada");
+  }catch(e){console.error(e);setSync("error","Error");toast(e?.message||"No se pudo cambiar la participación")}
 }
 function walletMovementLabel(t){
   const labels={opening:"Saldo inicial",funds:"Fondos añadidos",prize:"Premio añadido",bet:"Apuesta confirmada",bet_adjustment:"Ajuste de apuesta",refund:"Apuesta anulada"};
@@ -888,25 +908,37 @@ function estimatedQuinielaWalletCost(){
 }
 function renderJointWallet(){
   const el=$("#jointWallet");if(!el||!journey)return;
-  const manager=walletCanManage(),conf=walletConfirmation("quiniela",journey.id),estimated=estimatedQuinielaWalletCost();
+  const manager=walletCanManage(),conf=walletConfirmation("quiniela",journey.id),skipped=betIsSkipped("quiniela",journey.id),editable=journeyCanEdit(journey),estimated=estimatedQuinielaWalletCost();
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
-  const status=conf
-    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>`
-    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
-  const controls=manager?`
-    <div class="wallet-confirm-controls">
+  const status=skipped
+    ? `<div class="wallet-bet-status skipped"><span>— No jugamos esta jornada</span><small>No se descontará dinero ni se buscarán premios de esta apuesta.</small></div>`
+    : conf
+      ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>`
+      : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
+  let controls="";
+  if(skipped){
+    controls=manager&&editable
+      ? '<div class="wallet-confirm-controls skip-only"><button id="walletPlayAgainBtn" type="button">Volver a participar</button></div>'
+      : '<p class="wallet-readonly">Esta jornada está marcada como No jugada.</p>';
+  }else if(manager){
+    controls=`<div class="wallet-confirm-controls">
       <label><span>Coste de esta apuesta</span><div><input id="walletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${escapeHtml(costValue)}" placeholder="0,00"><b>€</b></div></label>
       <button id="walletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
       ${conf?'<button id="walletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
-    </div>`
-    : `<p class="wallet-readonly">Confirmación gestionada por Salva.</p>`;
-  el.innerHTML=`<section class="bet-confirm-card">
+      ${editable?'<button id="walletSkipBtn" class="wallet-skip-btn" type="button">No jugar esta jornada</button>':""}
+    </div>`;
+  }else{
+    controls='<p class="wallet-readonly">Confirmación gestionada por Salva.</p>';
+  }
+  el.innerHTML=`<section class="bet-confirm-card ${skipped?"is-skipped":""}">
     <div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>La Quiniela · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${escapeHtml(euro(walletBalance))}</button></div>
     <div class="wallet-confirmation">${status}${controls}</div>
   </section>`;
   if(manager){
     $("#walletConfirmBtn")?.addEventListener("click",confirmQuinielaWalletBet);
     $("#walletUnconfirmBtn")?.addEventListener("click",unconfirmQuinielaWalletBet);
+    $("#walletSkipBtn")?.addEventListener("click",()=>setJourneySkipped(true));
+    $("#walletPlayAgainBtn")?.addEventListener("click",()=>setJourneySkipped(false));
   }
   el.querySelector("[data-open-global-wallet]")?.addEventListener("click",openWalletDialog);
 }
@@ -2308,7 +2340,8 @@ function renderHistory(){
   if(!historic.length){$("#historyList").innerHTML=`<div class="history-empty">Todavía no hay jornadas con los 15 resultados oficiales. Las jornadas en juego se mantienen arriba hasta completarse.</div>`;return}
   const p1=memberBySlot(1),p2=memberBySlot(2);
   $("#historyList").innerHTML=historic.map(j=>{const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0},s2=p2?scoreUserJourney(p2.user_id,j):{correct:0},e1=p1?scoreElige8(p1.user_id,j):{selected:0,correct:0,resolved:0},e2=p2?scoreElige8(p2.user_id,j):{selected:0,correct:0,resolved:0},winner=!p1||!p2?"":s1.correct>s2.correct?p1.display_name:s2.correct>s1.correct?p2.display_name:"Empate";
-    return `<button class="history-card" data-history-id="${j.id}"><div class="history-card-top"><div><div class="history-card-title">Jornada ${j.number}</div><div class="history-card-date">${escapeHtml(formatDate(j.draw_date))}</div></div><span class="history-card-badge finished">${winner==="Empate"?"Empate":winner?`Gana ${escapeHtml(winner)}`:"Finalizada"}</span></div><div class="history-versus"><div><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${s1.correct}</strong></div><b>–</b><div><strong>${s2.correct}</strong><span>${escapeHtml(p2?.display_name||"J2")}</span></div></div><div class="history-card-stats"><div class="history-stat ${e1.selected===8&&e1.resolved===8&&e1.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p1?.display_name||"J1")}</span><strong>${e1.selected?`${e1.correct}/${e1.resolved}`:"—"}</strong></div><div class="history-stat ${e2.selected===8&&e2.resolved===8&&e2.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p2?.display_name||"J2")}</span><strong>${e2.selected?`${e2.correct}/${e2.resolved}`:"—"}</strong></div></div></button>`}).join("");
+    const skipped=betIsSkipped("quiniela",j.id);
+    return `<button class="history-card" data-history-id="${j.id}"><div class="history-card-top"><div><div class="history-card-title">Jornada ${j.number}</div><div class="history-card-date">${escapeHtml(formatDate(j.draw_date))}</div></div><span class="history-card-badge ${skipped?"skipped":"finished"}">${skipped?"No jugada":winner==="Empate"?"Empate":winner?`Gana ${escapeHtml(winner)}`:"Finalizada"}</span></div><div class="history-versus"><div><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${s1.correct}</strong></div><b>–</b><div><strong>${s2.correct}</strong><span>${escapeHtml(p2?.display_name||"J2")}</span></div></div><div class="history-card-stats"><div class="history-stat ${e1.selected===8&&e1.resolved===8&&e1.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p1?.display_name||"J1")}</span><strong>${e1.selected?`${e1.correct}/${e1.resolved}`:"—"}</strong></div><div class="history-stat ${e2.selected===8&&e2.resolved===8&&e2.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p2?.display_name||"J2")}</span><strong>${e2.selected?`${e2.correct}/${e2.resolved}`:"—"}</strong></div></div></button>`}).join("");
   $$(".history-card").forEach(btn=>btn.addEventListener("click",()=>openHistory(Number(btn.dataset.historyId))));
 }
 
@@ -2395,6 +2428,7 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_skips",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderJoint();renderHistory()})
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==identityUserId);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{const before=allMatches.map(m=>({...m}));await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();detectNewResults(before);renderAll()})
