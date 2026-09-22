@@ -6283,3 +6283,60 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     font-size:.47rem!important;
   }
 }
+
+
+/* Icono del monedero v112 */
+.room-wallet-pill{
+  gap:5px!important;
+  min-height:26px!important;
+  padding:4px 9px 4px 6px!important;
+}
+.room-wallet-icon{
+  width:18px!important;
+  height:18px!important;
+  display:grid!important;
+  place-items:center;
+  flex:0 0 18px;
+  border-radius:6px!important;
+  background:color-mix(in srgb,var(--brand) 12%,var(--surface))!important;
+  color:var(--brand)!important;
+}
+.room-wallet-icon svg{
+  width:15px;
+  height:15px;
+  overflow:visible;
+}
+.room-wallet-icon svg path,
+.room-wallet-icon svg rect,
+.room-wallet-icon svg circle{
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.55;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.room-wallet-icon svg text{
+  fill:currentColor;
+  stroke:none;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:6.2px;
+  font-weight:900;
+}
+.room-wallet-pill>.room-wallet-label{
+  color:var(--text)!important;
+  font-size:.47rem!important;
+}
+.room-wallet-pill>strong{
+  font-size:.54rem!important;
+}
+@media(max-width:430px){
+  .room-wallet-icon{
+    width:17px!important;
+    height:17px!important;
+    flex-basis:17px;
+  }
+  .room-wallet-icon svg{
+    width:14px;
+    height:14px;
+  }
+}
