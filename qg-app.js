@@ -6,7 +6,7 @@ const $$=s=>[...document.querySelectorAll(s)];
 const GOALS=["0","1","2","M"];
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],allJoint=[];
-let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[];
+let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[],qgBetSkips=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
 const drafts=new Map(),jointDrafts=new Map();
@@ -229,19 +229,38 @@ async function load(){
 
 async function qgLoadWalletData(){
   if(!roomId)return;
-  const [wr,tr,cr]=await Promise.all([
+  const [wr,tr,cr,sr]=await Promise.all([
     sb.from("room_wallets").select("balance,updated_at").eq("room_id",roomId).maybeSingle(),
     sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(12),
-    sb.from("bet_confirmations").select("*").eq("room_id",roomId)
+    sb.from("bet_confirmations").select("*").eq("room_id",roomId),
+    sb.from("bet_skips").select("*").eq("room_id",roomId)
   ]);
-  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;
+  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;if(sr.error)throw sr.error;
   qgWalletBalance=Number(wr.data?.balance||0);
   qgWalletTransactions=tr.data||[];
   qgBetConfirmations=cr.data||[];
+  qgBetSkips=sr.data||[];
 }
 function qgWalletCanManage(){return Number(member(1)?.user_id===identityUserId?1:0)===1}
 function qgWalletConfirmation(jid=journey?.id){
   return qgBetConfirmations.find(x=>x.game==="quinigol"&&Number(x.journey_id)===Number(jid))||null;
+}
+function qgBetIsSkipped(jid=journey?.id){
+  return qgBetSkips.some(x=>x.game==="quinigol"&&Number(x.journey_id)===Number(jid));
+}
+async function qgSetJourneySkipped(skipped){
+  if(!journey||!qgWalletCanManage()||!canEdit(journey))return;
+  const question=skipped
+    ? `¿Seguro que esta jornada de Quinigol no la vais a jugar? No se descontará dinero y quedará como No jugada.`
+    : `¿Volver a participar en la Jornada ${journey.number}?`;
+  if(!confirm(question))return;
+  try{
+    const {error}=await sb.rpc("set_bet_skipped",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id,p_skipped:skipped});
+    if(error)throw error;
+    await qgLoadWalletData();renderJoint();renderHistory();
+    window.dispatchEvent(new CustomEvent("wallet:refresh"));
+    toast(skipped?"Jornada marcada como No jugada":"Volvéis a participar en esta jornada");
+  }catch(e){console.error(e);toast(e?.message||"No se pudo cambiar la participación")}
 }
 function qgEuro(value){return Number(value||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"}
 function qgWalletDate(v){
@@ -254,26 +273,38 @@ function qgWalletMovementLabel(t){
 }
 function renderQGWallet(){
   const el=$("#qgJointWallet");if(!el||!journey)return;
-  const manager=qgWalletCanManage(),conf=qgWalletConfirmation(journey.id),plan=planData();
+  const manager=qgWalletCanManage(),conf=qgWalletConfirmation(journey.id),skipped=qgBetIsSkipped(journey.id),editable=canEdit(journey),plan=planData();
   const estimated=plan?.ready?Number(plan.cost):null;
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
-  const status=conf
-    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))}</small></div>`
-    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${esc(qgEuro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
-  const controls=manager?`
-    <div class="wallet-confirm-controls">
+  const status=skipped
+    ? `<div class="wallet-bet-status skipped"><span>— No jugamos esta jornada</span><small>No se descontará dinero ni se buscarán premios de este Quinigol.</small></div>`
+    : conf
+      ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))}</small></div>`
+      : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${esc(qgEuro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
+  let controls="";
+  if(skipped){
+    controls=manager&&editable
+      ? '<div class="wallet-confirm-controls skip-only"><button id="qgWalletPlayAgainBtn" type="button">Volver a participar</button></div>'
+      : '<p class="wallet-readonly">Esta jornada está marcada como No jugada.</p>';
+  }else if(manager){
+    controls=`<div class="wallet-confirm-controls">
       <label><span>Coste de este Quinigol</span><div><input id="qgWalletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${esc(costValue)}" placeholder="0,00"><b>€</b></div></label>
       <button id="qgWalletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
       ${conf?'<button id="qgWalletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
-    </div>`
-    : `<p class="wallet-readonly">Confirmación gestionada por Salva.</p>`;
-  el.innerHTML=`<section class="bet-confirm-card">
+      ${editable?'<button id="qgWalletSkipBtn" class="wallet-skip-btn" type="button">No jugar esta jornada</button>':""}
+    </div>`;
+  }else{
+    controls='<p class="wallet-readonly">Confirmación gestionada por Salva.</p>';
+  }
+  el.innerHTML=`<section class="bet-confirm-card ${skipped?"is-skipped":""}">
     <div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>Quinigol · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${esc(qgEuro(qgWalletBalance))}</button></div>
     <div class="wallet-confirmation">${status}${controls}</div>
   </section>`;
   if(manager){
     $("#qgWalletConfirmBtn")?.addEventListener("click",qgConfirmWalletBet);
     $("#qgWalletUnconfirmBtn")?.addEventListener("click",qgUnconfirmWalletBet);
+    $("#qgWalletSkipBtn")?.addEventListener("click",()=>qgSetJourneySkipped(true));
+    $("#qgWalletPlayAgainBtn")?.addEventListener("click",()=>qgSetJourneySkipped(false));
   }
   el.querySelector("[data-open-global-wallet]")?.addEventListener("click",()=>$("#walletBtn")?.click());
 }
@@ -581,7 +612,8 @@ function renderHistory(){
   el.innerHTML=done.map(j=>{
     const s1=p1?score(p1.user_id,j):{correct:0},s2=p2?score(p2.user_id,j):{correct:0},sj=jointScore(j);
     const rows=msFor(j.id).map(m=>`<div class="qg-history-match"><span>P${m.number}</span><div class="qg-history-fixture">${esc(stripTeam(m.home))} · ${esc(stripTeam(m.away))}</div><div class="qg-history-picks"><span class="p1">${esc(p1?pickText(pick(p1.user_id,m.number,j.id)):"—")}</span><span class="p2">${esc(p2?pickText(pick(p2.user_id,m.number,j.id)):"—")}</span><span class="pj">${esc(jointText(m.number,j.id))}</span><span class="real">${esc(actual(m))}</span></div></div>`).join("");
-    return `<details class="qg-history-item"><summary><span class="qg-history-num">J${j.number}</span><div class="qg-history-title"><strong>${esc(new Intl.DateTimeFormat("es-ES",{day:"numeric",month:"short",year:"numeric"}).format(new Date(j.draw_date+"T12:00:00")))}</strong><small>${prizeLabel(sj.correct,6)||"Resultados oficiales"}</small></div><div class="qg-history-score"><span>${s1.correct}/6</span><span>${s2.correct}/6</span><span>${sj.correct}/6</span></div></summary><div class="qg-history-body">${rows}</div></details>`;
+    const skipped=qgBetIsSkipped(j.id);
+    return `<details class="qg-history-item ${skipped?"is-skipped":""}"><summary><span class="qg-history-num">J${j.number}</span><div class="qg-history-title"><strong>${esc(new Intl.DateTimeFormat("es-ES",{day:"numeric",month:"short",year:"numeric"}).format(new Date(j.draw_date+"T12:00:00")))}</strong><small>${skipped?"No jugada":prizeLabel(sj.correct,6)||"Resultados oficiales"}</small></div><div class="qg-history-score">${skipped?'<span class="qg-history-no-play">No jugada</span>':`<span>${s1.correct}/6</span><span>${s2.correct}/6</span><span>${sj.correct}/6</span>`}</div></summary><div class="qg-history-body">${rows}</div></details>`;
   }).join("");
 }
 function setView(v,persist=true){
@@ -636,6 +668,7 @@ function subscribe(){
     .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_skips",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint();renderHistory()})
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
     .subscribe();
