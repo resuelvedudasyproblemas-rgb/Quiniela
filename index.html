@@ -607,7 +607,8 @@ function renderHero(){
   $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="playing"?`En juego · ${res}/6 resultados`:st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
   $("#qgJourneyDate").textContent=`Cierre · ${fullDate(journey.close_at)}`;
   $("#qgJourneyCountdown").textContent=st==="open"?`Empieza en ${timeLeft(journey.close_at)}`:st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
-  renderJourneyCompetitions();\n  const card=$("#qgJourneyCard");
+  renderJourneyCompetitions();
+  const card=$("#qgJourneyCard");
   card.dataset.status=st;
   const prizeState=qgPrizeState(journey);
   if(prizeState)card.dataset.prize=prizeState;
