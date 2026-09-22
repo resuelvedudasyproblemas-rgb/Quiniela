@@ -137,6 +137,7 @@
             <h2>Los 6 marcadores de los dos</h2>
             <p>Si coincidís se usa vuestro resultado. Si diferís, la app propone un marcador conjunto que podéis cambiar.</p>
           </section>
+          <section id="qgJointWallet"></section>
           <section id="qgJointPlan"></section>
           <div id="qgJointList" class="qg-joint-list"></div>
         </section>
@@ -242,6 +243,7 @@
           <h2>La apuesta de los dos</h2>
           <p>La app compara vuestros pronósticos y os propone cómo jugarla intentando mantener el coste habitual y cubrir las diferencias importantes.</p>
         </section>
+        <section id="jointWallet"></section>
         <div id="jointSummary" class="joint-builder-summary"></div>
         <div id="jointList" class="joint-builder-list"></div>
       </section>
@@ -379,6 +381,7 @@ const $$=s=>[...document.querySelectorAll(s)];
 const GOALS=["0","1","2","M"];
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],allJoint=[];
+let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
 const drafts=new Map(),jointDrafts=new Map();
@@ -474,6 +477,14 @@ function pickText(p){return p?.home_goals&&p?.away_goals?`${p.home_goals}-${p.aw
 function goalNum(v){return v==="M"?3:Number(v)}
 function goalToken(v){const n=Math.max(0,Math.min(3,Math.round(Number(v)||0)));return n>=3?"M":String(n)}
 function actual(m){return resolved(m)?`${m.home_score>=3?"M":m.home_score}-${m.away_score>=3?"M":m.away_score}`:"—"}
+function qgHeaderScore(m){
+  if(resolved(m))return {home:String(m.home_score),away:String(m.away_score),cls:"official",label:"FINAL"};
+  if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
+    const label=m.live_status==="inprogress"?(m.live_minute?m.live_minute+"′":"EN DIRECTO"):"FINAL";
+    return {home:String(m.live_home_score),away:String(m.live_away_score),cls:"live",label};
+  }
+  return {home:"–",away:"–",cls:"pending",label:""};
+}
 function projected(m){
   if(resolved(m))return actual(m);
   if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
@@ -577,8 +588,92 @@ async function load(){
   const f=readPref("quinigol-filter","all");activeFilter=["all","pending","correct","wrong"].includes(f)?f:"all";
   const g=readPref("quiniela-active-game","quiniela");activeGame=g==="quinigol"?"quinigol":"quiniela";
   for(const id of qgInitialJourneyIds())qgLoadedJourneyIds.add(id);
-  await Promise.all([qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),qgLoadSummaries()]);
+  await Promise.all([qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),qgLoadSummaries(),qgLoadWalletData()]);
   selectJourney();
+}
+
+async function qgLoadWalletData(){
+  if(!roomId)return;
+  const [wr,tr,cr]=await Promise.all([
+    sb.from("room_wallets").select("balance,updated_at").eq("room_id",roomId).maybeSingle(),
+    sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(12),
+    sb.from("bet_confirmations").select("*").eq("room_id",roomId)
+  ]);
+  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;
+  qgWalletBalance=Number(wr.data?.balance||0);
+  qgWalletTransactions=tr.data||[];
+  qgBetConfirmations=cr.data||[];
+}
+function qgWalletCanManage(){return Number(member(1)?.user_id===identityUserId?1:0)===1}
+function qgWalletConfirmation(jid=journey?.id){
+  return qgBetConfirmations.find(x=>x.game==="quinigol"&&Number(x.journey_id)===Number(jid))||null;
+}
+function qgEuro(value){return Number(value||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"}
+function qgWalletDate(v){
+  if(!v)return "";
+  return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
+}
+function qgWalletMovementLabel(t){
+  const labels={opening:"Saldo inicial",funds:"Fondos añadidos",prize:"Premio añadido",bet:"Apuesta confirmada",bet_adjustment:"Ajuste de apuesta",refund:"Apuesta anulada"};
+  return t?.note||labels[t?.kind]||"Movimiento";
+}
+function renderQGWallet(){
+  const el=$("#qgJointWallet");if(!el||!journey)return;
+  const manager=qgWalletCanManage(),conf=qgWalletConfirmation(journey.id),plan=planData();
+  const estimated=plan?.ready?Number(plan.cost):null;
+  const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
+  const movements=qgWalletTransactions.slice(0,8).map(t=>`<div class="wallet-move"><div><strong>${esc(qgWalletMovementLabel(t))}</strong><small>${esc(qgWalletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${esc(qgEuro(Number(t.amount)))}</b></div>`).join("");
+  const status=conf
+    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))}</small></div>`
+    : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${esc(qgEuro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
+  const controls=manager?`
+    <div class="wallet-confirm-controls">
+      <label><span>Coste de este Quinigol</span><div><input id="qgWalletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${esc(costValue)}" placeholder="0,00"><b>€</b></div></label>
+      <button id="qgWalletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
+      ${conf?'<button id="qgWalletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
+    </div>
+    <div class="wallet-credit-controls">
+      <label><span>Añadir al monedero</span><div><input id="qgWalletCreditAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label>
+      <input id="qgWalletCreditNote" class="wallet-note" type="text" maxlength="80" placeholder="Nota opcional">
+      <div class="wallet-credit-actions"><button id="qgWalletAddFundsBtn" type="button">+ Fondos</button><button id="qgWalletAddPrizeBtn" type="button">+ Premio</button></div>
+    </div>`
+    : `<p class="wallet-readonly">Solo Salva puede confirmar apuestas y modificar el dinero. Ferran tiene acceso de solo lectura.</p>`;
+  el.innerHTML=`<section class="wallet-card">
+    <div class="wallet-top"><div><span>MONEDERO CONJUNTO</span><small>Saldo disponible</small></div><strong>${esc(qgEuro(qgWalletBalance))}</strong></div>
+    <div class="wallet-confirmation">${status}${controls}</div>
+    <details class="wallet-history"><summary>Movimientos <b>${qgWalletTransactions.length}</b></summary><div class="wallet-moves">${movements||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></details>
+  </section>`;
+  if(!manager)return;
+  $("#qgWalletConfirmBtn")?.addEventListener("click",qgConfirmWalletBet);
+  $("#qgWalletUnconfirmBtn")?.addEventListener("click",qgUnconfirmWalletBet);
+  $("#qgWalletAddFundsBtn")?.addEventListener("click",()=>qgAddWalletCredit("funds"));
+  $("#qgWalletAddPrizeBtn")?.addEventListener("click",()=>qgAddWalletCredit("prize"));
+}
+async function qgConfirmWalletBet(){
+  const cost=Number(String($("#qgWalletBetCost")?.value||"").replace(",","."));
+  if(!Number.isFinite(cost)||cost<=0){toast("Introduce un coste válido");return}
+  try{
+    const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id,p_cost:cost});
+    if(error)throw error;
+    await qgLoadWalletData();renderJoint();toast("✓ Quinigol confirmado y descontado del monedero");
+  }catch(e){console.error(e);toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
+}
+async function qgUnconfirmWalletBet(){
+  try{
+    const {error}=await sb.rpc("wallet_unconfirm_bet",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id});
+    if(error)throw error;
+    await qgLoadWalletData();renderJoint();toast("Confirmación anulada · importe devuelto");
+  }catch(e){console.error(e);toast("No se pudo anular")}
+}
+async function qgAddWalletCredit(kind){
+  const amount=Number(String($("#qgWalletCreditAmount")?.value||"").replace(",","."));
+  const note=$("#qgWalletCreditNote")?.value?.trim()||null;
+  if(!Number.isFinite(amount)||amount<=0){toast("Introduce un importe válido");return}
+  try{
+    const {error}=await sb.rpc("wallet_add_credit",{p_room_id:roomId,p_kind:kind,p_amount:amount,p_note:note});
+    if(error)throw error;
+    await qgLoadWalletData();renderJoint();toast(kind==="prize"?"Premio añadido al monedero":"Fondos añadidos al monedero");
+  }catch(e){console.error(e);toast("No se pudo actualizar el monedero")}
 }
 function currentDraft(n){
   const k=`${journey?.id}:${n}`,p=pick(identityUserId,n),d=drafts.get(k)||{};
@@ -734,7 +829,7 @@ function renderPlay(){
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"✓ Acierto":saved?"✕ Fallo":"Sin pronóstico"}</strong></div>`;
     else if(proj!=="—")result=`<div class="qg-result live"><span>En directo · provisional</span><strong>${esc(proj)}</strong></div>`;
-    return `<article class="qg-match-card ${show?"":"hidden"}"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}</article>`;
+    const hs=qgHeaderScore(m);\n    return `<article class="qg-match-card ${show?"":"hidden"}"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.home)}</strong></div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.away)}</strong></div>${hs.label?`<span class="qg-head-score-label ${hs.cls}">${esc(hs.label)}</span>`:""}</div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}</article>`;
   }).join("");
   $$(".qg-goal").forEach(b=>b.addEventListener("click",()=>saveGoal(Number(b.dataset.qgMatch),b.dataset.qgSide,b.dataset.qgGoal)));
   $$("[data-qg-clear]").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.qgClear))));
@@ -819,7 +914,7 @@ function renderPlan(){
   el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>${esc(plan.title)}</h3></div><div class="qg-plan-price"><strong>${plan.cost.toFixed(2).replace(".",",")} €</strong><small>${plan.bets} apuesta${plan.bets===1?"":"s"} · 1 € cada una</small></div></div><p>${reason}</p>${detail}${alternative}</section>`;
 }
 function renderJoint(){
-  const el=$("#qgJointList");if(!el||!journey)return;renderPlan();
+  const el=$("#qgJointList");if(!el||!journey)return;renderQGWallet();renderPlan();
   const p1=member(1),p2=member(2),locked=!canEdit();
   el.innerHTML=matches.map(m=>{
     const a=p1?pick(p1.user_id,m.number):null,b=p2?pick(p2.user_id,m.number):null,man=jointOverride(m.number),auto=autoJoint(m.number),autoKind=auto?.kind||"Pendiente",sel=currentJointDraft(m.number);
@@ -909,6 +1004,9 @@ function subscribe(){
   channel=sb.channel(`quinigol-${roomId}`)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_picks",filter:`room_id=eq.${roomId}`},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_joint_picks",filter:`room_id=eq.${roomId}`},refreshLoaded)
+    .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
     .subscribe();
