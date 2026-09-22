@@ -629,6 +629,7 @@ function goalButtons(n,side,selected,locked,attrs=""){
 }
 function qgPrizeState(j){
   if(!j||state(j)!=="finished")return "";
+  if(!qgLoadedJourneyIds.has(j.id))return qgJourneySummaries.get(Number(j.id))?.prize_state||"miss";
   const personal=score(identityUserId,j);
   const joint=jointScore(j);
   return personal.correct>=2||joint.correct>=2?"prize":"miss";
@@ -690,7 +691,19 @@ function renderSwitcher(){
   el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
     archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
   }`;
-  $$("#qgJourneySwitcher [data-qg-journey]").forEach(b=>b.addEventListener("click",()=>{selectedJourneyId=Number(b.dataset.qgJourney);savePref("quinigol-journey",selectedJourneyId);selectJourney();renderAll()}));
+  $$("#qgJourneySwitcher [data-qg-journey]").forEach(b=>b.addEventListener("click",async()=>{
+    const id=Number(b.dataset.qgJourney);
+    try{
+      await ensureQGJourneyLoaded(id);
+      selectedJourneyId=id;
+      savePref("quinigol-journey",selectedJourneyId);
+      selectJourney();
+      renderAll();
+    }catch(e){
+      console.error(e);
+      toast("No se pudo cargar la jornada");
+    }
+  }));
 }
 function dashCard(name,done,s,cls){
   const finished=state(journey)==="finished",prize=prizeLabel(s.correct,s.resolved),gold=finished&&s.correct>=2;
@@ -869,9 +882,15 @@ function renderAll(){
   if(!journey)return;
   renderHero();renderSwitcher();renderDashboard();renderPlay();renderJoint();renderCompare();renderStats();renderHistory();setView(activeView,false);
 }
+async function openQGView(v){
+  if((v==="stats"||v==="history")&&!qgHistoryFullyLoaded){
+    try{await ensureAllQGJourneysLoaded()}catch(e){console.error(e);toast("No se pudo cargar todo el historial")}
+  }
+  setView(v);
+}
 function bind(){
   $$(".game-choice").forEach(b=>b.addEventListener("click",()=>setGame(b.dataset.game)));
-  $$(".qg-tab").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.qgView)));
+  $$(".qg-tab").forEach(b=>b.addEventListener("click",()=>openQGView(b.dataset.qgView)));
   $$(".qg-filter").forEach(b=>b.addEventListener("click",()=>setFilter(b.dataset.qgFilter)));
 }
 function subscribe(){
