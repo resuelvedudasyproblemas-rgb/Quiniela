@@ -6283,3 +6283,52 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     font-size:.47rem!important;
   }
 }
+
+
+/* Jornadas no jugadas */
+.wallet-bet-status.skipped{
+  background:color-mix(in srgb,#8a6a18 10%,var(--surface));
+  border-color:color-mix(in srgb,#8a6a18 28%,var(--border));
+}
+.wallet-bet-status.skipped>span{
+  color:#77580f;
+}
+.bet-confirm-card.is-skipped{
+  border-color:color-mix(in srgb,#8a6a18 28%,var(--border));
+}
+.wallet-confirm-controls .wallet-skip-btn{
+  background:transparent!important;
+  color:var(--muted)!important;
+  border:1px solid var(--border)!important;
+}
+.wallet-confirm-controls .wallet-skip-btn:hover{
+  color:#77580f!important;
+  border-color:color-mix(in srgb,#8a6a18 35%,var(--border))!important;
+}
+.wallet-confirm-controls.skip-only{
+  grid-template-columns:1fr!important;
+}
+.wallet-confirm-controls.skip-only button{
+  justify-self:start;
+}
+.history-card-badge.skipped{
+  background:#fff7df;
+  color:#77580f;
+}
+.qg-history-item.is-skipped summary{
+  background:color-mix(in srgb,#8a6a18 7%,var(--surface));
+}
+.qg-history-no-play{
+  grid-column:1/-1;
+  color:#77580f!important;
+  font-weight:900;
+}
+@media(max-width:430px){
+  .wallet-confirm-controls .wallet-skip-btn{
+    grid-column:1/-1;
+    width:100%;
+  }
+  .wallet-confirm-controls.skip-only button{
+    width:100%;
+  }
+}
