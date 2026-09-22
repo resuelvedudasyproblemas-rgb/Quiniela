@@ -89,6 +89,87 @@
       </div>
     </section>
 
+
+    <section id="gameSwitcher" class="game-switcher" aria-label="Elegir juego">
+      <button type="button" class="game-choice active" data-game="quiniela"><span>1X2</span><strong>La Quiniela</strong></button>
+      <button type="button" class="game-choice" data-game="quinigol"><span>0·1·2·M</span><strong>Quinigol</strong></button>
+    </section>
+
+    <section id="qgRoot" class="qg-root hidden">
+      <section id="qgJourneyCard" class="journey-card qg-journey-card">
+        <div class="qg-journey-status"><span class="status-dot"></span><span id="qgStatusText">Quinigol</span></div>
+        <div class="qg-journey-main">
+          <span id="qgJourneyKicker" class="journey-kicker">PRÓXIMO QUINIGOL</span>
+          <strong id="qgJourneyNumber">Jornada —</strong>
+          <span id="qgJourneyDate" class="qg-journey-date">—</span>
+          <div id="qgJourneyCountdown" class="qg-hero-countdown"></div>
+        </div>
+        <div class="qg-ball-mark" aria-hidden="true">⚽</div>
+      </section>
+
+      <section id="qgJourneySwitcher" class="journey-switcher qg-journey-switcher" aria-label="Cambiar jornada de Quinigol"></section>
+
+      <nav class="qg-tabs" aria-label="Secciones de Quinigol">
+        <button type="button" class="qg-tab active" data-qg-view="play">Mi Quinigol</button>
+        <button type="button" class="qg-tab" data-qg-view="joint">Conjunta</button>
+        <button type="button" class="qg-tab" data-qg-view="compare">Comparar</button>
+        <button type="button" class="qg-tab" data-qg-view="stats">Estadísticas</button>
+        <button type="button" class="qg-tab" data-qg-view="history">Historial</button>
+      </nav>
+
+      <div class="qg-main">
+        <section id="qgPlayView" class="qg-view active">
+          <section id="qgDashboard" class="journey-dashboard qg-dashboard"></section>
+          <div class="progress-row"><span id="qgProgressText">0 de 6 completados</span><span>En la nube</span></div>
+          <div class="progress"><div id="qgProgressBar"></div></div>
+          <div class="qg-filter-wrap" aria-label="Filtrar partidos de Quinigol">
+            <button type="button" class="qg-filter active" data-qg-filter="all">Todos <span id="qgFilterAll">6</span></button>
+            <button type="button" class="qg-filter" data-qg-filter="pending">Pendientes <span id="qgFilterPending">6</span></button>
+            <button type="button" class="qg-filter" data-qg-filter="correct">Acertados <span id="qgFilterCorrect">0</span></button>
+            <button type="button" class="qg-filter" data-qg-filter="wrong">Fallados <span id="qgFilterWrong">0</span></button>
+          </div>
+          <div id="qgMatches" class="qg-matches"></div>
+        </section>
+
+        <section id="qgJointView" class="qg-view">
+          <section class="section-hero compact-hero">
+            <p class="eyebrow">QUINIGOL CONJUNTO</p>
+            <h2>Los 6 marcadores de los dos</h2>
+            <p>Si coincidís se usa vuestro resultado. Si diferís, la app propone un marcador conjunto que podéis cambiar.</p>
+          </section>
+          <section id="qgJointPlan"></section>
+          <div id="qgJointList" class="qg-joint-list"></div>
+        </section>
+
+        <section id="qgCompareView" class="qg-view">
+          <section class="section-hero compact-hero">
+            <p class="eyebrow">COMPARAR</p>
+            <h2>Salva · Ferran · Conjunta</h2>
+            <p>Los tres marcadores frente al resultado real.</p>
+          </section>
+          <div id="qgCompareList" class="qg-compare-list"></div>
+        </section>
+
+        <section id="qgStatsView" class="qg-view">
+          <section class="section-hero compact-hero">
+            <p class="eyebrow">ESTADÍSTICAS</p>
+            <h2>Quinigol</h2>
+            <p>Histórico de aciertos exactos y categorías de premio.</p>
+          </section>
+          <div id="qgStats"></div>
+        </section>
+
+        <section id="qgHistoryView" class="qg-view">
+          <section class="section-hero compact-hero">
+            <p class="eyebrow">HISTORIAL</p>
+            <h2>Jornadas de Quinigol</h2>
+            <p>Pronósticos, conjunta y resultados oficiales.</p>
+          </section>
+          <div id="qgHistory"></div>
+        </section>
+      </div>
+    </section>
+
     <section id="journeyCard" class="journey-card">
       <div class="journey-status"><span class="status-dot"></span><span class="status-text">Jornada actual</span></div>
       <div class="journey-main"><span class="journey-kicker">JORNADA ACTUAL</span><strong id="journeyNumber">Jornada —</strong><span id="journeyDate">—</span><div id="nextJourneyCountdown" class="next-journey-countdown hidden"></div></div>
@@ -97,7 +178,7 @@
 
     <section id="journeySwitcher" class="journey-switcher" aria-label="Cambiar jornada"></section>
 
-    <nav class="tabs tabs-five" aria-label="Secciones">
+    <nav id="quinielaTabs" class="tabs tabs-five" aria-label="Secciones">
       <button class="tab active" data-view="play">Mi quiniela</button>
       <button class="tab" data-view="joint">Conjunta</button>
       <button class="tab" data-view="compare">Comparar</button>
@@ -105,7 +186,7 @@
       <button class="tab" data-view="history">Historial</button>
     </nav>
 
-    <main>
+    <main id="quinielaMain">
       <section id="playView" class="view active">
         <section id="journeyDashboard" class="journey-dashboard"></section>
 
