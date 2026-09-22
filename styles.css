@@ -6340,3 +6340,43 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     height:14px;
   }
 }
+
+
+/* Monedero compacto por icono v114 */
+.room-wallet-pill.wallet-icon-only{
+  gap:7px!important;
+  min-height:32px!important;
+  padding:4px 10px 4px 5px!important;
+}
+.room-wallet-pill.wallet-icon-only .room-wallet-icon{
+  width:24px!important;
+  height:24px!important;
+  flex:0 0 24px!important;
+  border-radius:8px!important;
+}
+.room-wallet-pill.wallet-icon-only .room-wallet-icon svg{
+  width:20px!important;
+  height:20px!important;
+}
+.room-wallet-pill.wallet-icon-only>strong{
+  font-size:.63rem!important;
+  line-height:1!important;
+}
+@media(max-width:430px){
+  .room-wallet-pill.wallet-icon-only{
+    min-height:30px!important;
+    padding:4px 9px 4px 5px!important;
+  }
+  .room-wallet-pill.wallet-icon-only .room-wallet-icon{
+    width:22px!important;
+    height:22px!important;
+    flex-basis:22px!important;
+  }
+  .room-wallet-pill.wallet-icon-only .room-wallet-icon svg{
+    width:18px!important;
+    height:18px!important;
+  }
+  .room-wallet-pill.wallet-icon-only>strong{
+    font-size:.58rem!important;
+  }
+}
