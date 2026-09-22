@@ -1555,36 +1555,63 @@ async function enterApp(){
   $("#myName").textContent=myMember.display_name;
   setSync("","Cargando");
   await Promise.all([loadAllJourneys(),loadMembers()]);
-  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8()]);
+  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries()]);
   await loadNotices();
   selectActiveJourney();
   renderAll();
   subscribeRealtime();
   refreshPushSubscription();
   startCountdownTimer();
-  activateView(requestedView);
+  await activateView(requestedView);
   setSync("online","Sincronizado");
 }
 
+const loadedJourneyIds=new Set();
+let journeySummaries=new Map();
+let historyFullyLoaded=false;
+
+function mergeJourneyRows(base,incoming,keyFn){
+  const map=new Map((base||[]).map(x=>[keyFn(x),x]));
+  for(const row of incoming||[])map.set(keyFn(row),row);
+  return [...map.values()];
+}
+function initialJourneyIds(){
+  const ids=journeys.slice(0,3).map(j=>j.id);
+  const saved=loadSavedJourneyId();
+  if(saved&&journeys.some(j=>j.id===saved)&&!ids.includes(saved))ids.push(saved);
+  return ids;
+}
+async function loadJourneySummaries(){
+  const {data,error}=await sb.rpc("get_quiniela_journey_summaries",{p_room_id:roomId});
+  if(error){console.warn("Resumen de jornadas:",error);return}
+  journeySummaries=new Map((data||[]).map(x=>[Number(x.journey_id),x]));
+}
 async function loadAllJourneys(){
   const {data:js,error}=await sb.from("journeys").select("*").order("number",{ascending:false});
   if(error) throw error;
   journeys=js||[];
   if(!journeys.length) throw new Error("No hay jornadas cargadas.");
 
-  const ids=journeys.map(j=>j.id);
+  for(const id of initialJourneyIds())loadedJourneyIds.add(id);
+  if(selectedJourneyId&&journeys.some(j=>j.id===selectedJourneyId))loadedJourneyIds.add(selectedJourneyId);
+  const ids=[...loadedJourneyIds].filter(id=>journeys.some(j=>j.id===id));
+  if(!ids.length){allMatches=[];return}
   const {data:ms,error:me}=await sb.from("matches").select("*").in("journey_id",ids).order("number");
   if(me) throw me;
-  allMatches=ms||[];
+  allMatches=mergeJourneyRows(
+    allMatches.filter(m=>!ids.includes(m.journey_id)),
+    ms||[],
+    m=>`${m.journey_id}:${m.number}`
+  );
 }
 
 function selectActiveJourney(){
   if(selectedJourneyId==null)selectedJourneyId=loadSavedJourneyId();
-  const preferred=journeys.find(j=>j.id===selectedJourneyId);
-  const unfinished=journeys.filter(j=>journeyDisplayState(j)!=="finished");
+  const preferred=journeys.find(j=>j.id===selectedJourneyId&&loadedJourneyIds.has(j.id));
+  const unfinished=journeys.filter(j=>journeyDisplayState(j)!=="finished"&&loadedJourneyIds.has(j.id));
   const playing=unfinished.find(j=>journeyDisplayState(j)==="playing");
   const open=unfinished.find(j=>journeyDisplayState(j)==="open");
-  journey=preferred||playing||open||unfinished[0]||journeys[0];
+  journey=preferred||playing||open||unfinished[0]||journeys.find(j=>loadedJourneyIds.has(j.id))||journeys[0];
   selectedJourneyId=journey.id;
   saveSelectedJourneyId(selectedJourneyId);
   matches=matchesForJourney(journey.id);
@@ -1599,32 +1626,89 @@ async function loadMembers(){
 }
 
 async function loadAllPicks(){
-  const {data,error}=await sb.from("picks").select("*").eq("room_id",roomId);
+  const ids=[...loadedJourneyIds];
+  if(!ids.length){allPicks=[];return}
+  const {data,error}=await sb.from("picks").select("*").eq("room_id",roomId).in("journey_id",ids);
   if(error) throw error;
-  allPicks=data||[];
-  if(journey) picks=allPicks.filter(p=>p.journey_id===journey.id);
+  allPicks=mergeJourneyRows(allPicks.filter(x=>!ids.includes(x.journey_id)),data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
 }
-
 async function loadAllElige8(){
-  const {data,error}=await sb.from("elige8_selections").select("*").eq("room_id",roomId);
+  const ids=[...loadedJourneyIds];
+  if(!ids.length){allElige8=[];return}
+  const {data,error}=await sb.from("elige8_selections").select("*").eq("room_id",roomId).in("journey_id",ids);
   if(error) throw error;
-  allElige8=data||[];
+  allElige8=mergeJourneyRows(allElige8.filter(x=>!ids.includes(x.journey_id)),data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
 }
 async function loadAllJointPicks(){
-  const {data,error}=await sb.from("joint_picks").select("*").eq("room_id",roomId);
+  const ids=[...loadedJourneyIds];
+  if(!ids.length){allJointPicks=[];return}
+  const {data,error}=await sb.from("joint_picks").select("*").eq("room_id",roomId).in("journey_id",ids);
   if(error) throw error;
-  allJointPicks=data||[];
+  allJointPicks=mergeJourneyRows(allJointPicks.filter(x=>!ids.includes(x.journey_id)),data||[],x=>`${x.journey_id}:${x.match_number}`);
 }
 function loadAllJointElige8(){
   return (async()=>{
-    const {data,error}=await sb.from("joint_elige8_selections").select("*").eq("room_id",roomId);
+    const ids=[...loadedJourneyIds];
+    if(!ids.length){allJointElige8=[];return}
+    const {data,error}=await sb.from("joint_elige8_selections").select("*").eq("room_id",roomId).in("journey_id",ids);
     if(error) throw error;
-    allJointElige8=data||[];
+    allJointElige8=mergeJourneyRows(allJointElige8.filter(x=>!ids.includes(x.journey_id)),data||[],x=>`${x.journey_id}:${x.match_number}`);
   })();
 }
 
+async function ensureJourneyLoaded(jid,{quiet=false}={}){
+  const id=Number(jid);
+  if(loadedJourneyIds.has(id)&&matchesForJourney(id).length)return;
+  if(!quiet){setSync("","Cargando jornada");toast("Cargando jornada completa…")}
+  const [mr,pr,er,jr,jer]=await Promise.all([
+    sb.from("matches").select("*").eq("journey_id",id).order("number"),
+    sb.from("picks").select("*").eq("room_id",roomId).eq("journey_id",id),
+    sb.from("elige8_selections").select("*").eq("room_id",roomId).eq("journey_id",id),
+    sb.from("joint_picks").select("*").eq("room_id",roomId).eq("journey_id",id),
+    sb.from("joint_elige8_selections").select("*").eq("room_id",roomId).eq("journey_id",id)
+  ]);
+  for(const r of [mr,pr,er,jr,jer])if(r.error)throw r.error;
+  allMatches=mergeJourneyRows(allMatches,mr.data||[],m=>`${m.journey_id}:${m.number}`);
+  allPicks=mergeJourneyRows(allPicks,pr.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  allElige8=mergeJourneyRows(allElige8,er.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  allJointPicks=mergeJourneyRows(allJointPicks,jr.data||[],x=>`${x.journey_id}:${x.match_number}`);
+  allJointElige8=mergeJourneyRows(allJointElige8,jer.data||[],x=>`${x.journey_id}:${x.match_number}`);
+  loadedJourneyIds.add(id);
+  if(!quiet)setSync("online","Sincronizado");
+}
+async function ensureAllJourneysLoaded(){
+  if(historyFullyLoaded)return;
+  const missing=journeys.map(j=>j.id).filter(id=>!loadedJourneyIds.has(id));
+  for(let i=0;i<missing.length;i+=12){
+    const chunk=missing.slice(i,i+12);
+    setSync("","Cargando historial");
+    const [mr,pr,er,jr,jer]=await Promise.all([
+      sb.from("matches").select("*").in("journey_id",chunk).order("number"),
+      sb.from("picks").select("*").eq("room_id",roomId).in("journey_id",chunk),
+      sb.from("elige8_selections").select("*").eq("room_id",roomId).in("journey_id",chunk),
+      sb.from("joint_picks").select("*").eq("room_id",roomId).in("journey_id",chunk),
+      sb.from("joint_elige8_selections").select("*").eq("room_id",roomId).in("journey_id",chunk)
+    ]);
+    for(const r of [mr,pr,er,jr,jer])if(r.error)throw r.error;
+    allMatches=mergeJourneyRows(allMatches,mr.data||[],m=>`${m.journey_id}:${m.number}`);
+    allPicks=mergeJourneyRows(allPicks,pr.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+    allElige8=mergeJourneyRows(allElige8,er.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+    allJointPicks=mergeJourneyRows(allJointPicks,jr.data||[],x=>`${x.journey_id}:${x.match_number}`);
+    allJointElige8=mergeJourneyRows(allJointElige8,jer.data||[],x=>`${x.journey_id}:${x.match_number}`);
+    chunk.forEach(id=>loadedJourneyIds.add(id));
+  }
+  historyFullyLoaded=true;
+  if(journey){
+    matches=matchesForJourney(journey.id);
+    picks=allPicks.filter(p=>p.journey_id===journey.id);
+  }
+  setSync("online","Sincronizado");
+}
+
 async function refreshData(){
-  await Promise.all([loadAllJourneys(),loadMembers(),loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8()]);
+  await Promise.all([loadAllJourneys(),loadMembers()]);
+  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries()]);
   selectActiveJourney();
   renderAll();
 }
