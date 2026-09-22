@@ -966,7 +966,15 @@ function renderJointWallet(){
   if(manager){
     $("#walletConfirmBtn")?.addEventListener("click",confirmQuinielaWalletBet);
     $("#walletUnconfirmBtn")?.addEventListener("click",unconfirmQuinielaWalletBet);
-    $("#walletBetCost")?.addEventListener("input",()=>renderJointWallet());
+    $("#walletBetCost")?.addEventListener("input",e=>{
+      const val=Number(String(e.target.value||"").replace(",","."));
+      const node=el.querySelector(".wallet-confirm-summary");
+      if(node&&Number.isFinite(val)&&val>0){
+        const wrap=document.createElement("div");
+        wrap.innerHTML=walletConfirmationSummaryHtml(estimated,val,walletBalance);
+        if(wrap.firstElementChild)node.replaceWith(wrap.firstElementChild);
+      }
+    });
   }
   el.querySelector("[data-open-global-wallet]")?.addEventListener("click",openWalletDialog);
 }
@@ -995,6 +1003,24 @@ async function addWalletCredit(kind){
   }catch(e){console.error(e);setSync("error","Error");toast("No se pudo actualizar el monedero")}
 }
 
+const detectingQuinielaPrizes=new Set();
+async function detectQuinielaPrizeIfNeeded(j=journey){
+  if(!j||journeyDisplayState(j)!=="finished"||!walletConfirmation("quiniela",j.id))return;
+  if(walletPrizes.some(p=>p.game==="quiniela"&&Number(p.journey_id)===Number(j.id)))return;
+  const key=String(j.id);if(detectingQuinielaPrizes.has(key))return;
+  const p1=memberBySlot(1),p2=memberBySlot(2);if(!p1||!p2)return;
+  const s1=scoreUserJourney(p1.user_id,j),s2=scoreUserJourney(p2.user_id,j),e8=scoreJointElige8(j);
+  const best=Math.max(Number(s1.correct||0),Number(s2.correct||0));
+  const e8Prize=e8.selected===8&&e8.resolved===8&&e8.correct===8;
+  if(best<10&&!e8Prize)return;
+  const category=e8Prize&&best<10?"Elige 8 · 8/8":e8Prize?`${best} aciertos + Elige 8 · 8/8`:`${best} aciertos`;
+  detectingQuinielaPrizes.add(key);
+  try{
+    const {error}=await sb.rpc("wallet_detect_prize",{p_room_id:roomId,p_game:"quiniela",p_journey_id:j.id,p_category:category});
+    if(!error){await loadWalletData();renderGlobalWallet();renderJoint()}
+  }catch(e){console.warn("Premio Quiniela:",e)}
+  finally{detectingQuinielaPrizes.delete(key)}
+}
 function jointBetRecommendation(j=journey){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   if(!j||!p1||!p2)return {ready:false,reason:"Faltan jugadores"};
@@ -1766,6 +1792,7 @@ async function enterApp(){
   await loadNotices();
   selectActiveJourney();
   renderAll();
+  detectQuinielaPrizeIfNeeded(journey);
   subscribeRealtime();
   refreshPushSubscription();
   startCountdownTimer();
@@ -2449,9 +2476,10 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_prizes",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==identityUserId);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
-    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async(payload)=>{const before=allMatches.map(m=>({...m}));const row=payload?.new;if(row?.journey_id){allMatches=mergeJourneyRows(allMatches,[row],m=>`${m.journey_id}:${m.number}`);if(journey&&Number(row.journey_id)===Number(journey.id))matches=matchesForJourney(journey.id);detectNewResults(before);renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderCompare();renderJoint();updateCountdowns()}else{await loadAllJourneys();selectActiveJourney();renderAll()}})
+    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async(payload)=>{const before=allMatches.map(m=>({...m}));const row=payload?.new;if(row?.journey_id){allMatches=mergeJourneyRows(allMatches,[row],m=>`${m.journey_id}:${m.number}`);if(journey&&Number(row.journey_id)===Number(journey.id))matches=matchesForJourney(journey.id);detectNewResults(before);renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderCompare();renderJoint();updateCountdowns();detectQuinielaPrizeIfNeeded(journey)}else{await loadAllJourneys();selectActiveJourney();renderAll();detectQuinielaPrizeIfNeeded(journey)}})
     .subscribe(status=>{if(status==="SUBSCRIBED")setSync("online","Sincronizado");else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setSync("error","Sin conexión")});
 }
 
