@@ -572,7 +572,7 @@ function renderSwitcher(){
   const el=$("#qgJourneySwitcher");if(!el)return;
   el.innerHTML=[...journeys].sort((a,b)=>b.number-a.number).map(j=>{
     const st=state(j);
-    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}" data-qg-journey="${j.id}><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados":fullDate(j.close_at)}</small></button>`;
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados":fullDate(j.close_at)}</small></button>`;
   }).join("");
   $$("[data-qg-journey]").forEach(b=>b.addEventListener("click",()=>{selectedJourneyId=Number(b.dataset.qgJourney);savePref("quinigol-journey",selectedJourneyId);selectJourney();renderAll()}));
 }
