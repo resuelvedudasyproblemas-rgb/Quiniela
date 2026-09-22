@@ -382,6 +382,9 @@ let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],al
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
 const drafts=new Map(),jointDrafts=new Map();
+const qgLoadedJourneyIds=new Set();
+let qgJourneySummaries=new Map();
+let qgHistoryFullyLoaded=false;
 
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function toast(msg){
@@ -449,6 +452,11 @@ function msFor(jid){return allMatches.filter(m=>m.journey_id===jid).sort((a,b)=>
 function resolved(m){return m?.home_score!=null&&m?.away_score!=null}
 function state(j){
   if(!j)return "closed";
+  if(!qgLoadedJourneyIds.has(j.id)){
+    if(j.status==="finished")return "finished";
+    if(j.status==="open"&&Date.now()<new Date(j.close_at).getTime())return "open";
+    return "closed";
+  }
   const ms=msFor(j.id);
   if(ms.length===6&&ms.every(resolved))return "finished";
   if(j.status==="open"&&Date.now()<new Date(j.close_at).getTime())return "open";
