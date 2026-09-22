@@ -1456,8 +1456,8 @@ async function activateView(view){
     try{await ensureAllJourneysLoaded()}catch(e){console.error(e);toast("No se pudo cargar todo el historial")}
   }
   saveQuinielaView(next);
-  $("#quinielaTabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));
-  $("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
+  $$("#quinielaTabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));
+  $$("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
   if(next==="joint")renderJoint();if(next==="compare")renderCompare();if(next==="stats")renderStats();if(next==="history")renderHistory();
 }
 window.addEventListener("quiniela:show",async()=>{
