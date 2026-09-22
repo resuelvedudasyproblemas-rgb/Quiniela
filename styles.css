@@ -6680,3 +6680,431 @@ label{
 .compare-card-head>.compare-number-competition{
   justify-self:center;
 }
+
+
+/* Comparar Quiniela: refinado visual claro/oscuro v136 */
+#compareView .compare-summary{
+  position:relative;
+  overflow:hidden;
+  max-width:700px;
+  margin:14px auto 10px;
+  padding:18px 20px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:22px;
+  background:linear-gradient(145deg,#064b34 0%,#0b7650 58%,#11835b 100%);
+  box-shadow:0 14px 30px rgba(7,91,60,.14);
+  color:#fff;
+}
+#compareView .compare-summary::after{
+  content:"";
+  position:absolute;
+  width:180px;
+  height:180px;
+  right:-75px;
+  top:-105px;
+  border-radius:50%;
+  background:rgba(255,255,255,.07);
+  pointer-events:none;
+}
+#compareView .compare-summary-head{
+  position:relative;
+  z-index:1;
+  align-items:flex-end;
+  gap:18px;
+}
+#compareView .compare-summary h2{
+  margin:3px 0 0;
+  font-size:1.28rem;
+  line-height:1.05;
+  letter-spacing:-.02em;
+}
+#compareView .compare-summary p{
+  font-size:.56rem;
+  letter-spacing:.15em;
+  opacity:.72;
+}
+#compareView .compare-score{
+  min-width:104px;
+  text-align:center;
+  padding:8px 11px;
+  border-radius:14px;
+  background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.10);
+}
+#compareView .compare-score span{
+  display:block;
+  font-size:.54rem;
+  opacity:.72;
+}
+#compareView .compare-score strong{
+  margin:1px 0 0;
+  font-size:1.55rem;
+  line-height:1.05;
+  letter-spacing:-.03em;
+}
+#compareView .compare-summary>#compareSubtitle{
+  position:relative;
+  z-index:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin:11px auto 0;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.10);
+  font-size:.63rem;
+  line-height:1.25;
+  opacity:.88;
+}
+
+#compareView .elige8-compare-summary{
+  max-width:700px;
+  margin:10px auto 12px;
+  padding:11px 12px;
+  border-radius:16px;
+  border:1px solid #e8d59c;
+  background:linear-gradient(145deg,#fffaf0,#fff5d9);
+  box-shadow:0 5px 16px rgba(119,88,17,.05);
+}
+#compareView .e8-compare-head{
+  margin-bottom:9px;
+}
+#compareView .e8-compare-head>span{
+  letter-spacing:.11em;
+}
+#compareView .e8-compare-grid>div{
+  min-height:58px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+}
+
+#compareView .compare-list{
+  gap:11px;
+}
+#compareView .compare-card{
+  position:relative;
+  overflow:hidden;
+  padding:13px 14px 14px;
+  border:1px solid var(--border);
+  border-radius:20px;
+  background:var(--surface);
+  box-shadow:0 7px 20px rgba(8,52,34,.055);
+}
+#compareView .compare-card::before{
+  width:4px;
+}
+#compareView .compare-card.is-same{
+  border-color:color-mix(in srgb,#2b9a68 25%,var(--border));
+}
+#compareView .compare-card.is-different{
+  border-color:color-mix(in srgb,#d5952e 28%,var(--border));
+}
+#compareView .compare-card.is-pending{
+  border-color:color-mix(in srgb,var(--muted) 18%,var(--border));
+}
+#compareView .compare-card-head{
+  min-height:44px;
+  grid-template-columns:38px minmax(0,1fr) auto;
+  gap:10px;
+  padding-bottom:10px;
+  border-bottom:1px solid color-mix(in srgb,var(--border) 72%,transparent);
+}
+#compareView .compare-number-competition{
+  min-width:36px;
+  gap:5px;
+}
+#compareView .compare-number{
+  width:34px;
+  height:34px;
+  border-radius:11px;
+  background:var(--surface-3);
+  color:var(--brand);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--border) 70%,transparent);
+}
+#compareView .compare-fixture{
+  min-width:0;
+}
+#compareView .fixture-mini{
+  gap:7px;
+  row-gap:5px;
+}
+#compareView .fixture-mini-team{
+  font-size:.69rem;
+  font-weight:850;
+}
+#compareView .fixture-mini-sep{
+  font-size:.68rem;
+  opacity:.65;
+}
+#compareView .compare-state{
+  min-width:74px;
+  text-align:center;
+  padding:6px 9px;
+  border:1px solid transparent;
+  font-size:.53rem;
+  letter-spacing:.01em;
+}
+#compareView .is-same .compare-state{
+  background:#e6f6ed;
+  border-color:#c9e9d7;
+  color:#1d784f;
+}
+#compareView .is-different .compare-state{
+  background:#fff2dd;
+  border-color:#f1d7aa;
+  color:#966016;
+}
+#compareView .is-pending .compare-state{
+  background:#eef2f0;
+  border-color:#dce4e0;
+  color:#738179;
+}
+
+#compareView .compare-picks{
+  gap:8px;
+  margin-top:11px;
+}
+#compareView .compare-pick-box{
+  min-height:76px;
+  padding:9px 10px;
+  border-radius:13px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
+}
+#compareView .compare-pick-box>span{
+  min-height:18px;
+  font-size:.55rem;
+  font-weight:900;
+  letter-spacing:.01em;
+}
+#compareView .compare-pick-value{
+  min-height:38px;
+  margin-top:5px;
+}
+#compareView .compare-readonly{
+  grid-template-columns:repeat(3,36px);
+  gap:5px;
+}
+#compareView .compare-readonly>span{
+  width:36px;
+  height:32px;
+  border-radius:9px;
+  background:var(--surface);
+  border-color:color-mix(in srgb,var(--border) 88%,transparent);
+  font-size:.68rem;
+}
+#compareView .compare-pick-box.player-one,
+#compareView .compare-pick-box.player-two,
+#compareView .compare-pick-box.result-box{
+  border-width:1px;
+}
+#compareView .pick-mark{
+  font-size:.9rem;
+  font-weight:950;
+}
+#compareView .compare-pick-box.result-box{
+  background:var(--surface-2);
+}
+#compareView .compare-result-status{
+  padding:3px 6px;
+  font-size:.45rem!important;
+}
+#compareView .compare-score-text{
+  font-size:.63rem;
+}
+
+/* Comparar Quiniela: modo oscuro */
+html[data-theme="dark"] #compareView .compare-summary{
+  background:linear-gradient(145deg,#0a3527 0%,#0b5138 58%,#0c6847 100%);
+  border-color:#215b43;
+  box-shadow:0 16px 34px rgba(0,0,0,.34);
+}
+html[data-theme="dark"] #compareView .compare-score{
+  background:rgba(255,255,255,.07);
+  border-color:rgba(255,255,255,.09);
+}
+html[data-theme="dark"] #compareView .compare-summary>#compareSubtitle{
+  background:rgba(0,0,0,.18);
+  color:#e5f5ec;
+}
+html[data-theme="dark"] #compareView .elige8-compare-summary{
+  background:linear-gradient(145deg,#2d2615,#241f12);
+  border-color:#5d4d25;
+  box-shadow:0 7px 20px rgba(0,0,0,.22);
+  color:#ecd17c;
+}
+html[data-theme="dark"] #compareView .e8-compare-grid>div{
+  box-shadow:none;
+}
+html[data-theme="dark"] #compareView .compare-card{
+  background:#0f1d17;
+  border-color:#2a4035;
+  box-shadow:0 8px 24px rgba(0,0,0,.24);
+}
+html[data-theme="dark"] #compareView .compare-card.is-same{
+  border-color:#285940;
+}
+html[data-theme="dark"] #compareView .compare-card.is-different{
+  border-color:#60471f;
+}
+html[data-theme="dark"] #compareView .compare-card.is-pending{
+  border-color:#30433a;
+}
+html[data-theme="dark"] #compareView .compare-card-head{
+  border-bottom-color:#263b31;
+}
+html[data-theme="dark"] #compareView .compare-number{
+  background:#182b22;
+  color:#6bddaa;
+  box-shadow:inset 0 0 0 1px #2a4437;
+}
+html[data-theme="dark"] #compareView .fixture-mini-sep{
+  color:#82968c;
+}
+html[data-theme="dark"] #compareView .is-same .compare-state{
+  background:#143526;
+  border-color:#285a40;
+  color:#83dfae;
+}
+html[data-theme="dark"] #compareView .is-different .compare-state{
+  background:#382913;
+  border-color:#684b20;
+  color:#efbf69;
+}
+html[data-theme="dark"] #compareView .is-pending .compare-state{
+  background:#1b2a23;
+  border-color:#34483e;
+  color:#a7b8af;
+}
+html[data-theme="dark"] #compareView .compare-pick-box{
+  box-shadow:none;
+}
+html[data-theme="dark"] #compareView .compare-pick-box.player-one{
+  background:#15233f;
+  border-color:#34558c;
+}
+html[data-theme="dark"] #compareView .compare-pick-box.player-two{
+  background:#382718;
+  border-color:#74502a;
+}
+html[data-theme="dark"] #compareView .compare-readonly>span{
+  background:#0c1813;
+  border-color:#30443a;
+  color:#aabbb2;
+}
+html[data-theme="dark"] #compareView .player-one-signs>span.selected{
+  background:#4c82e8;
+  border-color:#5d91f3;
+  color:#fff;
+}
+html[data-theme="dark"] #compareView .player-two-signs>span.selected{
+  background:#d98522;
+  border-color:#ee9a35;
+  color:#fff;
+}
+html[data-theme="dark"] #compareView .result-signs>span.selected{
+  background:#607169;
+  border-color:#71847a;
+}
+html[data-theme="dark"] #compareView .compare-pick-box.result-box{
+  background:#14231c;
+  border-color:#30453a;
+}
+html[data-theme="dark"] #compareView .compare-pick-box.result-box.official{
+  background:#132c20;
+  border-color:#2c5942;
+}
+html[data-theme="dark"] #compareView .compare-pick-box.result-box.live{
+  background:#342a16;
+  border-color:#665126;
+}
+
+@media(max-width:620px){
+  #compareView .compare-summary{
+    padding:16px 14px;
+  }
+  #compareView .compare-summary-head{
+    flex-direction:row;
+    align-items:center;
+    text-align:left;
+  }
+  #compareView .compare-summary-head>div:first-child{
+    text-align:left;
+  }
+  #compareView .compare-score{
+    margin-left:auto;
+    min-width:92px;
+  }
+  #compareView .compare-summary>#compareSubtitle{
+    display:flex;
+    width:max-content;
+    max-width:100%;
+  }
+  #compareView .compare-card-head{
+    grid-template-columns:38px minmax(0,1fr) auto;
+  }
+  #compareView .compare-state{
+    grid-column:auto;
+    justify-self:end;
+  }
+}
+@media(max-width:430px){
+  #compareView .compare-summary h2{
+    font-size:1.12rem;
+  }
+  #compareView .compare-score{
+    min-width:84px;
+    padding:7px 8px;
+  }
+  #compareView .compare-score strong{
+    font-size:1.35rem;
+  }
+  #compareView .compare-card{
+    padding:11px 10px 12px;
+    border-radius:18px;
+  }
+  #compareView .compare-card-head{
+    grid-template-columns:36px minmax(0,1fr);
+    gap:8px;
+  }
+  #compareView .compare-state{
+    grid-column:2;
+    justify-self:start;
+    min-width:0;
+    margin-top:1px;
+    padding:5px 8px;
+  }
+  #compareView .fixture-mini{
+    justify-content:flex-start;
+  }
+  #compareView .fixture-mini-team>span:last-child{
+    max-width:112px;
+  }
+  #compareView .compare-picks{
+    grid-template-columns:1fr;
+    gap:7px;
+    margin-top:10px;
+  }
+  #compareView .compare-pick-box{
+    min-height:0;
+    display:grid;
+    grid-template-columns:minmax(96px,1fr) auto;
+    align-items:center;
+    gap:8px;
+    padding:8px 9px;
+  }
+  #compareView .compare-pick-box>span{
+    justify-content:flex-start;
+    text-align:left;
+  }
+  #compareView .compare-pick-value{
+    min-height:0;
+    margin:0;
+    justify-content:flex-end;
+  }
+  #compareView .compare-readonly{
+    grid-template-columns:repeat(3,36px);
+  }
+}
