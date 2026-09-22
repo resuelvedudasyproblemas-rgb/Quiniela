@@ -1840,7 +1840,7 @@ async function ensureAllJourneysLoaded(){
 
 async function refreshData(){
   await Promise.all([loadAllJourneys(),loadMembers()]);
-  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries()]);
+  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries(),loadWalletData()]);
   selectActiveJourney();
   renderAll();
 }
