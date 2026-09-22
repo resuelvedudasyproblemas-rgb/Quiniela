@@ -43,7 +43,17 @@ let pushSubscribed = false;
 const VAPID_PUBLIC_KEY = "BFmY1Uy8yquoZDQ57fxY2awxtrfSXYh-Nj0LtK4fuWKbrTRoSH6Z9hYtfShACqyMeeWMLo1LlLx52FwZuuE3W0o";
 let installPrompt = null;
 let countdownTimer = null;
-const requestedView = new URLSearchParams(location.search).get("view") || "play";
+const QUINIELA_VIEW_KEY="quiniela-view";
+const QUINIELA_VIEWS=new Set(["play","joint","compare","stats","history"]);
+function savedQuinielaView(){
+  const value=localStorage.getItem(QUINIELA_VIEW_KEY);
+  return QUINIELA_VIEWS.has(value)?value:"play";
+}
+function saveQuinielaView(view){
+  if(QUINIELA_VIEWS.has(view))localStorage.setItem(QUINIELA_VIEW_KEY,view);
+}
+const requestedViewParam=new URLSearchParams(location.search).get("view");
+const requestedView=QUINIELA_VIEWS.has(requestedViewParam)?requestedViewParam:savedQuinielaView();
 const UNIQUE_ROOM_CODE = "R4LBRU";
 
 const escapeHtml = (str="") => str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -1441,12 +1451,13 @@ function openMatchDetail(n,jid=journey?.id){
   $("#matchDetailDialog").showModal();
 }
 async function activateView(view){
-  const allowed=["play","joint","compare","stats","history"],next=allowed.includes(view)?view:"play";
+  const next=QUINIELA_VIEWS.has(view)?view:"play";
   if((next==="stats"||next==="history")&&!historyFullyLoaded){
     try{await ensureAllJourneysLoaded()}catch(e){console.error(e);toast("No se pudo cargar todo el historial")}
   }
-  $$("#quinielaTabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));
-  $$("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
+  saveQuinielaView(next);
+  $("#quinielaTabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));
+  $("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
   if(next==="joint")renderJoint();if(next==="compare")renderCompare();if(next==="stats")renderStats();if(next==="history")renderHistory();
 }
 window.addEventListener("quiniela:show",async()=>{
@@ -1458,6 +1469,7 @@ window.addEventListener("quiniela:show",async()=>{
     selectActiveJourney();
     $("#journeySwitcher")?.classList.remove("hidden");
     renderAll();
+    await activateView(savedQuinielaView());
     setSync("online","Sincronizado");
   }catch(e){
     console.error("Restaurar Quiniela:",e);
