@@ -6434,3 +6434,45 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     font-size:.68rem!important;
   }
 }
+
+
+/* Ajuste final monedero - ligeramente mas pequeno */
+.room-wallet-pill.wallet-icon-only{
+  min-height:42px!important;
+  padding:4px 11px 4px 5px!important;
+  gap:7px!important;
+}
+.room-wallet-pill.wallet-icon-only>.room-wallet-icon{
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  flex:0 0 32px!important;
+  border-radius:10px!important;
+}
+.room-wallet-pill.wallet-icon-only>.room-wallet-icon svg{
+  width:22px!important;
+  height:22px!important;
+}
+.room-wallet-pill.wallet-icon-only>strong{
+  font-size:.66rem!important;
+}
+@media(max-width:430px){
+  .room-wallet-pill.wallet-icon-only{
+    min-height:40px!important;
+    padding:4px 10px 4px 5px!important;
+    gap:7px!important;
+  }
+  .room-wallet-pill.wallet-icon-only>.room-wallet-icon{
+    width:31px!important;
+    height:31px!important;
+    min-width:31px!important;
+    flex-basis:31px!important;
+  }
+  .room-wallet-pill.wallet-icon-only>.room-wallet-icon svg{
+    width:21px!important;
+    height:21px!important;
+  }
+  .room-wallet-pill.wallet-icon-only>strong{
+    font-size:.64rem!important;
+  }
+}
