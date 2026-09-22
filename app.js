@@ -227,6 +227,39 @@ function formatJourneyDeadline(j){
   }).format(deadline);
   return parts.replace(","," ·");
 }
+function nextUpcomingJourney(){
+  const now=Date.now();
+  return journeys
+    .map(j=>({j,start:journeyDeadline(j)}))
+    .filter(x=>x.start&&x.start.getTime()>now)
+    .sort((a,b)=>a.start-b.start)[0]||null;
+}
+function journeyStartCountdownText(value){
+  const target=value instanceof Date?value:new Date(value);
+  const diff=target.getTime()-Date.now();
+  if(!Number.isFinite(diff)||diff<=0)return "Ya ha empezado";
+  const mins=Math.max(1,Math.floor(diff/60000));
+  const days=Math.floor(mins/1440);
+  const hours=Math.floor((mins%1440)/60);
+  const rem=mins%60;
+  const parts=[];
+  if(days)parts.push(days+" d");
+  if(hours||days)parts.push(hours+" h");
+  parts.push(rem+" min");
+  return parts.join(" ");
+}
+function renderNextJourneyCountdown(){
+  const el=$("#nextJourneyCountdown");
+  if(!el)return;
+  const next=nextUpcomingJourney();
+  if(!next){
+    el.classList.add("hidden");
+    el.innerHTML="";
+    return;
+  }
+  el.classList.remove("hidden");
+  el.innerHTML=`<small>SIGUIENTE JORNADA · J${next.j.number}</small><strong>Empieza en <b>${escapeHtml(journeyStartCountdownText(next.start))}</b></strong>`;
+}
 function journeyCanEdit(j){
   if(!j || j.status!=="open") return false;
   const deadline=journeyDeadline(j);
@@ -325,6 +358,7 @@ function updateLiveFreshness(){
   });
 }
 function updateCountdowns(){
+  renderNextJourneyCountdown();
   $$("[data-countdown]").forEach(el=>{
     const value=el.dataset.countdown;
     if(value) el.textContent=countdownText(value);
