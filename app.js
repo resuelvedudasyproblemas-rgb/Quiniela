@@ -19,7 +19,7 @@ let jointElige8Saving = false;
 let jointPlenoDraft = {journeyId:null,home:null,away:null};
 let selectedJourneyId = null;
 function selectedJourneyStorageKey(){
-  return identityUserId&&roomId?\`quiniela-selected-journey:\${roomId}:\${identityUserId}\`:"";
+  return identityUserId&&roomId?"quiniela-selected-journey:"+roomId+":"+identityUserId:"";
 }
 function loadSavedJourneyId(){
   const key=selectedJourneyStorageKey();
