@@ -6283,3 +6283,169 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     font-size:.47rem!important;
   }
 }
+
+
+/* Menu movil fijado - no modificar salvo peticion expresa */
+@media(max-width:620px){
+  #quinielaTabs.tabs-five,
+  .qg-tabs{
+    width:100%!important;
+    max-width:100%!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:3px!important;
+    padding:4px!important;
+    overflow:visible!important;
+    box-sizing:border-box!important;
+  }
+  #quinielaTabs.tabs-five .tab,
+  .qg-tabs .qg-tab{
+    min-width:0!important;
+    width:100%!important;
+    height:42px!important;
+    padding:8px 1px!important;
+    font-size:clamp(.46rem,2.2vw,.56rem)!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    text-align:center!important;
+  }
+}
+
+/* Acceso compacto del monedero */
+.room-wallet-pill.wallet-icon-only{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:42px!important;
+  padding:4px 11px 4px 5px!important;
+  gap:7px!important;
+  border:1px solid color-mix(in srgb,var(--brand) 28%,var(--border))!important;
+  border-radius:999px!important;
+  background:color-mix(in srgb,var(--brand) 5%,var(--surface))!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+.room-wallet-pill.wallet-icon-only>.room-wallet-icon{
+  display:grid!important;
+  place-items:center!important;
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  flex:0 0 32px!important;
+  border-radius:10px!important;
+  background:color-mix(in srgb,var(--brand) 24%,var(--surface-3))!important;
+  border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border))!important;
+  color:#fff!important;
+  overflow:hidden!important;
+}
+.room-wallet-pill.wallet-icon-only>.room-wallet-icon svg{
+  display:block!important;
+  width:22px!important;
+  height:22px!important;
+}
+.room-wallet-pill.wallet-icon-only .wallet-body,
+.room-wallet-pill.wallet-icon-only .wallet-fold,
+.room-wallet-pill.wallet-icon-only .wallet-pocket{
+  fill:none!important;
+  stroke:#fff!important;
+  stroke-width:2!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+}
+.room-wallet-pill.wallet-icon-only .wallet-dot{
+  fill:#fff!important;
+  stroke:none!important;
+}
+.room-wallet-pill.wallet-icon-only .room-wallet-icon text{
+  fill:#fff!important;
+  stroke:none!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:8.5px!important;
+  font-weight:900!important;
+}
+.room-wallet-pill.wallet-icon-only>strong{
+  color:var(--brand)!important;
+  font-size:.66rem!important;
+  font-weight:950!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+@media(max-width:430px){
+  .room-wallet-pill.wallet-icon-only{
+    min-height:40px!important;
+    padding:4px 10px 4px 5px!important;
+    gap:7px!important;
+  }
+  .room-wallet-pill.wallet-icon-only>.room-wallet-icon{
+    width:31px!important;
+    height:31px!important;
+    min-width:31px!important;
+    flex-basis:31px!important;
+  }
+  .room-wallet-pill.wallet-icon-only>.room-wallet-icon svg{
+    width:21px!important;
+    height:21px!important;
+  }
+  .room-wallet-pill.wallet-icon-only>strong{
+    font-size:.64rem!important;
+  }
+}
+
+/* Desplegable del monedero adaptado al movil */
+#walletDialog{
+  border:0!important;
+  background:transparent!important;
+  padding:0!important;
+  width:min(94vw,900px)!important;
+  max-width:94vw!important;
+  max-height:92dvh!important;
+  overflow:visible!important;
+}
+#walletDialog::backdrop{
+  background:rgba(4,18,12,.58);
+  backdrop-filter:blur(4px);
+}
+#walletDialog .wallet-dialog-card{
+  width:100%!important;
+  max-width:100%!important;
+  max-height:92dvh!important;
+  box-sizing:border-box!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  margin:0!important;
+  padding:16px!important;
+}
+#walletDialogContent,
+#walletDialogContent *{
+  min-width:0;
+  box-sizing:border-box;
+}
+@media(max-width:430px){
+  #walletDialog{
+    width:calc(100vw - 12px)!important;
+    max-width:calc(100vw - 12px)!important;
+    max-height:94dvh!important;
+  }
+  #walletDialog .wallet-dialog-card{
+    max-height:94dvh!important;
+    padding:12px!important;
+    border-radius:18px!important;
+  }
+  #walletDialog .global-wallet-add{
+    grid-template-columns:1fr!important;
+  }
+  #walletDialog .global-wallet-add .wallet-credit-actions{
+    grid-column:1!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    width:100%!important;
+  }
+  #walletDialog .wallet-credit-actions button{
+    min-width:0!important;
+    width:100%!important;
+  }
+  #walletDialog .wallet-move{
+    gap:8px!important;
+  }
+}
