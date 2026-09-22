@@ -392,7 +392,7 @@ const $$=s=>[...document.querySelectorAll(s)];
 const GOALS=["0","1","2","M"];
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],allJoint=[];
-let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[],qgWalletPrizes=[];
+let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[],qgWalletPrizes=[],qgOfficialPrizeRows=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
 const drafts=new Map(),jointDrafts=new Map();
@@ -546,8 +546,10 @@ async function qgDetectPrizeIfNeeded(j=journey){
   const s=jointScore(j),category=prizeLabel(s.correct,s.resolved);
   if(!category)return;
   if(qgWalletPrizes.some(p=>p.game==="quinigol"&&Number(p.journey_id)===Number(j.id)))return;
+  const official=qgOfficialPrizeRows.find(x=>Number(x.journey_number)===Number(j.number)&&String(x.category_key)===String(s.correct));
+  const suggested=official?Number(official.unit_amount):null;
   try{
-    const {error}=await sb.rpc("wallet_detect_prize",{p_room_id:roomId,p_game:"quinigol",p_journey_id:j.id,p_category:`${category} · ${s.correct}/6 aciertos`});
+    const {error}=await sb.rpc("wallet_detect_prize_v2",{p_room_id:roomId,p_game:"quinigol",p_journey_id:j.id,p_category:`${category} · ${s.correct}/6 aciertos`,p_amount:suggested});
     if(!error){await qgLoadWalletData();window.dispatchEvent(new CustomEvent("wallet:refresh"))}
   }catch(e){console.warn("Premio Quinigol:",e)}
 }
@@ -625,17 +627,19 @@ async function load(){
 
 async function qgLoadWalletData(){
   if(!roomId)return;
-  const [wr,tr,cr,pr]=await Promise.all([
+  const [wr,tr,cr,pr,op]=await Promise.all([
     sb.from("room_wallets").select("balance,updated_at").eq("room_id",roomId).maybeSingle(),
     sb.from("wallet_transactions").select("*").eq("room_id",roomId).order("created_at",{ascending:false}).limit(30),
     sb.from("bet_confirmations").select("*").eq("room_id",roomId),
-    sb.from("bet_prizes").select("*").eq("room_id",roomId)
+    sb.from("bet_prizes").select("*").eq("room_id",roomId),
+    sb.from("official_prizes").select("*").eq("game","quinigol")
   ]);
-  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;if(pr.error)throw pr.error;
+  if(wr.error)throw wr.error;if(tr.error)throw tr.error;if(cr.error)throw cr.error;if(pr.error)throw pr.error;if(op.error)throw op.error;
   qgWalletBalance=Number(wr.data?.balance||0);
   qgWalletTransactions=tr.data||[];
   qgBetConfirmations=cr.data||[];
   qgWalletPrizes=pr.data||[];
+  qgOfficialPrizeRows=op.data||[];
 }
 function qgWalletCanManage(){return Number(member(1)?.user_id===identityUserId?1:0)===1}
 function qgWalletConfirmation(jid=journey?.id){
