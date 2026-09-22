@@ -303,6 +303,10 @@ function finishedJourneyPrizeState(j){
 function renderJourneySwitcher(){
   const el=$("#journeySwitcher");
   if(!el) return;
+  if(document.documentElement.dataset.game==="quinigol"){
+    el.classList.add("hidden");
+    return;
+  }
   const available=[...journeys].sort((a,b)=>b.number-a.number);
   if(!available.length){ el.classList.add("hidden"); el.innerHTML=""; return; }
   el.classList.remove("hidden");
