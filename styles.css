@@ -5213,3 +5213,23 @@ html[data-game="quiniela"] #qgRoot{
 html[data-game="quinigol"] #qgRoot{
   display:block!important;
 }
+
+
+/* TV Quinigol v87 */
+.qg-tv{
+  margin-top:7px!important;
+  width:max-content;
+  max-width:100%;
+}
+.qg-tv .tv-title{
+  font-size:.48rem!important;
+}
+.qg-tv .tv-channel,
+.qg-tv .tv-pending{
+  font-size:.48rem!important;
+}
+@media(max-width:430px){
+  .qg-tv{
+    margin-top:6px!important;
+  }
+}

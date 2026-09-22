@@ -420,6 +420,13 @@ function formatKickoff(v){
   if(!v)return "Horario pendiente";
   return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(".","");
 }
+function tvHtml(m){
+  const channels=Array.isArray(m?.tv_channels)?m.tv_channels.filter(Boolean):[];
+  if(!channels.length)return `<div class="tv-broadcast compact pending-tv qg-tv"><span class="tv-icon" aria-hidden="true">▣</span><span class="tv-title">TV</span><span class="tv-pending">Por confirmar</span></div>`;
+  const clean=[...new Set(channels.map(ch=>String(ch).trim()).filter(Boolean))];
+  const visible=clean.slice(0,2),extra=Math.max(0,clean.length-2);
+  return `<div class="tv-broadcast compact qg-tv"><span class="tv-icon" aria-hidden="true">▣</span><span class="tv-title">TV</span><div class="tv-channels">${visible.map(ch=>`<span class="tv-channel">${esc(ch)}</span>`).join("")}${extra?`<span class="tv-channel tv-more">+${extra}</span>`:""}</div></div>`;
+}
 function fullDate(v){
   if(!v)return "Fecha pendiente";
   return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
@@ -600,7 +607,7 @@ function renderPlay(){
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"✓ Acierto":saved?"✕ Fallo":"Sin pronóstico"}</strong></div>`;
     else if(proj!=="—")result=`<div class="qg-result live"><span>En directo · provisional</span><strong>${esc(proj)}</strong></div>`;
-    return `<article class="qg-match-card ${show?"":"hidden"}"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}</article>`;
+    return `<article class="qg-match-card ${show?"":"hidden"}"><div class="qg-card-head"><span class="match-index">${String(m.number).padStart(2,"0")}</span><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div>${tvHtml(m)}<div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}</article>`;
   }).join("");
   $$(".qg-goal").forEach(b=>b.addEventListener("click",()=>saveGoal(Number(b.dataset.qgMatch),b.dataset.qgSide,b.dataset.qgGoal)));
   $$("[data-qg-clear]").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.qgClear))));
