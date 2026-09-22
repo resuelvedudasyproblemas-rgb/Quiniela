@@ -6386,7 +6386,7 @@ html[data-game="quiniela"] #qgJourneySwitcher{
   white-space:nowrap!important;
   overflow:visible!important;
   text-overflow:clip!important;
-  font-size:clamp(.44rem,2.25vw,.57rem)!important;
+  font-size:clamp(.48rem,2.45vw,.62rem)!important;
   line-height:1!important;
 }
 @media(max-width:430px){
@@ -6399,7 +6399,7 @@ html[data-game="quiniela"] #qgJourneySwitcher{
   #quinielaTabs .tab,
   .qg-tabs .qg-tab{
     height:42px!important;
-    font-size:clamp(.42rem,2.05vw,.52rem)!important;
+    font-size:clamp(.46rem,2.25vw,.57rem)!important;
     padding:0 1px!important;
   }
 }
