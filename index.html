@@ -104,7 +104,7 @@
           <span id="qgJourneyDate" class="qg-journey-date">—</span>
           <div id="qgJourneyCountdown" class="qg-hero-countdown"></div>
         </div>
-        <div class="qg-ball-mark" aria-hidden="true">⚽</div>
+        <div id="qgJourneyLeagues" class="journey-leagues" aria-label="Competiciones de la jornada"></div>
       </section>
 
       <section id="qgJourneySwitcher" class="journey-switcher qg-journey-switcher" aria-label="Cambiar jornada de Quinigol"></section>
@@ -408,6 +408,14 @@ function logoUrl(raw=""){
   const m=String(raw).match(/(?:api|img)\.sofascore\.app\/api\/v1\/team\/(\d+)\/image/i);
   return m?`${cfg.SUPABASE_URL}/storage/v1/object/public/quiniela-web/logos/team/${m[1]}.webp`:raw;
 }
+function competitionLogoUrl(raw=""){
+  const m=String(raw).match(/(?:api|img)\.sofascore\.app\/api\/v1\/unique-tournament\/(\d+)\/image/i);
+  return m?`${cfg.SUPABASE_URL}/storage/v1/object/public/quiniela-web/logos/tournament/${m[1]}.webp`:raw;
+}
+function competitionLogoFallback(raw=""){
+  const m=String(raw).match(/(?:api|img)\.sofascore\.app\/api\/v1\/unique-tournament\/(\d+)\/image/i);
+  return m?`${cfg.SUPABASE_URL}/functions/v1/logo-proxy?kind=tournament&id=${m[1]}`:raw;
+}
 function crest(name,url=""){
   const direct=logoUrl(url),flag=FLAGS[norm(name)],label=esc(stripTeam(name));
   if(direct)return `<span class="team-crest xs" title="${label}"><span class="crest-fallback">${esc(initials(name))}</span><img class="team-crest-img high-quality" src="${esc(direct)}" alt="" loading="lazy" onload="if(this.previousElementSibling)this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
@@ -570,6 +578,27 @@ function qgPrizeState(j){
   const joint=jointScore(j);
   return personal.correct>=2||joint.correct>=2?"prize":"miss";
 }
+function competitionShort(name=""){
+  const n=String(name||"");
+  if(n==="LaLiga 2")return "L2";
+  if(n==="UEFA Nations League")return "NL";
+  return n.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()||"L";
+}
+function renderJourneyCompetitions(){
+  const el=$("#qgJourneyLeagues");
+  if(!el||!journey)return;
+  const seen=new Map();
+  msFor(journey.id).forEach(m=>{
+    const id=Number(m.competition_id),name=String(m.competition_name||"").trim(),logo=String(m.competition_logo_url||"").trim();
+    if(!id||!name||!logo||seen.has(id))return;
+    seen.set(id,{id,name,logo});
+  });
+  const comps=[...seen.values()];
+  if(!comps.length){el.innerHTML="";el.classList.add("hidden");return}
+  el.classList.remove("hidden");
+  const shown=comps.slice(0,3);
+  el.innerHTML=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${esc(c.name)}" aria-label="${esc(c.name)}"><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${esc(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
+}
 function renderHero(){
   if(!journey)return;
   const st=state(journey),res=msFor(journey.id).filter(resolved).length;
@@ -578,7 +607,7 @@ function renderHero(){
   $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="playing"?`En juego · ${res}/6 resultados`:st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
   $("#qgJourneyDate").textContent=`Cierre · ${fullDate(journey.close_at)}`;
   $("#qgJourneyCountdown").textContent=st==="open"?`Empieza en ${timeLeft(journey.close_at)}`:st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
-  const card=$("#qgJourneyCard");
+  renderJourneyCompetitions();\n  const card=$("#qgJourneyCard");
   card.dataset.status=st;
   const prizeState=qgPrizeState(journey);
   if(prizeState)card.dataset.prize=prizeState;
