@@ -18,6 +18,21 @@ let jointSaving = false;
 let jointElige8Saving = false;
 let jointPlenoDraft = {journeyId:null,home:null,away:null};
 let selectedJourneyId = null;
+function selectedJourneyStorageKey(){
+  return identityUserId&&roomId?\`quiniela-selected-journey:\${roomId}:\${identityUserId}\`:"";
+}
+function loadSavedJourneyId(){
+  const key=selectedJourneyStorageKey();
+  if(!key)return null;
+  const value=Number(localStorage.getItem(key));
+  return Number.isFinite(value)&&value>0?value:null;
+}
+function saveSelectedJourneyId(id){
+  const key=selectedJourneyStorageKey();
+  if(!key)return;
+  if(id==null)localStorage.removeItem(key);
+  else localStorage.setItem(key,String(id));
+}
 const MATCH_FILTER_KEY="quiniela-match-filter";
 const MATCH_FILTER_MODES=new Set(["all","pending","correct","wrong","e8"]);
 const savedMatchFilter=localStorage.getItem(MATCH_FILTER_KEY);
