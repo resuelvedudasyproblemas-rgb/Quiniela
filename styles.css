@@ -5486,3 +5486,92 @@ html[data-game="quiniela"] #qgJourneySwitcher{
     min-width:118px!important;
   }
 }
+
+
+/* Selector compacto de jornadas v91 */
+#journeySwitcher,
+#qgJourneySwitcher{
+  display:block!important;
+  max-width:760px;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  padding:10px 1px 3px!important;
+}
+.journey-primary-row{
+  display:flex;
+  justify-content:center;
+  align-items:stretch;
+  gap:7px;
+  flex-wrap:nowrap;
+}
+.journey-more{
+  margin-top:7px;
+  text-align:center;
+}
+.journey-more>summary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:31px;
+  padding:6px 11px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--surface);
+  color:var(--muted);
+  font-size:.56rem;
+  font-weight:900;
+  cursor:pointer;
+  list-style:none;
+  box-shadow:0 3px 10px rgba(10,55,36,.035);
+}
+.journey-more>summary::-webkit-details-marker{display:none}
+.journey-more[open]>summary{
+  color:var(--brand);
+  border-color:color-mix(in srgb,var(--brand) 30%,var(--border));
+  background:var(--soft);
+}
+.journey-more-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  gap:7px;
+  margin-top:7px;
+  padding:8px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:color-mix(in srgb,var(--surface-3) 88%,transparent);
+}
+.journey-more-grid .journey-choice{
+  width:100%;
+  min-width:0!important;
+}
+html[data-game="quinigol"] #journeySwitcher{
+  display:none!important;
+}
+html[data-game="quiniela"] #qgJourneySwitcher{
+  display:none!important;
+}
+@media(max-width:430px){
+  .journey-primary-row{
+    gap:5px;
+  }
+  .journey-primary-row .journey-choice{
+    min-width:0!important;
+    flex:1 1 0!important;
+    padding:7px 6px!important;
+  }
+  .journey-primary-row .journey-choice>span{
+    min-width:24px!important;
+    margin-right:3px!important;
+  }
+  .journey-primary-row .journey-choice>strong{
+    font-size:.62rem!important;
+  }
+  .journey-primary-row .journey-choice>small{
+    font-size:.49rem!important;
+  }
+  .journey-more-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
+    padding:7px;
+  }
+}
