@@ -109,12 +109,12 @@
 
       <section id="qgJourneySwitcher" class="journey-switcher qg-journey-switcher" aria-label="Cambiar jornada de Quinigol"></section>
 
-      <nav class="qg-tabs" aria-label="Secciones de Quinigol">
-        <button type="button" class="qg-tab active" data-qg-view="play">Mi Quinigol</button>
-        <button type="button" class="qg-tab" data-qg-view="joint">Conjunta</button>
-        <button type="button" class="qg-tab" data-qg-view="compare">Comparar</button>
-        <button type="button" class="qg-tab" data-qg-view="stats">Estadísticas</button>
-        <button type="button" class="qg-tab" data-qg-view="history">Historial</button>
+      <nav class="tabs tabs-five qg-tabs" aria-label="Secciones de Quinigol">
+        <button type="button" class="tab qg-tab active" data-qg-view="play">Mi Quinigol</button>
+        <button type="button" class="tab qg-tab" data-qg-view="joint">Conjunta</button>
+        <button type="button" class="tab qg-tab" data-qg-view="compare">Comparar</button>
+        <button type="button" class="tab qg-tab" data-qg-view="stats">Estadísticas</button>
+        <button type="button" class="tab qg-tab" data-qg-view="history">Historial</button>
       </nav>
 
       <div class="qg-main">
@@ -564,6 +564,12 @@ async function resetJoint(n){
 function goalButtons(n,side,selected,locked,attrs=""){
   return GOALS.map(v=>`<button type="button" class="qg-goal ${selected===v?"selected":""}" data-qg-match="${n}" data-qg-side="${side}" data-qg-goal="${v}" ${attrs} ${locked?"disabled":""}>${v}</button>`).join("");
 }
+function qgPrizeState(j){
+  if(!j||state(j)!=="finished")return "";
+  const personal=score(identityUserId,j);
+  const joint=jointScore(j);
+  return personal.correct>=2||joint.correct>=2?"prize":"miss";
+}
 function renderHero(){
   if(!journey)return;
   const st=state(journey),res=msFor(journey.id).filter(resolved).length;
@@ -573,24 +579,29 @@ function renderHero(){
   $("#qgJourneyDate").textContent=`Cierre · ${fullDate(journey.close_at)}`;
   $("#qgJourneyCountdown").textContent=st==="open"?`Empieza en ${timeLeft(journey.close_at)}`:st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
   const card=$("#qgJourneyCard");
-  card.classList.remove("qg-prize","qg-miss");
+  card.dataset.status=st;
+  const prizeState=qgPrizeState(journey);
+  if(prizeState)card.dataset.prize=prizeState;
+  else delete card.dataset.prize;
 }
 function renderSwitcher(){
   const el=$("#qgJourneySwitcher");if(!el)return;
   el.innerHTML=[...journeys].sort((a,b)=>b.number-a.number).map(j=>{
     const st=state(j);
-    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados":fullDate(j.close_at)}</small></button>`;
+    const prizeState=st==="finished"?qgPrizeState(j):"";
+    const prizeClass=prizeState?` finished-${prizeState}`:"";
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados · finalizada":fullDate(j.close_at)}</small></button>`;
   }).join("");
   $$("[data-qg-journey]").forEach(b=>b.addEventListener("click",()=>{selectedJourneyId=Number(b.dataset.qgJourney);savePref("quinigol-journey",selectedJourneyId);selectJourney();renderAll()}));
 }
 function dashCard(name,done,s,cls){
-  const finished=state(journey)==="finished",prize=prizeLabel(s.correct,s.resolved);
-  return `<div class="qg-dashboard-card ${cls}"><span>${esc(name)}</span><strong>${finished?`${s.correct}/6`:`${done}/6`}</strong><small>${finished?(prize||"Sin categoría"):"completados"}</small></div>`;
+  const finished=state(journey)==="finished",prize=prizeLabel(s.correct,s.resolved),gold=finished&&s.correct>=2;
+  return `<div class="qg-dashboard-card ${cls} ${gold?"prize":""}"><span>${esc(name)}</span><strong>${finished?`${s.correct}/6`:`${done}/6`}</strong><small>${finished?(prize||"Sin premio"):"completados"}</small></div>`;
 }
 function renderDashboard(){
   const el=$("#qgDashboard");if(!el)return;
-  const p1=member(1),p2=member(2),s1=p1?score(p1.user_id):{correct:0,resolved:0},s2=p2?score(p2.user_id):{correct:0,resolved:0},js=jointScore(),finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved);
-  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,"player-two")+`<div class="qg-dashboard-card joint"><span>Conjunta</span><strong>${finished?`${js.correct}/6`:`${matches.filter(m=>effectiveJoint(m.number)).length}/6`}</strong><small>${finished?(jp||"Sin categoría"):"marcadores"}</small></div>`;
+  const p1=member(1),p2=member(2),s1=p1?score(p1.user_id):{correct:0,resolved:0},s2=p2?score(p2.user_id):{correct:0,resolved:0},js=jointScore(),finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved),jointGold=finished&&js.correct>=2;
+  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${finished?`${js.correct}/6`:`${matches.filter(m=>effectiveJoint(m.number)).length}/6`}</strong><small>${finished?(jp||"Sin premio"):"marcadores"}</small></div>`;
 }
 function renderFilters(){
   const c={all:matches.length,pending:0,correct:0,wrong:0};
@@ -720,8 +731,8 @@ function jstat(){
 function renderStats(){
   const el=$("#qgStats");if(!el)return;
   const p1=member(1),p2=member(2),s1=p1?stat(p1.user_id):{best:0,prizes:0},s2=p2?stat(p2.user_id):{best:0,prizes:0},sj=jstat();
-  const card=(name,s,cls)=>`<div class="qg-stat-card ${cls}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con categoría</small></div>`;
-  el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. Una categoría no implica necesariamente premio económico; el dorado se reservará para premio confirmado por el escrutinio oficial.</div>`;
+  const card=(name,s,cls)=>`<div class="qg-stat-card ${cls}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con premio</small></div>`;
+  el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. En la app se considera jornada con premio visual cuando hay 2 o más aciertos.</div>`;
 }
 function renderHistory(){
   const el=$("#qgHistory");if(!el)return;
