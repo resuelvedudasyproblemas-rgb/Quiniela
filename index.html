@@ -86,6 +86,7 @@
       <div class="room-meta-line">
         <span class="room-playing-as">Tú: <b id="myName">—</b></span>
         <span id="opponentStatus" class="opponent-status room-opponent-status">Esperando al segundo jugador</span>
+        <button id="walletBtn" class="room-wallet-pill" type="button" aria-label="Abrir monedero conjunto"><span>€</span><strong id="walletHeaderBalance">6,99 €</strong></button>
       </div>
     </section>
 
@@ -324,6 +325,16 @@
           <small>Caduca en 15 minutos y solo puede usarse una vez.</small>
         </div>
       </div>
+    </div>
+  </dialog>
+
+  <dialog id="walletDialog">
+    <div class="utility-dialog-card wallet-dialog-card">
+      <div class="utility-dialog-head">
+        <div><p class="eyebrow">SALA COMPARTIDA</p><h2>Monedero conjunto</h2></div>
+        <button id="closeWalletDialog" class="close-btn" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div id="walletDialogContent"></div>
     </div>
   </dialog>
 
