@@ -855,6 +855,32 @@ function walletDate(v){
   if(!v)return "";
   return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
 }
+function renderGlobalWallet(){
+  const balance=$("#walletHeaderBalance");
+  if(balance)balance.textContent=euro(walletBalance);
+  const el=$("#walletDialogContent");if(!el)return;
+  const manager=walletCanManage();
+  const moves=walletTransactions.slice(0,12).map(t=>`<div class="wallet-move"><div><strong>${escapeHtml(walletMovementLabel(t))}</strong><small>${escapeHtml(walletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${escapeHtml(euro(Number(t.amount)))}</b></div>`).join("");
+  const controls=manager?`
+    <div class="global-wallet-add">
+      <label><span>Importe</span><div><input id="globalWalletAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label>
+      <input id="globalWalletNote" class="wallet-note" type="text" maxlength="80" placeholder="Nota opcional">
+      <div class="wallet-credit-actions"><button id="globalWalletAddFunds" type="button">+ Fondos</button><button id="globalWalletAddPrize" type="button">+ Premio</button></div>
+    </div>`
+    : `<p class="wallet-readonly global">Solo Salva puede añadir fondos, registrar premios o modificar el saldo.</p>`;
+  el.innerHTML=`
+    <div class="global-wallet-balance"><span>SALDO DISPONIBLE</span><strong>${escapeHtml(euro(walletBalance))}</strong><small>Compartido entre La Quiniela y Quinigol</small></div>
+    ${controls}
+    <div class="global-wallet-history"><div class="global-wallet-history-head"><span>ÚLTIMOS MOVIMIENTOS</span><b>${walletTransactions.length}</b></div><div class="wallet-moves">${moves||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></div>`;
+  if(manager){
+    $("#globalWalletAddFunds")?.addEventListener("click",()=>addWalletCredit("funds"));
+    $("#globalWalletAddPrize")?.addEventListener("click",()=>addWalletCredit("prize"));
+  }
+}
+function openWalletDialog(){
+  renderGlobalWallet();
+  $("#walletDialog")?.showModal();
+}
 function estimatedQuinielaWalletCost(){
   const plan=jointBetRecommendation(journey);
   if(!plan?.ready)return null;
@@ -864,7 +890,6 @@ function renderJointWallet(){
   const el=$("#jointWallet");if(!el||!journey)return;
   const manager=walletCanManage(),conf=walletConfirmation("quiniela",journey.id),estimated=estimatedQuinielaWalletCost();
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
-  const movements=walletTransactions.slice(0,8).map(t=>`<div class="wallet-move"><div><strong>${escapeHtml(walletMovementLabel(t))}</strong><small>${escapeHtml(walletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${escapeHtml(euro(Number(t.amount)))}</b></div>`).join("");
   const status=conf
     ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>`
     : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
@@ -873,23 +898,17 @@ function renderJointWallet(){
       <label><span>Coste de esta apuesta</span><div><input id="walletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${escapeHtml(costValue)}" placeholder="0,00"><b>€</b></div></label>
       <button id="walletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
       ${conf?'<button id="walletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
-    </div>
-    <div class="wallet-credit-controls">
-      <label><span>Añadir al monedero</span><div><input id="walletCreditAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label>
-      <input id="walletCreditNote" class="wallet-note" type="text" maxlength="80" placeholder="Nota opcional">
-      <div class="wallet-credit-actions"><button id="walletAddFundsBtn" type="button">+ Fondos</button><button id="walletAddPrizeBtn" type="button">+ Premio</button></div>
     </div>`
-    : `<p class="wallet-readonly">Solo Salva puede confirmar apuestas y modificar el dinero. Ferran tiene acceso de solo lectura.</p>`;
-  el.innerHTML=`<section class="wallet-card">
-    <div class="wallet-top"><div><span>MONEDERO CONJUNTO</span><small>Saldo disponible</small></div><strong>${escapeHtml(euro(walletBalance))}</strong></div>
+    : `<p class="wallet-readonly">Confirmación gestionada por Salva.</p>`;
+  el.innerHTML=`<section class="bet-confirm-card">
+    <div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>La Quiniela · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${escapeHtml(euro(walletBalance))}</button></div>
     <div class="wallet-confirmation">${status}${controls}</div>
-    <details class="wallet-history"><summary>Movimientos <b>${walletTransactions.length}</b></summary><div class="wallet-moves">${movements||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></details>
   </section>`;
-  if(!manager)return;
-  $("#walletConfirmBtn")?.addEventListener("click",confirmQuinielaWalletBet);
-  $("#walletUnconfirmBtn")?.addEventListener("click",unconfirmQuinielaWalletBet);
-  $("#walletAddFundsBtn")?.addEventListener("click",()=>addWalletCredit("funds"));
-  $("#walletAddPrizeBtn")?.addEventListener("click",()=>addWalletCredit("prize"));
+  if(manager){
+    $("#walletConfirmBtn")?.addEventListener("click",confirmQuinielaWalletBet);
+    $("#walletUnconfirmBtn")?.addEventListener("click",unconfirmQuinielaWalletBet);
+  }
+  el.querySelector("[data-open-global-wallet]")?.addEventListener("click",openWalletDialog);
 }
 async function confirmQuinielaWalletBet(){
   const raw=String($("#walletBetCost")?.value||"").replace(",",".");
@@ -911,14 +930,14 @@ async function unconfirmQuinielaWalletBet(){
   }catch(e){console.error(e);setSync("error","Error");toast("No se pudo anular")}
 }
 async function addWalletCredit(kind){
-  const raw=String($("#walletCreditAmount")?.value||"").replace(",",".");
-  const amount=Number(raw),note=$("#walletCreditNote")?.value?.trim()||null;
+  const raw=String($("#globalWalletAmount")?.value||"").replace(",",".");
+  const amount=Number(raw),note=$("#globalWalletNote")?.value?.trim()||null;
   if(!Number.isFinite(amount)||amount<=0){toast("Introduce un importe válido");return}
   try{
     setSync("","Guardando");
     const {error}=await sb.rpc("wallet_add_credit",{p_room_id:roomId,p_kind:kind,p_amount:amount,p_note:note});
     if(error)throw error;
-    await loadWalletData();renderJoint();setSync("online","Sincronizado");toast(kind==="prize"?"Premio añadido al monedero":"Fondos añadidos al monedero");
+    await loadWalletData();renderGlobalWallet();renderJoint();setSync("online","Sincronizado");toast(kind==="prize"?"Premio añadido al monedero":"Fondos añadidos al monedero");
   }catch(e){console.error(e);setSync("error","Error");toast("No se pudo actualizar el monedero")}
 }
 
@@ -1447,6 +1466,8 @@ window.addEventListener("quiniela:show",async()=>{
   }
 });
 
+window.addEventListener("wallet:refresh",async()=>{try{await loadWalletData();renderGlobalWallet();renderJoint()}catch(e){console.error("Monedero:",e)}});
+
 function roomSummaryText(){
   const ordered=[...members].sort((a,b)=>a.slot-b.slot).map(m=>m.display_name).filter(Boolean);
   return ordered.length?ordered.join(" ↔ "):"Vosotros dos";
@@ -1911,7 +1932,7 @@ function renderAll(){
     if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
     else $("#opponentStatus").textContent="Esperando al segundo jugador";
   }
-  renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
+  renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
 }
 
 function renderMatches(){
@@ -2371,9 +2392,9 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllElige8();renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_picks",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointPicks();renderJoint();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await Promise.all([loadAllJointElige8(),loadJourneySummaries()]);renderJoint();setSync("online","Sincronizado")})
-    .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==identityUserId);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{const before=allMatches.map(m=>({...m}));await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();detectNewResults(before);renderAll()})
@@ -2443,6 +2464,9 @@ $("#createRoomBtn")?.addEventListener("click",createRoom);
 $("#joinRoomBtn").addEventListener("click",joinRoom);
 $("#roomCodeInput")?.addEventListener("input",e=>e.target.value=UNIQUE_ROOM_CODE);
 $("#openRoomBtn").addEventListener("click",openRoomDialog);
+$("#walletBtn")?.addEventListener("click",openWalletDialog);
+$("#closeWalletDialog")?.addEventListener("click",()=>$("#walletDialog")?.close());
+$("#walletDialog")?.addEventListener("click",e=>{if(e.target===$("#walletDialog"))$("#walletDialog").close()});
 $("#closeRoomDialog").addEventListener("click",()=>$("#roomDialog").close());
 $("#closeHistoryDialog")?.addEventListener("click",()=>$("#historyDialog")?.close());
 $("#historyDialog")?.addEventListener("click",e=>{if(e.target===$("#historyDialog"))$("#historyDialog").close()});
