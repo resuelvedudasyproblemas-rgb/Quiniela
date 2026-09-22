@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nuestra Quiniela">
+  <defs>
+    <linearGradient id="blue" x1="70" y1="80" x2="245" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1495ff"/><stop offset="1" stop-color="#0863e8"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="270" y1="75" x2="445" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffad18"/><stop offset="1" stop-color="#ff7300"/>
+    </linearGradient>
+    <linearGradient id="green" x1="256" y1="55" x2="310" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#58d83d"/><stop offset="1" stop-color="#20ac50"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#0b5d3b"/>
+  <g transform="translate(76 76) scale(.70)">
+    <path d="M256 74a174 174 0 0 0 0 348" fill="none" stroke="url(#blue)" stroke-width="68" stroke-linecap="round"/>
+    <path d="M256 74a174 174 0 0 1 0 348" fill="none" stroke="url(#orange)" stroke-width="68" stroke-linecap="round"/>
+    <rect x="232" y="40" width="48" height="72" rx="24" fill="url(#green)"/>
+    <path d="M300 410c25-7 48-20 67-38l28 29c-22 22-49 39-80 48z" fill="url(#green)"/>
+    <path d="M365 372l78 78" fill="none" stroke="url(#orange)" stroke-width="68" stroke-linecap="round"/>
+    <circle cx="256" cy="248" r="105" fill="#fff" stroke="#082747" stroke-width="12"/>
+    <polygon points="256,194 288,217 276,255 236,255 224,217" fill="#082747"/>
+    <polygon points="256,154 280,164 274,188 240,188 232,165" fill="#082747"/>
+    <polygon points="327,208 340,232 321,250 297,233 304,205" fill="#082747"/>
+    <polygon points="309,301 286,321 264,306 276,278 305,277" fill="#082747"/>
+    <polygon points="203,301 180,282 190,255 220,260 229,288" fill="#082747"/>
+    <polygon points="185,208 208,194 226,213 216,240 188,238" fill="#082747"/>
+    <g stroke="#082747" stroke-width="7" stroke-linecap="round">
+      <path d="M256 194l2-6M288 217l16-12M276 255l29 22M236 255l-16 5M224 217l-16-23"/>
+    </g>
+  </g>
+</svg>
