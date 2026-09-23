@@ -820,14 +820,41 @@ function renderSwitcher(){
     }
   }));
 }
-function dashCard(name,done,s,cls){
-  const finished=state(journey)==="finished",prize=prizeLabel(s.correct,s.resolved),gold=finished&&s.correct>=2;
-  return `<div class="qg-dashboard-card ${cls} ${gold?"prize":""}"><span>${esc(name)}</span><strong>${finished?`${s.correct}/6`:`${done}/6`}</strong><small>${finished?(prize||"Sin premio"):"completados"}</small></div>`;
+function qgProjectedScore(uid,j=journey){
+  let correct=0,considered=0;if(!j)return {correct,considered};
+  for(const m of msFor(j.id)){
+    const r=projected(m);if(r==="—")continue;
+    considered++;
+    if(pickText(pick(uid,m.number,j.id))===r)correct++;
+  }
+  return {correct,considered};
+}
+function qgProjectedJointScore(j=journey){
+  let correct=0,considered=0;if(!j)return {correct,considered};
+  for(const m of msFor(j.id)){
+    const r=projected(m);if(r==="—")continue;
+    considered++;
+    if(jointText(m.number,j.id)===r)correct++;
+  }
+  return {correct,considered};
+}
+function dashCard(name,done,s,projectedScore,cls){
+  const finished=state(journey)==="finished";
+  const currentCorrect=finished?s.correct:projectedScore.correct;
+  const prize=prizeLabel(s.correct,s.resolved),gold=finished&&s.correct>=2;
+  const detail=finished?(prize||"Sin premio"):`${done}/6 pronosticados${projectedScore.considered?` · ${projectedScore.considered} valorados`:""}`;
+  return `<div class="qg-dashboard-card ${cls} ${gold?"prize":""}"><span>${esc(name)}</span><strong>${currentCorrect} aciertos</strong><small>${detail}</small></div>`;
 }
 function renderDashboard(){
   const el=$("#qgDashboard");if(!el)return;
-  const p1=member(1),p2=member(2),s1=p1?score(p1.user_id):{correct:0,resolved:0},s2=p2?score(p2.user_id):{correct:0,resolved:0},js=jointScore(),finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved),jointGold=finished&&js.correct>=2;
-  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${finished?`${js.correct}/6`:`${matches.filter(m=>effectiveJoint(m.number)).length}/6`}</strong><small>${finished?(jp||"Sin premio"):"marcadores"}</small></div>`;
+  const p1=member(1),p2=member(2);
+  const s1=p1?score(p1.user_id):{correct:0,resolved:0},s2=p2?score(p2.user_id):{correct:0,resolved:0},js=jointScore();
+  const ps1=p1?qgProjectedScore(p1.user_id):{correct:0,considered:0},ps2=p2?qgProjectedScore(p2.user_id):{correct:0,considered:0},pjs=qgProjectedJointScore();
+  const finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved),jointGold=finished&&js.correct>=2;
+  const jointDone=matches.filter(m=>effectiveJoint(m.number)).length;
+  const jointCorrect=finished?js.correct:pjs.correct;
+  const jointDetail=finished?(jp||"Sin premio"):`${jointDone}/6 marcadores${pjs.considered?` · ${pjs.considered} valorados`:""}`;
+  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,ps1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,ps2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${jointCorrect} aciertos</strong><small>${jointDetail}</small></div>`;
 }
 function renderFilters(){
   const c={all:matches.length,pending:0,correct:0,wrong:0};
