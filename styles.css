@@ -8202,3 +8202,223 @@ html:not([data-theme="dark"]) #compareView .result-signs>span.selected{
 html:not([data-theme="dark"]) #compareView .compare-state{
   box-shadow:none!important;
 }
+
+
+/* Auditoría global tema claro/oscuro v150 */
+/* Ajustes solo de contraste/tema. No modifican tamaños, posiciones ni menús. */
+html[data-theme="dark"] .history-count{
+  background:var(--surface-2)!important;
+  border-color:var(--border)!important;
+  color:var(--brand)!important;
+}
+html[data-theme="dark"] .joint-mode.manual{
+  background:#382913!important;
+  color:#efbf69!important;
+}
+html[data-theme="dark"] .joint-same{
+  background:#143526!important;
+  color:#83dfae!important;
+}
+html[data-theme="dark"] .joint-different{
+  background:#382913!important;
+  color:#efbf69!important;
+}
+html[data-theme="dark"] .e8-chip{
+  background:#3a3014!important;
+  color:#f0ce75!important;
+}
+html[data-theme="dark"] .e8-both{
+  color:#83dfae!important;
+}
+html[data-theme="dark"] .joint-e8-chip{
+  background:#173729!important;
+  color:#7fe0b1!important;
+}
+html[data-theme="dark"] .journey-choice.state-playing>strong{
+  color:#efbf69!important;
+}
+html[data-theme="dark"] .journey-choice.state-playing>span{
+  background:#382913!important;
+  color:#efbf69!important;
+}
+html[data-theme="dark"] .journey-choice.state-finished:not(.finished-miss):not(.finished-prize){
+  background:#14231c!important;
+  border-color:#30433a!important;
+}
+html[data-theme="dark"] .journey-choice.state-finished:not(.finished-miss):not(.finished-prize)>span{
+  background:#1b2a23!important;
+  color:#a7b8af!important;
+}
+html[data-theme="dark"] .journey-choice.state-finished:not(.finished-miss):not(.finished-prize)>strong{
+  color:#c1d0c8!important;
+}
+
+/* Estados en directo de La Quiniela */
+html[data-theme="dark"] .live-fixture-score,
+html[data-theme="dark"] .match-result-bar.live-result,
+html[data-theme="dark"] .pleno-live-score{
+  background:#321919!important;
+  border-color:#613030!important;
+  color:#f2a2a2!important;
+}
+html[data-theme="dark"] .live-fixture-score.is-provisional,
+html[data-theme="dark"] .match-result-bar.live-result.is-provisional,
+html[data-theme="dark"] .pleno-live-score.is-provisional{
+  background:#17231d!important;
+  border-color:#34483e!important;
+  color:#a9b8b0!important;
+}
+html[data-theme="dark"] .match-detail-score .detail-live,
+html[data-theme="dark"] .compare-result-line.live-compare{
+  color:#f2a2a2!important;
+}
+html[data-theme="dark"] .match-detail-score .detail-provisional,
+html[data-theme="dark"] .match-detail-score em,
+html[data-theme="dark"] .compare-result-line.live-compare small{
+  color:#a9b8b0!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-correct .live-fixture-score,
+html[data-theme="dark"] .live-fixture-score.live-pick-correct,
+html[data-theme="dark"] .pleno-live-score.live-pick-correct{
+  background:#143526!important;
+  border-color:#285a40!important;
+  color:#83dfae!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-wrong .live-fixture-score,
+html[data-theme="dark"] .live-fixture-score.live-pick-wrong,
+html[data-theme="dark"] .pleno-live-score.live-pick-wrong{
+  background:#3a2020!important;
+  border-color:#6b3535!important;
+  color:#f0a0a0!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-neutral .live-fixture-score,
+html[data-theme="dark"] .live-fixture-score.live-pick-neutral,
+html[data-theme="dark"] .pleno-live-score.live-pick-neutral{
+  background:#1b2a23!important;
+  border-color:#34483e!important;
+  color:#a7b8af!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-correct .match-result-bar.live-result{
+  background:#143526!important;
+  border-color:#285a40!important;
+  color:#83dfae!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-wrong .match-result-bar.live-result{
+  background:#3a2020!important;
+  border-color:#6b3535!important;
+  color:#f0a0a0!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-neutral .match-result-bar.live-result{
+  background:#1b2a23!important;
+  border-color:#34483e!important;
+  color:#a7b8af!important;
+}
+html[data-theme="dark"] .live-pick-badge.correct,
+html[data-theme="dark"] .live-pick-badge.both{
+  background:#173729!important;
+  color:#7fe0b1!important;
+}
+html[data-theme="dark"] .live-pick-badge.wrong,
+html[data-theme="dark"] .live-pick-badge.none{
+  background:#432424!important;
+  color:#f0a0a0!important;
+}
+html[data-theme="dark"] .live-pick-badge.neutral{
+  background:#1b2a23!important;
+  color:#a7b8af!important;
+}
+html[data-theme="dark"] .live-pick-badge.one{
+  background:#3a3014!important;
+  color:#efcc73!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-both .live-fixture-score,
+html[data-theme="dark"] .live-fixture-score.live-pick-both,
+html[data-theme="dark"] .pleno-live-score.live-pick-both{
+  background:#143526!important;
+  border-color:#285a40!important;
+  color:#83dfae!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-one .live-fixture-score,
+html[data-theme="dark"] .live-fixture-score.live-pick-one,
+html[data-theme="dark"] .pleno-live-score.live-pick-one{
+  background:#382913!important;
+  border-color:#684b20!important;
+  color:#efbf69!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-none .live-fixture-score,
+html[data-theme="dark"] .live-fixture-score.live-pick-none,
+html[data-theme="dark"] .pleno-live-score.live-pick-none{
+  background:#3a2020!important;
+  border-color:#6b3535!important;
+  color:#f0a0a0!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-both .match-result-bar.live-result{
+  background:#143526!important;
+  border-color:#285a40!important;
+  color:#83dfae!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-one .match-result-bar.live-result{
+  background:#382913!important;
+  border-color:#684b20!important;
+  color:#efbf69!important;
+}
+html[data-theme="dark"] .match-card.has-live-result.live-pick-none .match-result-bar.live-result{
+  background:#3a2020!important;
+  border-color:#6b3535!important;
+  color:#f0a0a0!important;
+}
+
+/* Identidades, historial y monedero */
+html[data-theme="dark"] .room-card-unified .room-playing-as.player-one{
+  color:#8cb2ff!important;
+  background:rgba(73,118,205,.18)!important;
+  border-color:#34558c!important;
+}
+html[data-theme="dark"] .room-card-unified .room-playing-as.player-two{
+  color:#ffc070!important;
+  background:rgba(156,94,31,.18)!important;
+  border-color:#74502a!important;
+}
+html[data-theme="dark"] .result-bad,
+html[data-theme="dark"] .history-player-pick.bad>strong{
+  color:#f0a0a0!important;
+}
+html[data-theme="dark"] .history-player-pick.ok>strong{
+  color:#7fe0b1!important;
+}
+html[data-theme="dark"] .evolution-prize,
+html[data-theme="dark"] .joint-plan-cell>span i{
+  color:#efcc73!important;
+}
+html[data-theme="dark"] .wallet-bet-status.confirmed>span,
+html[data-theme="dark"] .wallet-move>b.plus{
+  color:#7fe0b1!important;
+}
+html[data-theme="dark"] .wallet-move>b.minus{
+  color:#f0a0a0!important;
+}
+
+/* Quinigol */
+html[data-theme="dark"] .game-choice[data-game="quinigol"].active{
+  color:#65d9a5!important;
+}
+html[data-theme="dark"] .qg-filter.active{
+  border-color:#2d6f58!important;
+  background:#143126!important;
+  color:#7fe0b1!important;
+}
+html[data-theme="dark"] .qg-plan-top span,
+html[data-theme="dark"] .qg-plan-price strong{
+  color:#65d9a5!important;
+}
+html[data-theme="dark"] .qg-result.live{
+  background:#17263d!important;
+  color:#9fc1ff!important;
+}
+html[data-theme="dark"] .qg-card-team .qg-head-score.live{
+  background:#432424!important;
+  color:#f0a0a0!important;
+}
+html[data-theme="dark"] .qg-head-score-label.live{
+  color:#f0a0a0!important;
+}
