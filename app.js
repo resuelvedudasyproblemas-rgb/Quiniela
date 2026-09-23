@@ -2198,19 +2198,20 @@ function renderElige8Progress(){
     return;
   }
 
-  if(projected.considered>0){
-    el.innerHTML=`<span class="e8-score-ok">✓ ${projected.correct} aciertos</span><span class="e8-score-bad">✕ ${projected.wrong} fallos</span>`;
-    if(status){
+  el.innerHTML=`<span class="e8-score-ok">✓ ${projected.correct} aciertos</span><span class="e8-score-bad">✕ ${projected.wrong} fallos</span>`;
+
+  if(status){
+    if(projected.considered>0){
       const parts=[`${projected.considered}/${projected.selected||8} valorados`];
       if(projected.live)parts.push(`${projected.live} en directo`);
       if(projected.pending)parts.push(`${projected.pending} pendientes`);
       status.textContent=parts.join(" · ")+(projected.live?" · provisional":"");
+    }else if(count===8){
+      status.textContent="8/8 seleccionados · esperando resultados";
+    }else{
+      status.textContent=`${count}/8 seleccionados · Marca E8 en ocho partidos del 1 al 14.`;
     }
-    return;
   }
-
-  el.textContent=count===8?"✓ 8 / 8 seleccionados":`${count} / 8 seleccionados`;
-  if(status)status.textContent=count===8?"Elige 8 completo · esperando resultados.":"Marca E8 en ocho partidos del 1 al 14.";
 }
 
 function displayPick(p,n){
