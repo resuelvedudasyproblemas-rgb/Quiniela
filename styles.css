@@ -8073,3 +8073,69 @@ html[data-theme="dark"] #qgCompareView .qg-compare-card>.qg-tv-inline{background
     flex:0 0 auto!important;
   }
 }
+
+
+/* Comparar móvil: nombres en una línea y escudos separados v148 */
+@media(max-width:520px){
+  #compareView .compare-fixture{
+    padding:0 52px!important;
+    overflow:visible!important;
+  }
+  #compareView .compare-fixture-row{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:auto 10px auto!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:4px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    padding:0 34px!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+  }
+  #compareView .compare-team,
+  #compareView .compare-team-home,
+  #compareView .compare-team-away{
+    display:block!important;
+    min-width:0!important;
+    max-width:none!important;
+    position:relative!important;
+    font-size:clamp(.44rem,2.05vw,.55rem)!important;
+  }
+  #compareView .compare-team-home{
+    text-align:right!important;
+  }
+  #compareView .compare-team-away{
+    text-align:left!important;
+  }
+  #compareView .compare-team-name{
+    display:block!important;
+    min-width:0!important;
+    max-width:none!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    line-height:1!important;
+  }
+  #compareView .compare-team .team-crest,
+  #compareView .compare-team .team-position{
+    position:absolute!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    z-index:2!important;
+  }
+  #compareView .compare-team-home .team-crest{
+    left:-48px!important;
+  }
+  #compareView .compare-team-home .team-position{
+    left:-25px!important;
+  }
+  #compareView .compare-team-away .team-position{
+    right:-25px!important;
+  }
+  #compareView .compare-team-away .team-crest{
+    right:-48px!important;
+  }
+}
