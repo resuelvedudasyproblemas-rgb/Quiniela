@@ -8024,3 +8024,52 @@ html[data-theme="dark"] #qgCompareView .qg-compare-card>.qg-tv-inline{background
     z-index:2!important;
   }
 }
+
+
+/* Comparar móvil: nombres completos sin solapar escudos v147 */
+@media(max-width:520px){
+  #compareView .compare-fixture-row{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:3px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  #compareView .compare-fixture-sep{
+    flex:0 0 10px!important;
+    width:10px!important;
+  }
+  #compareView .compare-team,
+  #compareView .compare-team-home,
+  #compareView .compare-team-away{
+    display:flex!important;
+    flex:0 1 auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    align-items:center!important;
+    gap:3px!important;
+  }
+  #compareView .compare-team-home{
+    justify-content:flex-end!important;
+    text-align:right!important;
+  }
+  #compareView .compare-team-away{
+    justify-content:flex-start!important;
+    text-align:left!important;
+  }
+  #compareView .compare-team-name{
+    flex:0 1 auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    line-height:1.08!important;
+  }
+  #compareView .compare-team .team-crest,
+  #compareView .compare-team .team-position{
+    flex:0 0 auto!important;
+  }
+}
