@@ -8139,3 +8139,66 @@ html[data-theme="dark"] #qgCompareView .qg-compare-card>.qg-tv-inline{background
     right:-48px!important;
   }
 }
+
+
+/* Comparar: contraste corregido en modo claro v149 */
+html:not([data-theme="dark"]) #compareView .compare-card{
+  background:#ffffff!important;
+  border-color:#d5e2db!important;
+  box-shadow:0 7px 20px rgba(8,52,34,.06)!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-card-head{
+  border-bottom-color:#dfe8e3!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-team-name{
+  color:#10251b!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-pick-box.player-one{
+  background:#eaf2ff!important;
+  border-color:#9fbbef!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-pick-box.player-two{
+  background:#fff1df!important;
+  border-color:#e7b56f!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-pick-box.player-one>span{
+  color:#1f57c7!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-pick-box.player-two>span{
+  color:#b85f00!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-readonly>span{
+  background:#ffffff!important;
+  border-color:#ccd9d2!important;
+  color:#52645b!important;
+}
+html:not([data-theme="dark"]) #compareView .player-one-signs>span.selected{
+  background:#2563eb!important;
+  border-color:#2563eb!important;
+  color:#ffffff!important;
+}
+html:not([data-theme="dark"]) #compareView .player-two-signs>span.selected{
+  background:#d97706!important;
+  border-color:#d97706!important;
+  color:#ffffff!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-pick-box.result-box{
+  background:#f3f7f5!important;
+  border-color:#cfdcd5!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-pick-box.result-box.official{
+  background:#e8f6ee!important;
+  border-color:#afd8c0!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-pick-box.result-box.live{
+  background:#fff5dc!important;
+  border-color:#e6cc7e!important;
+}
+html:not([data-theme="dark"]) #compareView .result-signs>span.selected{
+  background:#64736b!important;
+  border-color:#64736b!important;
+  color:#ffffff!important;
+}
+html:not([data-theme="dark"]) #compareView .compare-state{
+  box-shadow:none!important;
+}
