@@ -489,8 +489,8 @@ function renderJourneyDashboard(){
   const commonPrize=commonCorrect>=10&&commonCorrect<=15;
   const projectedPrize1=projected1.correct>=10&&projected1.correct<=15;
   const projectedPrize2=projected2.correct>=10&&projected2.correct<=15;
-  const score1=resolved?`${s1.correct} aciertos`:`${c1}/15 hechos`;
-  const score2=resolved?`${s2.correct} aciertos`:`${c2}/15 hechos`;
+  const score1=`${s1.correct} aciertos`;
+  const score2=`${s2.correct} aciertos`;
   const considered=Math.max(projected1.considered,projected2.considered);
   const liveCount=Math.max(projected1.live,projected2.live);
   const projectedCopy=considered
