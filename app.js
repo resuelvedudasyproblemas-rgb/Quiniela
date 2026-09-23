@@ -2198,7 +2198,7 @@ function renderElige8Progress(){
     return;
   }
 
-  el.innerHTML=`<span class="e8-score-ok">✓ ${projected.correct} aciertos</span><span class="e8-score-bad">${projected.wrong} fallos</span>`;
+  el.innerHTML=`<span class="e8-score-ok">${projected.correct} aciertos</span><span class="e8-score-bad">${projected.wrong} fallos</span>`;
 
   if(status){
     if(projected.considered>0){
