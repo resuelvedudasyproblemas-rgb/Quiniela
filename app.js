@@ -309,14 +309,14 @@ function resultBarHtml(m,p){
       const actualHome=normalizedGoalScore(m.home_score), actualAway=normalizedGoalScore(m.away_score);
       const hasPick=Boolean(p?.home_goals&&p?.away_goals);
       const ok=hasPick && p.home_goals===actualHome && p.away_goals===actualAway;
-      const outcome=!hasPick?"Sin pronóstico":ok?"✓ Acierto":"Fallo";
+      const outcome=!hasPick?"Sin pronóstico":ok?"Acierto":"Fallo";
       const cls=!hasPick?"neutral":ok?"correct":"wrong";
       return `<div class="match-result-bar ${cls}"><span>Pleno oficial <strong>${actualHome}-${actualAway}</strong></span><span class="result-outcome">${outcome}</span></div>`;
     }
     const actual=resultSignForMatch(m);
     const hasPick=Boolean(p?.pick);
     const ok=hasPick && p.pick===actual;
-    const outcome=!hasPick?"Sin pronóstico":ok?"✓ Acierto":"Fallo";
+    const outcome=!hasPick?"Sin pronóstico":ok?"Acierto":"Fallo";
     const cls=!hasPick?"neutral":ok?"correct":"wrong";
     return `<div class="match-result-bar ${cls}"><span>Signo oficial <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
   }
@@ -703,7 +703,7 @@ function detectNewResults(oldMatches){
     if(!old||matchResolved(old)||!matchResolved(m))continue;
     const j=journeys.find(x=>x.id===m.journey_id);
     const mine=displayPickForJourney(identityUserId,m.journey_id,m.number),actual=actualResultForMatch(m);
-    const verdict=mine==="—"?"Sin pronóstico":mine===actual?"✓ Acertaste":"Fallaste";
+    const verdict=mine==="—"?"Sin pronóstico":mine===actual?"Acertaste":"Fallaste";
     notifyUser(`J${j?.number||""} · ${m.home} ${m.home_score}-${m.away_score} ${m.away}`,`${verdict}${m.number<=14?` · signo ${actual}`:""}`);
   }
 }
@@ -1462,7 +1462,7 @@ function openMatchDetail(n,jid=journey?.id){
   const j=journeys.find(x=>x.id===jid),m=allMatches.find(x=>x.journey_id===jid&&x.number===n);if(!j||!m)return;
   const p1=memberBySlot(1),p2=memberBySlot(2),a=p1?displayPickForJourney(p1.user_id,jid,n):"—",b=p2?displayPickForJourney(p2.user_id,jid,n):"—",actual=actualResultForMatch(m),resolved=matchResolved(m);
   $("#matchDetailTitle").textContent=`J${j.number} · Partido ${n}`;
-  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>FINAL</small><strong>${m.home_score}–${m.away_score}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"✓ Acierto":"Fallo"):""}${n<=14&&p1&&isElige8(p1.user_id,n,jid)?" · ★ E8":""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"✓ Acierto":"Fallo"):""}${n<=14&&p2&&isElige8(p2.user_id,n,jid)?" · ★ E8":""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
+  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>FINAL</small><strong>${m.home_score}–${m.away_score}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}${n<=14&&p1&&isElige8(p1.user_id,n,jid)?" · ★ E8":""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}${n<=14&&p2&&isElige8(p2.user_id,n,jid)?" · ★ E8":""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
   $("#matchDetailDialog").showModal();
 }
 async function activateView(view){
