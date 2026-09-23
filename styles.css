@@ -8422,3 +8422,26 @@ html[data-theme="dark"] .qg-card-team .qg-head-score.live{
 html[data-theme="dark"] .qg-head-score-label.live{
   color:#f0a0a0!important;
 }
+
+
+/* Remate auditoría de contraste v151 */
+html[data-theme="dark"] .history-match-number{
+  background:#182b22!important;
+  color:#6bddaa!important;
+  box-shadow:inset 0 0 0 1px #2a4437!important;
+}
+html[data-theme="dark"] .e8-compare-head>span{
+  color:#f0ce75!important;
+}
+html[data-theme="dark"] #compareView .compare-result-status{
+  background:#1b2a23!important;
+  color:#a7b8af!important;
+}
+html[data-theme="dark"] #compareView .compare-pick-box.result-box.live .compare-result-status{
+  background:#4a3a13!important;
+  color:#ffe79a!important;
+}
+html[data-theme="dark"] #compareView .compare-pick-box.result-box.official .compare-result-status{
+  background:#173729!important;
+  color:#7fe0b1!important;
+}
