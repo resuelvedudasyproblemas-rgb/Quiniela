@@ -508,7 +508,7 @@ function renderJourneyDashboard(){
       <div class="dashboard-stat projected-score-stat"><span>Aciertos posibles</span>${projectedCopy}</div>
     </div>`;
 }
-function matchOutcomeForUser(m,uid=user?.id){
+function matchOutcomeForUser(m,uid=identityUserId){
   if(!matchResolved(m)) return "pending";
   const mine=displayPickForJourney(uid,m.journey_id,m.number);
   if(mine==="—") return "none";
