@@ -7979,3 +7979,48 @@ html[data-theme="dark"] #qgCompareView .qg-compare-card>.qg-tv-inline{background
     font-size:.45rem!important;
   }
 }
+
+
+/* Comparar móvil: reservar espacio para escudos v146 */
+@media(max-width:520px){
+  #compareView .compare-team{
+    display:grid!important;
+    align-items:center!important;
+    gap:3px!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  #compareView .compare-team-home{
+    grid-template-columns:20px 19px minmax(0,1fr)!important;
+  }
+  #compareView .compare-team-away{
+    grid-template-columns:minmax(0,1fr) 19px 20px!important;
+  }
+  #compareView .compare-team-name{
+    display:block!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    position:relative!important;
+    z-index:1!important;
+  }
+  #compareView .compare-team .team-crest{
+    width:20px!important;
+    height:20px!important;
+    min-width:20px!important;
+    max-width:20px!important;
+    overflow:hidden!important;
+    position:relative!important;
+    z-index:2!important;
+  }
+  #compareView .compare-team .team-position{
+    min-width:19px!important;
+    max-width:19px!important;
+    width:19px!important;
+    box-sizing:border-box!important;
+    position:relative!important;
+    z-index:2!important;
+  }
+}
