@@ -2546,7 +2546,8 @@ function openHistory(jid){
     const e8j=Boolean(m.number<=14&&allJointElige8.some(e=>e.journey_id===j.id&&e.match_number===m.number));
     const ca=r==="—"?"":a===r?"ok":"bad";
     const cb=r==="—"?"":b===r?"ok":"bad";
-    return `<article class="history-detail-match" data-history-jid="${j.id}" data-history-match="${m.number}">
+    const historyState=r==="—"?"neutral":playerVerdictState(a===r?"correct":"wrong",b===r?"correct":"wrong");
+    return `<article class="history-detail-match result-state-${historyState}" data-history-jid="${j.id}" data-history-match="${m.number}">
       <div class="history-detail-head">
         <div class="history-match-meta"><span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div>
         <div class="history-detail-fixture">${historyFixtureHtml(m)}</div>

@@ -8842,3 +8842,52 @@ html[data-theme="dark"] .qg-joint-pick.wrong{color:#ff9ca1}
 }
 .qg-joint-pick.player-one strong{color:var(--player-one)}
 .qg-joint-pick.player-two strong{color:var(--player-two)}
+
+
+/* Colores por jugador también en el historial desplegado v165 */
+.history-detail-match.result-state-both,
+.qg-history-match.result-state-both{
+  border-color:color-mix(in srgb,#24a56f 58%,var(--border))!important;
+  background:color-mix(in srgb,#24a56f 7%,var(--surface))!important;
+  box-shadow:inset 4px 0 0 #24a56f!important;
+}
+.history-detail-match.result-state-player-one,
+.qg-history-match.result-state-player-one{
+  border-color:var(--player-one-border)!important;
+  background:color-mix(in srgb,var(--player-one) 8%,var(--surface))!important;
+  box-shadow:inset 4px 0 0 var(--player-one)!important;
+}
+.history-detail-match.result-state-player-two,
+.qg-history-match.result-state-player-two{
+  border-color:var(--player-two-border)!important;
+  background:color-mix(in srgb,var(--player-two) 8%,var(--surface))!important;
+  box-shadow:inset 4px 0 0 var(--player-two)!important;
+}
+.history-detail-match.result-state-none,
+.qg-history-match.result-state-none{
+  border-color:color-mix(in srgb,#d5545b 58%,var(--border))!important;
+  background:color-mix(in srgb,#d5545b 7%,var(--surface))!important;
+  box-shadow:inset 4px 0 0 #d5545b!important;
+}
+.qg-history-picks .pj.history-joint-correct{
+  color:#1b875c!important;
+  border-color:color-mix(in srgb,#24a56f 38%,var(--border))!important;
+  background:color-mix(in srgb,#24a56f 12%,var(--surface))!important;
+}
+.qg-history-picks .pj.history-joint-player-one{
+  color:var(--player-one)!important;
+  border-color:var(--player-one-border)!important;
+  background:var(--player-one-soft)!important;
+}
+.qg-history-picks .pj.history-joint-player-two{
+  color:var(--player-two)!important;
+  border-color:var(--player-two-border)!important;
+  background:var(--player-two-soft)!important;
+}
+.qg-history-picks .pj.history-joint-wrong{
+  color:#b7464c!important;
+  border-color:color-mix(in srgb,#d5545b 38%,var(--border))!important;
+  background:color-mix(in srgb,#d5545b 12%,var(--surface))!important;
+}
+html[data-theme="dark"] .qg-history-picks .pj.history-joint-correct{color:#72dfad!important}
+html[data-theme="dark"] .qg-history-picks .pj.history-joint-wrong{color:#ff9ca1!important}
