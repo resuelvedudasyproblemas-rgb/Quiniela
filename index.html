@@ -532,10 +532,15 @@ function autoJoint(n,jid=journey?.id){
   if(a&&!b)return {home_goals:a.home_goals,away_goals:a.away_goals,kind:"Provisional"};
   if(!a&&b)return {home_goals:b.home_goals,away_goals:b.away_goals,kind:"Provisional"};
   if(pickText(a)===pickText(b))return {home_goals:a.home_goals,away_goals:a.away_goals,kind:"Coincidís"};
-  let home=(goalNum(a.home_goals)+goalNum(b.home_goals))/2,away=(goalNum(a.away_goals)+goalNum(b.away_goals))/2;
-  const m=msFor(jid).find(x=>x.number===n),hp=Number(m?.home_position),ap=Number(m?.away_position);
-  if(Number.isFinite(hp)&&Number.isFinite(ap)&&hp>0&&ap>0){const bias=Math.max(-.18,Math.min(.18,(ap-hp)/45));home+=bias;away-=bias}
-  return {home_goals:goalToken(home),away_goals:goalToken(away),kind:"Recomendado"};
+
+  const home=(goalNum(a.home_goals)+goalNum(b.home_goals))/2;
+  const away=(goalNum(a.away_goals)+goalNum(b.away_goals))/2;
+
+  return {
+    home_goals:goalToken(home),
+    away_goals:goalToken(away),
+    kind:"Media"
+  };
 }
 function effectiveJoint(n,jid=journey?.id){
   const man=jointOverride(n,jid);
