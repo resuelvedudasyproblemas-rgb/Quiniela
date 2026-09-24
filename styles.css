@@ -8811,3 +8811,34 @@ html[data-theme="dark"] .qg-match-card.is-wrong .qg-live-scorers{
 }
 html[data-theme="dark"] .qg-joint-pick.correct{color:#72dfad}
 html[data-theme="dark"] .qg-joint-pick.wrong{color:#ff9ca1}
+
+
+/* Goleadores con escudo en Mi Quiniela + estados de conjunta Quinigol v164 */
+.live-scorer-team{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.live-scorer-team .team-crest{
+  flex:0 0 auto;
+}
+.live-scorer-team>strong{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.53rem;
+  font-weight:950;
+}
+.qg-joint-pick.player-one{
+  border-color:var(--player-one-border);
+  background:var(--player-one-soft);
+  color:var(--player-one);
+}
+.qg-joint-pick.player-two{
+  border-color:var(--player-two-border);
+  background:var(--player-two-soft);
+  color:var(--player-two);
+}
+.qg-joint-pick.player-one strong{color:var(--player-one)}
+.qg-joint-pick.player-two strong{color:var(--player-two)}

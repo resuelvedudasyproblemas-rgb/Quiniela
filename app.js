@@ -2814,20 +2814,21 @@ function buildScorerGroupsNode(m){
   if(!home.length&&!away.length) return null;
   const wrap=document.createElement("div");
   wrap.className="live-scorers-groups";
-  [[m.home,home,"home"],[m.away,away,"away"]].forEach(([team,goals,side])=>{
+  [[m.home,m.home_logo_url,home,"home"],[m.away,m.away_logo_url,away,"away"]].forEach(([team,logo,goals,side])=>{
+    if(!goals.length)return;
     const row=document.createElement("div");
     row.className="live-scorer-row "+side;
-    const teamEl=document.createElement("strong");
+    const teamEl=document.createElement("div");
     teamEl.className="live-scorer-team";
-    teamEl.textContent="⚽ "+scorerTeamName(team);
+    teamEl.innerHTML=teamCrestHtml(team,"xs",logo)+`<strong>${escapeHtml(scorerTeamName(team))}</strong>`;
     const goalsEl=document.createElement("span");
     goalsEl.className="live-scorer-goals";
-    goalsEl.textContent=goals.length?goals.join(" · "):"—";
+    goalsEl.textContent=goals.join(" · ");
     row.appendChild(teamEl);
     row.appendChild(goalsEl);
     wrap.appendChild(row);
   });
-  return wrap;
+  return wrap.children.length?wrap:null;
 }
 function livePickVerdict(m,uid){
   if(!hasLiveMatch(m) || !uid) return "missing";
