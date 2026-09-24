@@ -376,7 +376,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=148"></script>
+  <script type="module" src="app.js?v=149"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -475,7 +475,8 @@ function qgCloseTime(v){
 }
 function qgCloseLabel(v){
   if(!v)return "Cierre pendiente";
-  return qgMadridDayKey(v)===qgMadridDayKey(new Date())?`Hasta ${qgCloseTime(v)}`:`Cierre · ${fullDate(v)}`;
+  const prefix=qgMadridDayKey(v)===qgMadridDayKey(new Date())?"Hasta":"Cierre";
+  return `${prefix} · ${fullDate(v)}`;
 }
 function timeLeft(v){
   const diff=new Date(v).getTime()-Date.now();

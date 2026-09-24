@@ -2019,7 +2019,7 @@ function renderAll(){
     const passed=deadline&&Date.now()>=deadline.getTime();
     const today=!passed&&journeyDeadlineIsToday(journey);
     deadlineEl.className="journey-deadline"+(passed?" passed":"");
-    deadlineEl.innerHTML=`<small>${passed?"PRONÓSTICOS CERRADOS":today?"HASTA":"CIERRE"}</small><b>${escapeHtml(today?formatJourneyDeadlineTime(journey):formatJourneyDeadline(journey))}</b>`;
+    deadlineEl.innerHTML=`<small>${passed?"PRONÓSTICOS CERRADOS":today?"HASTA":"CIERRE"}</small><b>${escapeHtml(formatJourneyDeadline(journey))}</b>`;
   }
   const state=journeyDisplayState(journey),resolved=journeyResolvedCount(journey);
   const statusLabels={open:"Abierta para pronósticos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
