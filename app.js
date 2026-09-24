@@ -2285,15 +2285,21 @@ function renderAll(){
   if($("#roomCode"))$("#roomCode").textContent=roomCode;
   $("#myName").textContent=myMember?.display_name||"Tú";
   $("#journeyNumber").textContent=`Jornada ${journey.number}`;
+  const state=journeyVisualState(journey),resolved=journeyResolvedCount(journey);
   const deadline=journeyDeadline(journey);
   const deadlineEl=$("#journeyDate");
   if(deadlineEl){
-    const passed=deadline&&Date.now()>=deadline.getTime();
-    const today=!passed&&journeyDeadlineIsToday(journey);
-    deadlineEl.className="journey-deadline"+(passed?" passed":"");
-    deadlineEl.innerHTML=`<small>${passed?"PRONÓSTICOS CERRADOS":today?"HASTA":"CIERRE"}</small><b>${escapeHtml(formatJourneyDeadline(journey))}</b>`;
+    const hideDeadline=state==="playing";
+    deadlineEl.className="journey-deadline"+(hideDeadline?" hidden":"");
+    if(!hideDeadline){
+      const passed=deadline&&Date.now()>=deadline.getTime();
+      const today=!passed&&journeyDeadlineIsToday(journey);
+      deadlineEl.className="journey-deadline"+(passed?" passed":"");
+      deadlineEl.innerHTML=`<small>${passed?"PRONÓSTICOS CERRADOS":today?"HASTA":"CIERRE"}</small><b>${escapeHtml(formatJourneyDeadline(journey))}</b>`;
+    }else{
+      deadlineEl.innerHTML="";
+    }
   }
-  const state=journeyVisualState(journey),resolved=journeyResolvedCount(journey);
   const statusLabels={open:"Abierta para pronósticos",confirmed:"Apuesta confirmada · esperando partidos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
   $(".status-text").textContent=statusLabels[state]||"Jornada";
   const kicker=$("#journeyCard .journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
