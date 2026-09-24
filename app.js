@@ -28,6 +28,7 @@ let selectedJourneyId = null;
 const standingsCache=new Map();
 const standingsLoading=new Set();
 let activeStandingCompetitionId=null;
+let standingsExpanded=false;
 function selectedJourneyStorageKey(){
   return identityUserId&&roomId?"quiniela-selected-journey:"+roomId+":"+identityUserId:"";
 }
@@ -2063,7 +2064,15 @@ function renderJourneyLeagues(){
   if(!comps.length){el.innerHTML="";el.classList.add("hidden");return}
   el.classList.remove("hidden");
   const shown=comps.slice(0,3);
-  el.innerHTML=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${escapeHtml(c.name)}" aria-label="${escapeHtml(c.name)}"><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoStorageUrl(c.logo))}" data-logo-fallback="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${escapeHtml(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
+  const logos=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${escapeHtml(c.name)}" aria-label="${escapeHtml(c.name)}"><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoStorageUrl(c.logo))}" data-logo-fallback="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${escapeHtml(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
+  const canShow=journeyVisualState(journey)!=="finished";
+  const trigger=canShow?`<button type="button" class="journey-standings-btn ${standingsExpanded?"active":""}" data-standings-toggle aria-expanded="${standingsExpanded?"true":"false"}" title="Ver clasificación" aria-label="Ver clasificación"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16M4 11.5h16M4 17.5h16M8 3v18"/></svg></button>`:"";
+  el.innerHTML=logos+trigger;
+  el.querySelector("[data-standings-toggle]")?.addEventListener("click",()=>{
+    standingsExpanded=!standingsExpanded;
+    renderStandingsPanel();
+    renderJourneyLeagues();
+  });
 }
 
 function standingsSeasonLabel(drawDate=""){
@@ -2073,13 +2082,41 @@ function standingsSeasonLabel(drawDate=""){
   return String(start).slice(-2)+"/"+String(start+1).slice(-2);
 }
 function standingGroupLabel(raw="",competitionName="",seasonLabel=""){
-  let s=String(raw||"").trim();
+  const original=String(raw||"").trim();
+  const league=original.match(/\bLeague\s+([A-D])\b/i);
+  const group=original.match(/\bGroup\s+(\d+)\b/i);
+  if(/Nations League/i.test(String(competitionName||""))&&league&&group)return `Liga ${league[1].toUpperCase()} · Grupo ${group[1]}`;
+  let s=original;
   if(!s)return "Clasificación";
   const prefix=String(competitionName||"").trim();
   if(prefix&&s.toLowerCase().startsWith(prefix.toLowerCase()))s=s.slice(prefix.length).trim();
   if(seasonLabel&&s.startsWith(seasonLabel))s=s.slice(seasonLabel.length).trim();
   s=s.replace(/^[-,·\s]+/,"").replace(/\bLeague\b/gi,"Liga").replace(/\bGroup\b/gi,"Grupo");
   return s||"Clasificación";
+}
+function standingNationName(name=""){
+  const map={"Spain":"España","England":"Inglaterra","Netherlands":"Países Bajos","Germany":"Alemania","Wales":"Gales","Norway":"Noruega","Denmark":"Dinamarca","Italy":"Italia","Belgium":"Bélgica","Turkey":"Turquía","France":"Francia","Sweden":"Suecia","Romania":"Rumanía","Croatia":"Croacia","Czechia":"Chequia","Portugal":"Portugal"};
+  return map[String(name)]||String(name||"Equipo");
+}
+function standingZoneClass(compId,groupName,position,total){
+  const id=Number(compId),p=Number(position),n=Number(total)||0;
+  if(!p)return "";
+  if(id===10783){if(p===1)return "zone-green";if(p===2)return "zone-blue";if(p===n)return "zone-red";return "zone-amber"}
+  if(id===8){if(p<=4)return "zone-green";if(p===5)return "zone-blue";if(p===6)return "zone-purple";if(n&&p>=n-2)return "zone-red"}
+  if(id===54){if(p<=2)return "zone-green";if(p<=6)return "zone-amber";if(n&&p>=n-3)return "zone-red"}
+  if(id===1127){if(p<=3)return "zone-blue";if(n&&p>=n-1)return "zone-red"}
+  return "";
+}
+function standingsLegendHtml(comp){
+  const id=Number(comp?.id);
+  if(id===8)return '<div class="standings-legend"><span class="zone-green">Champions</span><span class="zone-blue">Europa</span><span class="zone-purple">Conference</span><span class="zone-red">Descenso</span></div>';
+  if(id===54)return '<div class="standings-legend"><span class="zone-green">Ascenso directo</span><span class="zone-amber">Playoff</span><span class="zone-red">Descenso</span></div>';
+  if(id===1127)return '<div class="standings-legend"><span class="zone-blue">Zona Champions</span><span class="zone-red">Descenso</span></div>';
+  if(id===10783)return '<div class="standings-legend nations"><span class="zone-green">1.º del grupo</span><span class="zone-blue">2.º</span><span class="zone-amber">3.º</span><span class="zone-red">Último</span></div>';
+  return "";
+}
+function nationsExplanationHtml(comp){
+  return Number(comp?.id)===10783?'<div class="standings-nations-note"><strong>Nations League</strong><span>Se divide en ligas (A–D) y grupos. Aquí solo aparecen los grupos donde juega algún equipo de esta jornada.</span></div>':"";
 }
 function standingsRowsForCompetition(id,j=journey){
   const all=standingsCache.get(Number(id))||[];
@@ -2116,16 +2153,21 @@ function standingsTableHtml(rows=[],journeyTeamIds=new Set(),comp=null){
   return groups.map(group=>{
     const groupRows=rows.filter(r=>String(r.group_name||"")===group).sort((a,b)=>(Number(a.position)||99)-(Number(b.position)||99));
     const label=standingGroupLabel(group,comp?.name,groupRows[0]?.season_label);
-    return `<div class="standings-group"><div class="standings-group-title">${escapeHtml(label)}</div><div class="standings-table"><div class="standings-row headings"><span>Pos.</span><span>Equipo</span><span>PJ</span><span>Pts</span></div>${groupRows.map(r=>{
+    const nations=Number(comp?.id)===10783;
+    const groupHead=nations?`<div class="standings-group-head nations"><span>${escapeHtml(label.split(" · ")[0]||"Nations League")}</span><strong>${escapeHtml(label.split(" · ")[1]||label)}</strong><small>${groupRows.length} selecciones</small></div>`:`<div class="standings-group-head"><strong>${escapeHtml(label)}</strong></div>`;
+    return `<div class="standings-group">${groupHead}<div class="standings-table"><div class="standings-row headings"><span>Pos.</span><span>Equipo</span><span>PJ</span><span>Pts</span></div>${groupRows.map(r=>{
       const highlighted=journeyTeamIds.has(Number(r.sofascore_team_id));
-      return `<div class="standings-row ${highlighted?"journey-team":""}"><span class="standing-pos">${r.position??"—"}</span><span class="standing-team">${teamCrestHtml(r.team_name,"xs",r.team_logo_url)}<b>${escapeHtml(r.team_name||"Equipo")}</b>${highlighted?'<em>Jornada</em>':""}</span><span>${r.played??"—"}</span><strong>${r.points??"—"}</strong></div>`;
+      const zone=standingZoneClass(comp?.id,group,r.position,groupRows.length);
+      const display=standingNationName(r.team_name);
+      return `<div class="standings-row ${zone} ${highlighted?"journey-team":""}"><span class="standing-pos">${r.position??"—"}</span><span class="standing-team">${teamCrestHtml(display,"xs",r.team_logo_url)}<b>${escapeHtml(display)}</b>${highlighted?'<em>En jornada</em>':""}</span><span>${r.played??"—"}</span><strong>${r.points??"—"}</strong></div>`;
     }).join("")}</div></div>`;
   }).join("");
 }
+
 function renderStandingsPanel(){
   const el=$("#standingsPanel");if(!el||!journey)return;
-  if(journeyVisualState(journey)==="finished"){el.classList.add("hidden");el.innerHTML="";return}
-  const wasOpen=Boolean(el.querySelector(".standings-shell")?.open);
+  if(journeyVisualState(journey)==="finished"){standingsExpanded=false;el.classList.add("hidden");el.innerHTML="";return}
+  if(!standingsExpanded){el.classList.add("hidden");return}
   const comps=journeyCompetitions();
   if(!comps.length){el.classList.add("hidden");el.innerHTML="";return}
   el.classList.remove("hidden");
@@ -2138,14 +2180,15 @@ function renderStandingsPanel(){
   const journeyRows=matchesForJourney(journey.id);
   const teamIds=new Set(journeyRows.flatMap(m=>[Number(m.home_team_id),Number(m.away_team_id)]).filter(Boolean));
   const highlights=rows.filter(r=>teamIds.has(Number(r.sofascore_team_id))).sort((a,b)=>(Number(a.position)||99)-(Number(b.position)||99));
-  const compact=highlights.length?`<div class="standings-journey-teams">${highlights.map(r=>`<div class="standings-journey-team">${teamCrestHtml(r.team_name,"xs",r.team_logo_url)}<span><b>${escapeHtml(r.team_name||"Equipo")}</b><small>${escapeHtml(standingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
-  el.innerHTML=`<details class="standings-shell"><summary><span><b>Clasificaciones</b><small>${comps.length} competición${comps.length===1?"":"es"} · equipos de esta jornada</small></span><i>⌄</i></summary><div class="standings-content"><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-standing-comp="${c.id}">${matchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${escapeHtml(c.name)}</span></button>`).join("")}</div>${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${standingsTableHtml(rows,teamIds,active)}</details></div></details>`;
-  if(wasOpen)el.querySelector(".standings-shell")?.setAttribute("open","");
-  el.querySelectorAll("[data-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{
-    activeStandingCompetitionId=Number(btn.dataset.standingComp);
-    renderStandingsPanel();
-    el.querySelector(".standings-shell")?.setAttribute("open","");
-  }));
+  const compact=highlights.length?`<div class="standings-subtitle">Equipos de esta jornada</div><div class="standings-journey-teams">${highlights.map(r=>{
+    const groupRows=rows.filter(x=>String(x.group_name||"")===String(r.group_name||""));
+    const zone=standingZoneClass(active.id,r.group_name,r.position,groupRows.length);
+    const display=standingNationName(r.team_name);
+    return `<div class="standings-journey-team ${zone}">${teamCrestHtml(display,"xs",r.team_logo_url)}<span><b>${escapeHtml(display)}</b><small>${escapeHtml(standingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`;
+  }).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
+  el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>CLASIFICACIONES</span><strong>Jornada ${journey.number}</strong></div><button type="button" class="standings-close" data-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-standing-comp="${c.id}">${matchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${escapeHtml(c.name)}</span></button>`).join("")}</div>${nationsExplanationHtml(active)}${standingsLegendHtml(active)}${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${standingsTableHtml(rows,teamIds,active)}</details></div>`;
+  el.querySelector("[data-standings-close]")?.addEventListener("click",()=>{standingsExpanded=false;renderStandingsPanel();renderJourneyLeagues()});
+  el.querySelectorAll("[data-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{activeStandingCompetitionId=Number(btn.dataset.standingComp);renderStandingsPanel()}));
 }
 
 function renderAll(){

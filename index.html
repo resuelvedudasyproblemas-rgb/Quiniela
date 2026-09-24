@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=167" />
+  <link rel="stylesheet" href="styles.css?v=169" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -107,6 +107,7 @@
         </div>
         <div id="qgJourneyLeagues" class="journey-leagues" aria-label="Competiciones de la jornada"></div>
       </section>
+      <section id="qgStandingsPanel" class="standings-panel hidden" aria-label="Clasificaciones de las competiciones"></section>
 
       <section id="qgJourneySwitcher" class="journey-switcher qg-journey-switcher" aria-label="Cambiar jornada de Quinigol"></section>
 
@@ -121,7 +122,6 @@
       <div class="qg-main">
         <section id="qgPlayView" class="qg-view active">
           <section id="qgDashboard" class="journey-dashboard qg-dashboard"></section>
-          <section id="qgStandingsPanel" class="standings-panel hidden" aria-label="Clasificaciones de las competiciones"></section>
           <div class="progress-row"><span id="qgProgressText">0 de 6 completados</span><span>En la nube</span></div>
           <div class="progress"><div id="qgProgressBar"></div></div>
           <div class="qg-filter-wrap" aria-label="Filtrar partidos de Quinigol">
@@ -174,6 +174,7 @@
       <div class="journey-main"><span class="journey-kicker">JORNADA ACTUAL</span><strong id="journeyNumber">Jornada —</strong><span id="journeyDate">—</span><div id="nextJourneyCountdown" class="next-journey-countdown hidden"></div></div>
       <div id="journeyLeagues" class="journey-leagues" aria-label="Competiciones de la jornada"></div>
     </section>
+    <section id="standingsPanel" class="standings-panel hidden" aria-label="Clasificaciones de las competiciones"></section>
 
     <section id="journeySwitcher" class="journey-switcher" aria-label="Cambiar jornada"></section>
 
@@ -188,7 +189,6 @@
     <main id="quinielaMain">
       <section id="playView" class="view active">
         <section id="journeyDashboard" class="journey-dashboard"></section>
-        <section id="standingsPanel" class="standings-panel hidden" aria-label="Clasificaciones de las competiciones"></section>
 
         <div class="progress-row">
           <span id="progressText">0 de 15 completados</span>
@@ -380,7 +380,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=168"></script>
+  <script type="module" src="app.js?v=169"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -402,6 +402,7 @@ let qgHistoryFullyLoaded=false;
 const qgStandingsCache=new Map();
 const qgStandingsLoading=new Set();
 let qgActiveStandingCompetitionId=null;
+let qgStandingsExpanded=false;
 
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function toast(msg){
@@ -803,7 +804,15 @@ function renderJourneyCompetitions(){
   if(!comps.length){el.innerHTML="";el.classList.add("hidden");return}
   el.classList.remove("hidden");
   const shown=comps.slice(0,3);
-  el.innerHTML=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${esc(c.name)}" aria-label="${esc(c.name)}"><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${esc(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
+  const logos=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${esc(c.name)}" aria-label="${esc(c.name)}"><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${esc(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
+  const canShow=qgVisualState(journey)!=="finished";
+  const trigger=canShow?`<button type="button" class="journey-standings-btn ${qgStandingsExpanded?"active":""}" data-qg-standings-toggle aria-expanded="${qgStandingsExpanded?"true":"false"}" title="Ver clasificación" aria-label="Ver clasificación"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16M4 11.5h16M4 17.5h16M8 3v18"/></svg></button>`:"";
+  el.innerHTML=logos+trigger;
+  el.querySelector("[data-qg-standings-toggle]")?.addEventListener("click",()=>{
+    qgStandingsExpanded=!qgStandingsExpanded;
+    qgRenderStandings();
+    renderJourneyCompetitions();
+  });
 }
 
 function qgStandingsSeasonLabel(drawDate=""){
@@ -811,11 +820,37 @@ function qgStandingsSeasonLabel(drawDate=""){
   return String(start).slice(-2)+"/"+String(start+1).slice(-2);
 }
 function qgStandingGroupLabel(raw="",compName="",seasonLabel=""){
-  let s=String(raw||"").trim();if(!s)return "Clasificación";
+  const original=String(raw||"").trim();
+  const league=original.match(/\bLeague\s+([A-D])\b/i),group=original.match(/\bGroup\s+(\d+)\b/i);
+  if(/Nations League/i.test(String(compName||""))&&league&&group)return `Liga ${league[1].toUpperCase()} · Grupo ${group[1]}`;
+  let s=original;if(!s)return "Clasificación";
   if(compName&&s.toLowerCase().startsWith(String(compName).toLowerCase()))s=s.slice(String(compName).length).trim();
   if(seasonLabel&&s.startsWith(seasonLabel))s=s.slice(seasonLabel.length).trim();
   s=s.replace(/^[-,·\s]+/,"").replace(/\bLeague\b/gi,"Liga").replace(/\bGroup\b/gi,"Grupo");
   return s||"Clasificación";
+}
+function qgStandingNationName(name=""){
+  const map={"Spain":"España","England":"Inglaterra","Netherlands":"Países Bajos","Germany":"Alemania","Wales":"Gales","Norway":"Noruega","Denmark":"Dinamarca","Italy":"Italia","Belgium":"Bélgica","Turkey":"Turquía","France":"Francia","Sweden":"Suecia","Romania":"Rumanía","Croatia":"Croacia","Czechia":"Chequia","Portugal":"Portugal"};
+  return map[String(name)]||String(name||"Equipo");
+}
+function qgStandingZoneClass(compId,groupName,position,total){
+  const id=Number(compId),p=Number(position),n=Number(total)||0;if(!p)return "";
+  if(id===10783){if(p===1)return "zone-green";if(p===2)return "zone-blue";if(p===n)return "zone-red";return "zone-amber"}
+  if(id===8){if(p<=4)return "zone-green";if(p===5)return "zone-blue";if(p===6)return "zone-purple";if(n&&p>=n-2)return "zone-red"}
+  if(id===54){if(p<=2)return "zone-green";if(p<=6)return "zone-amber";if(n&&p>=n-3)return "zone-red"}
+  if(id===1127){if(p<=3)return "zone-blue";if(n&&p>=n-1)return "zone-red"}
+  return "";
+}
+function qgStandingsLegendHtml(comp){
+  const id=Number(comp?.id);
+  if(id===8)return '<div class="standings-legend"><span class="zone-green">Champions</span><span class="zone-blue">Europa</span><span class="zone-purple">Conference</span><span class="zone-red">Descenso</span></div>';
+  if(id===54)return '<div class="standings-legend"><span class="zone-green">Ascenso directo</span><span class="zone-amber">Playoff</span><span class="zone-red">Descenso</span></div>';
+  if(id===1127)return '<div class="standings-legend"><span class="zone-blue">Zona Champions</span><span class="zone-red">Descenso</span></div>';
+  if(id===10783)return '<div class="standings-legend nations"><span class="zone-green">1.º del grupo</span><span class="zone-blue">2.º</span><span class="zone-amber">3.º</span><span class="zone-red">Último</span></div>';
+  return "";
+}
+function qgNationsExplanationHtml(comp){
+  return Number(comp?.id)===10783?'<div class="standings-nations-note"><strong>Nations League</strong><span>Se divide en ligas (A–D) y grupos. Aquí solo aparecen los grupos donde juega algún equipo de esta jornada.</span></div>':"";
 }
 function qgStandingsRows(id,j=journey){
   const all=qgStandingsCache.get(Number(id))||[];if(!all.length)return [];
@@ -850,13 +885,16 @@ function qgStandingsTableHtml(rows=[],teamIds=new Set(),comp=null){
   const groups=[...new Set(rows.map(r=>String(r.group_name||"")))].filter(g=>!relevant.size||relevant.has(g));
   return groups.map(group=>{
     const rr=rows.filter(r=>String(r.group_name||"")===group).sort((a,b)=>(Number(a.position)||99)-(Number(b.position)||99));
-    return `<div class="standings-group"><div class="standings-group-title">${esc(qgStandingGroupLabel(group,comp?.name,rr[0]?.season_label))}</div><div class="standings-table"><div class="standings-row headings"><span>Pos.</span><span>Equipo</span><span>PJ</span><span>Pts</span></div>${rr.map(r=>{const h=teamIds.has(Number(r.sofascore_team_id));return `<div class="standings-row ${h?"journey-team":""}"><span class="standing-pos">${r.position??"—"}</span><span class="standing-team">${crest(r.team_name,r.team_logo_url)}<b>${esc(r.team_name||"Equipo")}</b>${h?'<em>Jornada</em>':""}</span><span>${r.played??"—"}</span><strong>${r.points??"—"}</strong></div>`}).join("")}</div></div>`;
+    const label=qgStandingGroupLabel(group,comp?.name,rr[0]?.season_label),nations=Number(comp?.id)===10783;
+    const head=nations?`<div class="standings-group-head nations"><span>${esc(label.split(" · ")[0]||"Nations League")}</span><strong>${esc(label.split(" · ")[1]||label)}</strong><small>${rr.length} selecciones</small></div>`:`<div class="standings-group-head"><strong>${esc(label)}</strong></div>`;
+    return `<div class="standings-group">${head}<div class="standings-table"><div class="standings-row headings"><span>Pos.</span><span>Equipo</span><span>PJ</span><span>Pts</span></div>${rr.map(r=>{const h=teamIds.has(Number(r.sofascore_team_id)),zone=qgStandingZoneClass(comp?.id,group,r.position,rr.length),display=qgStandingNationName(r.team_name);return `<div class="standings-row ${zone} ${h?"journey-team":""}"><span class="standing-pos">${r.position??"—"}</span><span class="standing-team">${crest(display,r.team_logo_url)}<b>${esc(display)}</b>${h?'<em>En jornada</em>':""}</span><span>${r.played??"—"}</span><strong>${r.points??"—"}</strong></div>`}).join("")}</div></div>`;
   }).join("");
 }
+
 function qgRenderStandings(){
   const el=$("#qgStandingsPanel");if(!el||!journey)return;
-  if(qgVisualState(journey)==="finished"){el.classList.add("hidden");el.innerHTML="";return}
-  const wasOpen=Boolean(el.querySelector(".standings-shell")?.open);
+  if(qgVisualState(journey)==="finished"){qgStandingsExpanded=false;el.classList.add("hidden");el.innerHTML="";return}
+  if(!qgStandingsExpanded){el.classList.add("hidden");return}
   const comps=qgCompetitionList();
   if(!comps.length){el.classList.add("hidden");el.innerHTML="";return}
   el.classList.remove("hidden");
@@ -866,10 +904,10 @@ function qgRenderStandings(){
   const active=comps.find(c=>Number(c.id)===Number(qgActiveStandingCompetitionId))||comps[0];
   const rows=qgStandingsRows(active.id,journey),teamIds=new Set((matches||[]).flatMap(m=>[Number(m.home_team_id),Number(m.away_team_id)]).filter(Boolean));
   const highlights=rows.filter(r=>teamIds.has(Number(r.sofascore_team_id))).sort((a,b)=>(Number(a.position)||99)-(Number(b.position)||99));
-  const compact=highlights.length?`<div class="standings-journey-teams">${highlights.map(r=>`<div class="standings-journey-team">${crest(r.team_name,r.team_logo_url)}<span><b>${esc(r.team_name||"Equipo")}</b><small>${esc(qgStandingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
-  el.innerHTML=`<details class="standings-shell"><summary><span><b>Clasificaciones</b><small>${comps.length} competición${comps.length===1?"":"es"} · equipos de esta jornada</small></span><i>⌄</i></summary><div class="standings-content"><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-qg-standing-comp="${c.id}">${qgMatchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${esc(c.name)}</span></button>`).join("")}</div>${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${qgStandingsTableHtml(rows,teamIds,active)}</details></div></details>`;
-  if(wasOpen)el.querySelector(".standings-shell")?.setAttribute("open","");
-  el.querySelectorAll("[data-qg-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingComp);qgRenderStandings();el.querySelector(".standings-shell")?.setAttribute("open","")}));
+  const compact=highlights.length?`<div class="standings-subtitle">Equipos de esta jornada</div><div class="standings-journey-teams">${highlights.map(r=>{const gr=rows.filter(x=>String(x.group_name||"")===String(r.group_name||"")),zone=qgStandingZoneClass(active.id,r.group_name,r.position,gr.length),display=qgStandingNationName(r.team_name);return `<div class="standings-journey-team ${zone}">${crest(display,r.team_logo_url)}<span><b>${esc(display)}</b><small>${esc(qgStandingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`}).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
+  el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>CLASIFICACIONES</span><strong>Jornada ${journey.number}</strong></div><button type="button" class="standings-close" data-qg-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-qg-standing-comp="${c.id}">${qgMatchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${esc(c.name)}</span></button>`).join("")}</div>${qgNationsExplanationHtml(active)}${qgStandingsLegendHtml(active)}${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${qgStandingsTableHtml(rows,teamIds,active)}</details></div>`;
+  el.querySelector("[data-qg-standings-close]")?.addEventListener("click",()=>{qgStandingsExpanded=false;qgRenderStandings();renderJourneyCompetitions()});
+  el.querySelectorAll("[data-qg-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingComp);qgRenderStandings()}));
 }
 
 function renderHero(){

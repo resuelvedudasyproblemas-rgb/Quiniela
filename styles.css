@@ -8936,3 +8936,73 @@ html[data-theme="dark"] .qg-history-picks .pj.history-joint-wrong{color:#ff9ca1!
 html[data-theme="dark"] .standings-chip.active{color:#73d9ad;border-color:#2d6f58;background:#143126}
 html[data-theme="dark"] .standings-journey-team,html[data-theme="dark"] .standings-row.journey-team{background:color-mix(in srgb,var(--brand) 8%,var(--surface))}
 
+
+
+/* Clasificaciones mejoradas y acceso desde tarjeta de jornada v169 */
+.journey-standings-btn{
+  width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;flex:0 0 28px!important;
+  margin:0!important;padding:5px!important;border-radius:9px!important;
+  border:1px solid rgba(255,255,255,.46)!important;background:rgba(255,255,255,.94)!important;
+  color:var(--brand)!important;box-shadow:0 4px 12px rgba(0,0,0,.14)!important;backdrop-filter:blur(5px);
+  display:grid!important;place-items:center!important;cursor:pointer;
+}
+.journey-standings-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+.journey-standings-btn.active{background:var(--brand)!important;color:#fff!important;border-color:color-mix(in srgb,var(--brand) 78%,#fff)!important}
+@media(max-width:430px){
+  .journey-standings-btn{width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;flex-basis:26px!important;border-radius:8px!important;padding:4px!important}
+  .journey-standings-btn svg{width:16px;height:16px}
+}
+.standings-panel{margin:8px 0 10px!important;animation:standingsReveal .18s ease-out}
+@keyframes standingsReveal{from{opacity:.25;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.standings-sheet{border:1px solid color-mix(in srgb,var(--brand) 18%,var(--border));border-radius:17px;background:var(--surface);box-shadow:0 9px 26px rgba(8,54,36,.08);overflow:hidden;padding:10px}
+.standings-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.standings-sheet-head>div{display:flex;flex-direction:column;gap:1px}
+.standings-sheet-head span{font-size:.44rem;font-weight:950;letter-spacing:.12em;color:var(--brand)}
+.standings-sheet-head strong{font-size:.78rem;color:var(--text)}
+.standings-close{width:27px;height:27px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);font-size:1rem;line-height:1;display:grid;place-items:center}
+.standings-subtitle{margin:8px 2px 6px;font-size:.48rem;font-weight:950;letter-spacing:.05em;color:var(--muted);text-transform:uppercase}
+.standings-nations-note{display:flex;gap:8px;align-items:flex-start;margin:2px 0 8px;padding:8px 9px;border-radius:11px;background:color-mix(in srgb,#4667d9 8%,var(--surface-2));border:1px solid color-mix(in srgb,#4667d9 20%,var(--border))}
+.standings-nations-note strong{font-size:.56rem;color:#4667d9;white-space:nowrap}
+.standings-nations-note span{font-size:.49rem;line-height:1.35;color:var(--muted)}
+.standings-legend{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 8px}
+.standings-legend>span{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:999px;border:1px solid var(--border);font-size:.44rem;font-weight:900;background:var(--surface-2)}
+.standings-legend>span::before{content:"";width:7px;height:7px;border-radius:50%;background:#9aa4a0}
+.standings-legend>span.zone-green::before{background:#27a56e}
+.standings-legend>span.zone-blue::before{background:#397dd6}
+.standings-legend>span.zone-purple::before{background:#8666d8}
+.standings-legend>span.zone-amber::before{background:#d6962b}
+.standings-legend>span.zone-red::before{background:#d5545b}
+.standings-group{margin-top:10px}
+.standings-group-head{display:flex;align-items:center;gap:6px;min-height:25px;margin:0 2px 5px}
+.standings-group-head strong{font-size:.56rem;color:var(--text)}
+.standings-group-head.nations span{display:inline-flex;padding:3px 6px;border-radius:999px;background:#e9edff;color:#405dc4;font-size:.43rem;font-weight:950;letter-spacing:.05em}
+.standings-group-head.nations strong{font-size:.62rem}
+.standings-group-head small{margin-left:auto;font-size:.43rem;color:var(--muted)}
+.standings-row,.standings-journey-team{position:relative}
+.standings-row.zone-green,.standings-journey-team.zone-green{box-shadow:inset 4px 0 0 #27a56e}
+.standings-row.zone-blue,.standings-journey-team.zone-blue{box-shadow:inset 4px 0 0 #397dd6}
+.standings-row.zone-purple,.standings-journey-team.zone-purple{box-shadow:inset 4px 0 0 #8666d8}
+.standings-row.zone-amber,.standings-journey-team.zone-amber{box-shadow:inset 4px 0 0 #d6962b}
+.standings-row.zone-red,.standings-journey-team.zone-red{box-shadow:inset 4px 0 0 #d5545b}
+.standings-row.zone-green .standing-pos{background:#e8f7ef;color:#168153}
+.standings-row.zone-blue .standing-pos{background:#eaf2fd;color:#2768bc}
+.standings-row.zone-purple .standing-pos{background:#f0ecfb;color:#7251c4}
+.standings-row.zone-amber .standing-pos{background:#fff5e2;color:#a76b10}
+.standings-row.zone-red .standing-pos{background:#fff0f1;color:#b43f47}
+.standing-pos{width:25px;height:23px;border-radius:7px;display:grid;place-items:center}
+.standings-row.journey-team{background:color-mix(in srgb,var(--brand) 7%,var(--surface))!important;outline:1px solid color-mix(in srgb,var(--brand) 23%,transparent);outline-offset:-1px}
+.standings-journey-team.zone-green{border-color:color-mix(in srgb,#27a56e 30%,var(--border))}
+.standings-journey-team.zone-blue{border-color:color-mix(in srgb,#397dd6 30%,var(--border))}
+.standings-journey-team.zone-purple{border-color:color-mix(in srgb,#8666d8 30%,var(--border))}
+.standings-journey-team.zone-amber{border-color:color-mix(in srgb,#d6962b 30%,var(--border))}
+.standings-journey-team.zone-red{border-color:color-mix(in srgb,#d5545b 30%,var(--border))}
+.standings-full>summary{margin-top:8px;padding:7px 9px!important;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--brand)!important;font-size:.53rem!important}
+.standings-full[open]>summary{background:color-mix(in srgb,var(--brand) 7%,var(--surface-2))}
+html[data-theme="dark"] .standings-group-head.nations span{background:#1c2a57;color:#9fb3ff}
+html[data-theme="dark"] .standings-nations-note{background:#17213c;border-color:#2e426f}
+html[data-theme="dark"] .standings-nations-note strong{color:#9fb3ff}
+html[data-theme="dark"] .standings-row.zone-green .standing-pos{background:#153727;color:#70dbaa}
+html[data-theme="dark"] .standings-row.zone-blue .standing-pos{background:#182d49;color:#83b7ff}
+html[data-theme="dark"] .standings-row.zone-purple .standing-pos{background:#2b2344;color:#c0a9ff}
+html[data-theme="dark"] .standings-row.zone-amber .standing-pos{background:#392b14;color:#f1be65}
+html[data-theme="dark"] .standings-row.zone-red .standing-pos{background:#3d2024;color:#ff9da2}
