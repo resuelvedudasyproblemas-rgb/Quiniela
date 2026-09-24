@@ -41,7 +41,7 @@ function saveSelectedJourneyId(id){
   else localStorage.setItem(key,String(id));
 }
 const MATCH_FILTER_KEY="quiniela-match-filter";
-const MATCH_FILTER_MODES=new Set(["all","pending","correct","wrong","e8"]);
+const MATCH_FILTER_MODES=new Set(["all","pending","live","correct","wrong","e8"]);
 const savedMatchFilter=localStorage.getItem(MATCH_FILTER_KEY);
 let activeMatchFilter = MATCH_FILTER_MODES.has(savedMatchFilter)?savedMatchFilter:"all";
 let notices = [];
@@ -549,6 +549,9 @@ function renderJourneyDashboard(){
       <div class="dashboard-stat projected-score-stat"><span>Aciertos posibles</span>${projectedCopy}</div>
     </div>`;
 }
+function matchInProgress(m){
+  return Boolean(m&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null);
+}
 function matchOutcomeForUser(m,uid=identityUserId){
   if(!matchResolved(m)) return "pending";
   const mine=displayPickForJourney(uid,m.journey_id,m.number);
@@ -559,19 +562,21 @@ function renderMatchFilterCounts(){
   const normal=matches.filter(m=>m.number<=14);
   const counts={
     all:normal.length,
-    pending:normal.filter(m=>!matchResolved(m)).length,
+    pending:normal.filter(m=>!matchResolved(m)&&!matchInProgress(m)).length,
+    live:normal.filter(matchInProgress).length,
     correct:normal.filter(m=>matchOutcomeForUser(m)==="correct").length,
     wrong:normal.filter(m=>matchOutcomeForUser(m)==="wrong").length,
     e8:normal.filter(m=>isElige8(identityUserId,m.number)).length
   };
-  const map={filterAll:"all",filterPending:"pending",filterCorrect:"correct",filterWrong:"wrong",filterE8:"e8"};
+  const map={filterAll:"all",filterPending:"pending",filterLive:"live",filterCorrect:"correct",filterWrong:"wrong",filterE8:"e8"};
   Object.entries(map).forEach(([id,key])=>{const el=$("#"+id);if(el)el.textContent=counts[key]});
 }
 function applyMatchFilter(){
   $$(".match-filter").forEach(b=>b.classList.toggle("active",b.dataset.matchFilter===activeMatchFilter));
   $$(".match-card").forEach(card=>{
     let visible=true;
-    if(activeMatchFilter==="pending") visible=card.dataset.resolved!=="true";
+    if(activeMatchFilter==="pending") visible=card.dataset.resolved!=="true"&&card.dataset.live!=="true";
+    if(activeMatchFilter==="live") visible=card.dataset.live==="true";
     if(activeMatchFilter==="correct") visible=card.dataset.outcome==="correct";
     if(activeMatchFilter==="wrong") visible=card.dataset.outcome==="wrong";
     if(activeMatchFilter==="e8") visible=card.dataset.e8==="true";
@@ -581,7 +586,8 @@ function applyMatchFilter(){
   const pleno=$("#plenoCard"),m15=matches.find(m=>m.number===15);
   if(pleno&&m15){
     let visible=activeMatchFilter==="all";
-    if(activeMatchFilter==="pending") visible=!matchResolved(m15);
+    if(activeMatchFilter==="pending") visible=!matchResolved(m15)&&!matchInProgress(m15);
+    if(activeMatchFilter==="live") visible=matchInProgress(m15);
     if(activeMatchFilter==="correct") visible=matchOutcomeForUser(m15)==="correct";
     if(activeMatchFilter==="wrong") visible=matchOutcomeForUser(m15)==="wrong";
     if(activeMatchFilter==="e8") visible=false;
@@ -2067,7 +2073,7 @@ function renderMatches(){
     const mp=myPickFor(m.number),e8=isElige8(identityUserId,m.number),e8Disabled=locked||elige8Saving||(myE8Count>=8&&!e8),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
-    return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"}" data-resolved="${matchResolved(m)}" data-outcome="${outcome}" data-e8="${e8}">
+    return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"}" data-resolved="${matchResolved(m)}" data-live="${matchInProgress(m)}" data-outcome="${outcome}" data-e8="${e8}">
       <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${matchResolved(m)?`<button class="detail-btn" data-detail-match="${m.number}" type="button">Detalles</button>`:""}<button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div></div>
       <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m)}

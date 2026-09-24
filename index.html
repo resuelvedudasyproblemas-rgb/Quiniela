@@ -126,6 +126,7 @@
           <div class="qg-filter-wrap" aria-label="Filtrar partidos de Quinigol">
             <button type="button" class="qg-filter active" data-qg-filter="all">Todos <span id="qgFilterAll">6</span></button>
             <button type="button" class="qg-filter" data-qg-filter="pending">Pendientes <span id="qgFilterPending">6</span></button>
+            <button type="button" class="qg-filter" data-qg-filter="live">En directo <span id="qgFilterLive">0</span></button>
             <button type="button" class="qg-filter" data-qg-filter="correct">Acertados <span id="qgFilterCorrect">0</span></button>
             <button type="button" class="qg-filter" data-qg-filter="wrong">Fallados <span id="qgFilterWrong">0</span></button>
           </div>
@@ -204,6 +205,7 @@
         <div class="match-filter-wrap" aria-label="Filtrar partidos">
           <button class="match-filter active" data-match-filter="all">Todos <span id="filterAll">14</span></button>
           <button class="match-filter" data-match-filter="pending">Pendientes <span id="filterPending">14</span></button>
+          <button class="match-filter" data-match-filter="live">En directo <span id="filterLive">0</span></button>
           <button class="match-filter" data-match-filter="correct">Acertados <span id="filterCorrect">0</span></button>
           <button class="match-filter" data-match-filter="wrong">Fallados <span id="filterWrong">0</span></button>
           <button class="match-filter" data-match-filter="e8">E8 <span id="filterE8">0</span></button>
@@ -376,7 +378,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=154"></script>
+  <script type="module" src="app.js?v=155"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -883,10 +885,11 @@ function renderDashboard(){
   const jointDetail=finished?(jp||"Sin premio"):`${jointDone}/6 marcadores${pjs.considered?` · ${pjs.considered} valorados`:""}`;
   el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,ps1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,ps2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${jointCorrect} aciertos</strong><small>${jointDetail}</small></div>`;
 }
+function qgIsLive(m){return Boolean(m&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null)}
 function renderFilters(){
-  const c={all:matches.length,pending:0,correct:0,wrong:0};
-  matches.forEach(m=>{const r=actual(m),p=pick(identityUserId,m.number);if(r==="—")c.pending++;else if(p&&pickText(p)===r)c.correct++;else c.wrong++});
-  $("#qgFilterAll").textContent=c.all;$("#qgFilterPending").textContent=c.pending;$("#qgFilterCorrect").textContent=c.correct;$("#qgFilterWrong").textContent=c.wrong;
+  const c={all:matches.length,pending:0,live:0,correct:0,wrong:0};
+  matches.forEach(m=>{const r=actual(m),p=pick(identityUserId,m.number);if(qgIsLive(m))c.live++;else if(r==="—")c.pending++;else if(p&&pickText(p)===r)c.correct++;else c.wrong++});
+  $("#qgFilterAll").textContent=c.all;$("#qgFilterPending").textContent=c.pending;$("#qgFilterLive").textContent=c.live;$("#qgFilterCorrect").textContent=c.correct;$("#qgFilterWrong").textContent=c.wrong;
   $$(".qg-filter").forEach(b=>b.classList.toggle("active",b.dataset.qgFilter===activeFilter));
 }
 function renderPlay(){
@@ -894,7 +897,7 @@ function renderPlay(){
   const locked=!canEdit(),opp=members.find(m=>m.user_id!==identityUserId);
   el.innerHTML=matches.map(m=>{
     const cur=currentDraft(m.number),saved=pick(identityUserId,m.number),r=actual(m),proj=projected(m),ok=saved&&r!=="—"&&pickText(saved)===r;
-    const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—")||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
+    const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"✓ Acierto":saved?"✕ Fallo":"Sin pronóstico"}</strong></div>`;
     else if(proj!=="—")result=`<div class="qg-result live"><span>En directo · provisional</span><strong>${esc(proj)}</strong></div>`;
@@ -1063,7 +1066,7 @@ function setView(v,persist=true){
   $$(".qg-view").forEach(x=>x.classList.toggle("active",x.id===`qg${activeView.charAt(0).toUpperCase()+activeView.slice(1)}View`));
   if(activeView==="joint")renderJoint();if(activeView==="compare")renderCompare();if(activeView==="stats")renderStats();if(activeView==="history")renderHistory();
 }
-function setFilter(f){activeFilter=["all","pending","correct","wrong"].includes(f)?f:"all";savePref("quinigol-filter",activeFilter);renderPlay()}
+function setFilter(f){activeFilter=["all","pending","live","correct","wrong"].includes(f)?f:"all";savePref("quinigol-filter",activeFilter);renderPlay()}
 function setGame(g,persist=true){
   activeGame=g==="quinigol"?"quinigol":"quiniela";if(persist)savePref("quiniela-active-game",activeGame);
   $$(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
