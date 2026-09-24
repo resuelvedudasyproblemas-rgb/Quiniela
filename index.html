@@ -376,7 +376,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=152"></script>
+  <script type="module" src="app.js?v=153"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -389,7 +389,8 @@ let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],al
 let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
-let qgCrossDeviceSyncTimer=null,qgCrossDeviceSyncBusy=false,qgCrossDeviceSyncBound=false;
+let qgCrossDeviceSyncBusy=false,qgCrossDeviceSyncBound=false;
+let qgRealtimeStatus="CLOSED",qgRealtimeReconnectTimer=null,qgRealtimeRestarting=false,qgRealtimeWakeTimer=null;
 const drafts=new Map(),jointDrafts=new Map();
 const qgLoadedJourneyIds=new Set();
 let qgJourneySummaries=new Map();
@@ -1114,17 +1115,49 @@ async function qgRefreshCrossDeviceState(force=false){
     qgCrossDeviceSyncBusy=false;
   }
 }
-function qgStartCrossDeviceSync(){
-  if(qgCrossDeviceSyncTimer)clearInterval(qgCrossDeviceSyncTimer);
-  if(!qgCrossDeviceSyncBound){
-    const wake=()=>qgRefreshCrossDeviceState(true);
-    window.addEventListener("focus",wake);
-    window.addEventListener("pageshow",wake);
-    window.addEventListener("online",wake);
-    document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
-    qgCrossDeviceSyncBound=true;
+async function qgSyncRealtimeAuth(){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session?.access_token)await sb.realtime.setAuth(session.access_token);
+  }catch(e){
+    console.warn("Actualizar sesión Realtime Quinigol:",e);
   }
-  qgCrossDeviceSyncTimer=setInterval(()=>qgRefreshCrossDeviceState(false),15000);
+}
+function qgScheduleRealtimeReconnect(){
+  if(qgRealtimeReconnectTimer||qgRealtimeRestarting)return;
+  qgRealtimeReconnectTimer=setTimeout(async()=>{
+    qgRealtimeReconnectTimer=null;
+    if(!sb||!roomId||qgRealtimeStatus==="SUBSCRIBED")return;
+    qgRealtimeRestarting=true;
+    try{
+      await qgSyncRealtimeAuth();
+      subscribe();
+    }finally{
+      qgRealtimeRestarting=false;
+    }
+  },2500);
+}
+async function qgWakeRealtime(){
+  if(!sb||!roomId||document.hidden)return;
+  clearTimeout(qgRealtimeWakeTimer);
+  qgRealtimeWakeTimer=setTimeout(async()=>{
+    await qgSyncRealtimeAuth();
+    if(qgRealtimeStatus!=="SUBSCRIBED"){
+      if(qgRealtimeReconnectTimer){clearTimeout(qgRealtimeReconnectTimer);qgRealtimeReconnectTimer=null}
+      qgRealtimeRestarting=true;
+      try{subscribe()}finally{qgRealtimeRestarting=false}
+    }
+    await qgRefreshCrossDeviceState(true);
+  },200);
+}
+function qgStartCrossDeviceSync(){
+  if(qgCrossDeviceSyncBound)return;
+  const wake=()=>qgWakeRealtime();
+  window.addEventListener("focus",wake);
+  window.addEventListener("pageshow",wake);
+  window.addEventListener("online",wake);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
+  qgCrossDeviceSyncBound=true;
 }
 
 function subscribe(){
@@ -1143,7 +1176,13 @@ function subscribe(){
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
     .subscribe(status=>{
-      if(status==="SUBSCRIBED")qgRefreshCrossDeviceState(true);
+      qgRealtimeStatus=status;
+      if(status==="SUBSCRIBED"){
+        if(qgRealtimeReconnectTimer){clearTimeout(qgRealtimeReconnectTimer);qgRealtimeReconnectTimer=null}
+        qgRefreshCrossDeviceState(true);
+      }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
+        qgScheduleRealtimeReconnect();
+      }
     });
 }
 async function init(){

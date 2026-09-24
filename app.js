@@ -18,9 +18,12 @@ let elige8Saving = false;
 let jointSaving = false;
 let jointElige8Saving = false;
 let jointPlenoDraft = {journeyId:null,home:null,away:null};
-let crossDeviceSyncTimer = null;
 let crossDeviceSyncBusy = false;
 let crossDeviceSyncBound = false;
+let realtimeStatus = "CLOSED";
+let realtimeReconnectTimer = null;
+let realtimeRestarting = false;
+let realtimeWakeTimer = null;
 let selectedJourneyId = null;
 function selectedJourneyStorageKey(){
   return identityUserId&&roomId?"quiniela-selected-journey:"+roomId+":"+identityUserId:"";
@@ -2548,17 +2551,49 @@ async function refreshCrossDeviceState(force=false){
     crossDeviceSyncBusy=false;
   }
 }
-function startCrossDeviceSync(){
-  if(crossDeviceSyncTimer)clearInterval(crossDeviceSyncTimer);
-  if(!crossDeviceSyncBound){
-    const wake=()=>refreshCrossDeviceState(true);
-    window.addEventListener("focus",wake);
-    window.addEventListener("pageshow",wake);
-    window.addEventListener("online",wake);
-    document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
-    crossDeviceSyncBound=true;
+async function syncRealtimeAuth(){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session?.access_token)await sb.realtime.setAuth(session.access_token);
+  }catch(e){
+    console.warn("Actualizar sesión Realtime:",e);
   }
-  crossDeviceSyncTimer=setInterval(()=>refreshCrossDeviceState(false),15000);
+}
+function scheduleRealtimeReconnect(){
+  if(realtimeReconnectTimer||realtimeRestarting)return;
+  realtimeReconnectTimer=setTimeout(async()=>{
+    realtimeReconnectTimer=null;
+    if(!sb||!roomId||realtimeStatus==="SUBSCRIBED")return;
+    realtimeRestarting=true;
+    try{
+      await syncRealtimeAuth();
+      subscribeRealtime();
+    }finally{
+      realtimeRestarting=false;
+    }
+  },2500);
+}
+async function wakeRealtime(){
+  if(!sb||!roomId||document.hidden)return;
+  clearTimeout(realtimeWakeTimer);
+  realtimeWakeTimer=setTimeout(async()=>{
+    await syncRealtimeAuth();
+    if(realtimeStatus!=="SUBSCRIBED"){
+      if(realtimeReconnectTimer){clearTimeout(realtimeReconnectTimer);realtimeReconnectTimer=null}
+      realtimeRestarting=true;
+      try{subscribeRealtime()}finally{realtimeRestarting=false}
+    }
+    await refreshCrossDeviceState(true);
+  },200);
+}
+function startCrossDeviceSync(){
+  if(crossDeviceSyncBound)return;
+  const wake=()=>wakeRealtime();
+  window.addEventListener("focus",wake);
+  window.addEventListener("pageshow",wake);
+  window.addEventListener("online",wake);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
+  crossDeviceSyncBound=true;
 }
 
 function subscribeRealtime(){
@@ -2575,11 +2610,14 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`)})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();renderAll()})
     .subscribe(status=>{
+      realtimeStatus=status;
       if(status==="SUBSCRIBED"){
+        if(realtimeReconnectTimer){clearTimeout(realtimeReconnectTimer);realtimeReconnectTimer=null}
         setSync("online","Sincronizado");
         refreshCrossDeviceState(true);
-      }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
-        setSync("error","Sin conexión");
+      }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
+        if(status!=="CLOSED"||!realtimeRestarting)setSync("error","Reconectando");
+        scheduleRealtimeReconnect();
       }
     });
 }
