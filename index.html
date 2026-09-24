@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=162" />
+  <link rel="stylesheet" href="styles.css?v=163" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -378,7 +378,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=161"></script>
+  <script type="module" src="app.js?v=163"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -908,6 +908,27 @@ function qgScorersHtml(m){
   const rows=row(true)+row(false);
   return rows?`<div class="qg-live-scorers" aria-label="Goleadores">${rows}</div>`:"";
 }
+function qgPlayersState(m){
+  const current=resolved(m)?actual(m):projected(m);
+  if(current==="—")return "neutral";
+  const p1=member(1),p2=member(2);
+  const a=p1?pickText(pick(p1.user_id,m.number,m.journey_id)):"—";
+  const b=p2?pickText(pick(p2.user_id,m.number,m.journey_id)):"—";
+  const v1=a==="—"?"missing":a===current?"correct":"wrong";
+  const v2=b==="—"?"missing":b===current?"correct":"wrong";
+  if(v1==="correct"&&v2==="correct")return "both";
+  if(v1==="correct")return "player-one";
+  if(v2==="correct")return "player-two";
+  if(v1==="wrong"&&v2==="wrong")return "none";
+  return "neutral";
+}
+function qgJointLineHtml(m){
+  const value=jointText(m.number,m.journey_id);
+  if(value==="—")return `<div class="qg-joint-pick pending"><span>Conjunta</span><strong>Pendiente</strong></div>`;
+  const current=resolved(m)?actual(m):projected(m);
+  const verdict=current==="—"?"pending":value===current?"correct":"wrong";
+  return `<div class="qg-joint-pick ${verdict}"><span>Conjunta</span><strong>${esc(value)}</strong></div>`;
+}
 function renderFilters(){
   const c={all:matches.length,pending:0,live:0,correct:0,wrong:0};
   matches.forEach(m=>{const r=actual(m),p=pick(identityUserId,m.number);if(qgIsLive(m))c.live++;else if(r==="—")c.pending++;else if(p&&pickText(p)===r)c.correct++;else c.wrong++});
@@ -919,14 +940,14 @@ function renderPlay(){
   const locked=!canEdit(),opp=members.find(m=>m.user_id!==identityUserId);
   el.innerHTML=matches.map(m=>{
     const cur=currentDraft(m.number),saved=pick(identityUserId,m.number),r=actual(m),proj=projected(m),ok=saved&&r!=="—"&&pickText(saved)===r;
-    const isWrong=Boolean(saved&&((r!=="—"&&!ok)||(r==="—"&&proj!=="—"&&pickText(saved)!==proj)));
+    const playerState=qgPlayersState(m);
     const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
     else if(proj!=="—")result=`<div class="qg-result live"><span>En directo · provisional</span><strong>${esc(proj)}</strong></div>`;
-    const scorers=qgScorersHtml(m);
+    const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
-    return `<article class="qg-match-card ${show?"":"hidden"} ${isWrong?"is-wrong":""}"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.home)}</strong></div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.away)}</strong></div>${hs.label?`<span class="qg-head-score-label ${hs.cls}">${esc(hs.label)}</span>`:""}</div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${result}${scorers}</article>`;
+    return `<article class="qg-match-card ${show?"":"hidden"} result-state-${playerState}"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.home)}</strong></div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.away)}</strong></div>${hs.label?`<span class="qg-head-score-label ${hs.cls}">${esc(hs.label)}</span>`:""}</div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${jointLine}${result}${scorers}</article>`;
   }).join("");
   $$(".qg-goal").forEach(b=>b.addEventListener("click",()=>saveGoal(Number(b.dataset.qgMatch),b.dataset.qgSide,b.dataset.qgGoal)));
   $$("[data-qg-clear]").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.qgClear))));

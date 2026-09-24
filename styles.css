@@ -8722,3 +8722,92 @@ html[data-theme="dark"] .qg-match-card.is-wrong .qg-live-scorers{
 @media(max-width:520px){
   .qg-live-scorer-row{grid-template-columns:minmax(105px,38%) minmax(0,1fr)}
 }
+
+
+/* Estado visual por quién acierta v163 */
+.match-card.result-state-both,
+.pleno-card.result-state-both,
+.qg-match-card.result-state-both{
+  border-color:color-mix(in srgb,#24a56f 58%,var(--border))!important;
+  background:linear-gradient(0deg,color-mix(in srgb,#24a56f 6%,transparent),color-mix(in srgb,#24a56f 6%,transparent)),var(--surface)!important;
+  box-shadow:inset 4px 0 0 #24a56f,0 8px 22px rgba(27,139,91,.09)!important;
+}
+.match-card.result-state-player-one,
+.pleno-card.result-state-player-one,
+.qg-match-card.result-state-player-one{
+  border-color:var(--player-one-border)!important;
+  background:linear-gradient(0deg,color-mix(in srgb,var(--player-one) 7%,transparent),color-mix(in srgb,var(--player-one) 7%,transparent)),var(--surface)!important;
+  box-shadow:inset 4px 0 0 var(--player-one),0 8px 22px color-mix(in srgb,var(--player-one) 10%,transparent)!important;
+}
+.match-card.result-state-player-two,
+.pleno-card.result-state-player-two,
+.qg-match-card.result-state-player-two{
+  border-color:var(--player-two-border)!important;
+  background:linear-gradient(0deg,color-mix(in srgb,var(--player-two) 7%,transparent),color-mix(in srgb,var(--player-two) 7%,transparent)),var(--surface)!important;
+  box-shadow:inset 4px 0 0 var(--player-two),0 8px 22px color-mix(in srgb,var(--player-two) 10%,transparent)!important;
+}
+.match-card.result-state-none,
+.pleno-card.result-state-none,
+.qg-match-card.result-state-none{
+  border-color:color-mix(in srgb,#d5545b 62%,var(--border))!important;
+  background:linear-gradient(0deg,color-mix(in srgb,#d5545b 6%,transparent),color-mix(in srgb,#d5545b 6%,transparent)),var(--surface)!important;
+  box-shadow:inset 4px 0 0 #d5545b,0 8px 22px rgba(166,52,58,.10)!important;
+}
+
+/* Marcador y barra live: solo uno = color de ese jugador */
+.match-card.has-live-result.live-pick-player-one .live-fixture-score,
+.live-fixture-score.live-pick-player-one,
+.pleno-live-score.live-pick-player-one{
+  background:var(--player-one-soft)!important;
+  border-color:var(--player-one-border)!important;
+  color:var(--player-one)!important;
+  box-shadow:0 8px 20px color-mix(in srgb,var(--player-one) 12%,transparent)!important;
+}
+.match-card.has-live-result.live-pick-player-two .live-fixture-score,
+.live-fixture-score.live-pick-player-two,
+.pleno-live-score.live-pick-player-two{
+  background:var(--player-two-soft)!important;
+  border-color:var(--player-two-border)!important;
+  color:var(--player-two)!important;
+  box-shadow:0 8px 20px color-mix(in srgb,var(--player-two) 12%,transparent)!important;
+}
+.match-card.has-live-result.live-pick-player-one .match-result-bar.live-result{
+  background:var(--player-one-soft)!important;
+  border-color:var(--player-one-border)!important;
+  color:var(--player-one)!important;
+}
+.match-card.has-live-result.live-pick-player-two .match-result-bar.live-result{
+  background:var(--player-two-soft)!important;
+  border-color:var(--player-two-border)!important;
+  color:var(--player-two)!important;
+}
+.live-pick-badge.player-one{background:var(--player-one-soft);color:var(--player-one)}
+.live-pick-badge.player-two{background:var(--player-two-soft);color:var(--player-two)}
+
+/* Línea de conjunta en Mi Quinigol */
+.qg-joint-pick{
+  margin-top:7px;
+  padding:6px 8px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--surface-3);
+  color:var(--muted);
+  font-size:.54rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+.qg-joint-pick strong{font-size:.68rem}
+.qg-joint-pick.correct{
+  border-color:color-mix(in srgb,#24a56f 36%,var(--border));
+  background:color-mix(in srgb,#24a56f 11%,var(--surface));
+  color:#1b875c;
+}
+.qg-joint-pick.wrong{
+  border-color:color-mix(in srgb,#d5545b 38%,var(--border));
+  background:color-mix(in srgb,#d5545b 11%,var(--surface));
+  color:#b7464c;
+}
+html[data-theme="dark"] .qg-joint-pick.correct{color:#72dfad}
+html[data-theme="dark"] .qg-joint-pick.wrong{color:#ff9ca1}

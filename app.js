@@ -578,6 +578,20 @@ function matchOutcomeForUser(m,uid=identityUserId){
   if(mine==="—") return "none";
   return mine===actualResultForMatch(m)?"correct":"wrong";
 }
+function playerVerdictState(v1,v2){
+  if(v1==="correct"&&v2==="correct")return "both";
+  if(v1==="correct")return "player-one";
+  if(v2==="correct")return "player-two";
+  if(v1==="wrong"&&v2==="wrong")return "none";
+  return "neutral";
+}
+function officialPlayersState(m){
+  if(!matchResolved(m))return "neutral";
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  const v1=p1?matchOutcomeForUser(m,p1.user_id):"missing";
+  const v2=p2?matchOutcomeForUser(m,p2.user_id):"missing";
+  return playerVerdictState(v1,v2);
+}
 function renderMatchFilterCounts(){
   const normal=matches.filter(m=>m.number<=14);
   const counts={
@@ -2094,7 +2108,7 @@ function renderMatches(){
     const mp=myPickFor(m.number),e8=isElige8(identityUserId,m.number),e8Disabled=locked||elige8Saving||(myE8Count>=8&&!e8),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
-    return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} ${outcome==="wrong"?"is-wrong":""}" data-resolved="${matchResolved(m)}" data-live="${matchInProgress(m)}" data-outcome="${outcome}" data-e8="${e8}">
+    return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${officialPlayersState(m)}" data-resolved="${matchResolved(m)}" data-live="${matchInProgress(m)}" data-outcome="${outcome}" data-e8="${e8}">
       <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${matchResolved(m)?`<button class="detail-btn" data-detail-match="${m.number}" type="button">Detalles</button>`:""}<button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div></div>
       <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m)}
@@ -2112,7 +2126,11 @@ function renderMatches(){
 
 function renderPleno(){
   const m=matches.find(x=>x.number===15);if(!m){$("#plenoCard").classList.add("hidden");return}
-  $("#plenoCard").classList.remove("hidden");$("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
+  const plenoCard=$("#plenoCard");
+  plenoCard.classList.remove("hidden");
+  plenoCard.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral");
+  plenoCard.classList.add("result-state-"+officialPlayersState(m));
+  $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
   $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
   const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></div>`:tvBroadcastHtml(m);
@@ -2826,24 +2844,15 @@ function livePickVerdict(m,uid){
 }
 function livePickSummary(m){
   if(!hasLiveMatch(m)) return {state:"neutral",label:"Sin pronóstico"};
-  var players=[memberBySlot(1),memberBySlot(2)].filter(Boolean);
-  if(!players.length) return {state:"neutral",label:"Sin pronóstico"};
-  var rows=players.map(function(member){return {member:member,verdict:livePickVerdict(m,member.user_id)};});
-  var correct=rows.filter(function(x){return x.verdict==="correct";});
-  var wrong=rows.filter(function(x){return x.verdict==="wrong";});
-  var missing=rows.filter(function(x){return x.verdict==="missing";});
-  if(correct.length===players.length){
-    return {state:"both",label:players.length>1?"✓ Los dos vais acertando":"✓ "+correct[0].member.display_name+" va acertando"};
-  }
-  if(correct.length){
-    var names=correct.map(function(x){return x.member.display_name;}).join(" y ");
-    var suffix=missing.length?" · falta pronóstico del otro":"";
-    return {state:"one",label:"✓ "+names+" va acertando"+suffix};
-  }
-  if(wrong.length){
-    return {state:"none",label:missing.length?"Ahora mismo ninguno de los pronósticos hechos acierta":"Ahora mismo ninguno acierta"};
-  }
-  return {state:"neutral",label:"Sin pronóstico"};
+  var p1=memberBySlot(1),p2=memberBySlot(2);
+  var v1=p1?livePickVerdict(m,p1.user_id):"missing";
+  var v2=p2?livePickVerdict(m,p2.user_id):"missing";
+  var state=playerVerdictState(v1,v2);
+  if(state==="both")return {state,label:"Los dos vais acertando"};
+  if(state==="player-one")return {state,label:(p1?.display_name||"Jugador 1")+" va acertando"};
+  if(state==="player-two")return {state,label:(p2?.display_name||"Jugador 2")+" va acertando"};
+  if(state==="none")return {state,label:"Ahora mismo fallan los dos"};
+  return {state:"neutral",label:"Sin resultado común"};
 }
 function livePickState(m){return livePickSummary(m).state;}
 function livePickLabel(m){return livePickSummary(m).label;}
@@ -2875,10 +2884,10 @@ function decorateLiveMatchCards(){
     if(!hasLiveMatch(m) || !cards[i]) return;
     var card=cards[i];
     var pickState=livePickState(m);
-    var myLiveVerdict=livePickVerdict(m,identityUserId);
-    card.classList.toggle("is-wrong",myLiveVerdict==="wrong");
     card.classList.add("has-live-result");
-    card.classList.remove("live-pick-correct","live-pick-wrong","live-pick-both","live-pick-one","live-pick-none","live-pick-neutral");
+    card.classList.remove("is-wrong","result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral");
+    card.classList.add("result-state-"+pickState);
+    card.classList.remove("live-pick-correct","live-pick-wrong","live-pick-both","live-pick-one","live-pick-player-one","live-pick-player-two","live-pick-none","live-pick-neutral");
     card.classList.add("live-pick-"+pickState);
     var vs=card.querySelector(".fixture-vs");
     if(vs) vs.replaceWith(buildLiveScoreNode(m));
@@ -2948,6 +2957,11 @@ function decorateLivePleno(){
   el.innerHTML="";
   var box=document.createElement("div");
   var pickState=livePickState(m);
+  var card=$("#plenoCard");
+  if(card){
+    card.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral");
+    card.classList.add("result-state-"+pickState);
+  }
   box.className="pleno-live-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
   var small=document.createElement("small");
   if(m.live_status==="inprogress"){
