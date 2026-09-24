@@ -330,9 +330,13 @@ function journeyEditBlockedMessage(j=journey){
     ?"Apuesta confirmada: pronósticos y conjunta bloqueados"
     :"La jornada ya ha empezado o está cerrada";
 }
-function journeyStateLabel(j){
+function journeyVisualState(j){
   const state=journeyDisplayState(j);
-  return state==="open"?"Abierta":state==="playing"?"En juego":state==="finished"?"Finalizada":"Cerrada";
+  return journeyBetConfirmed(j)&&(state==="open"||state==="closed")?"confirmed":state;
+}
+function journeyStateLabel(j){
+  const state=journeyVisualState(j);
+  return state==="open"?"Abierta":state==="confirmed"?"Confirmada":state==="playing"?"En juego":state==="finished"?"Finalizada":"Cerrada";
 }
 function resultBarHtml(m,p){
   if(matchResolved(m)){
@@ -387,11 +391,11 @@ function renderJourneySwitcher(){
   const archived=available.filter(j=>!primary.some(x=>x.id===j.id));
 
   const buttonHtml=j=>{
-    const state=journeyDisplayState(j);
+    const state=journeyVisualState(j);
     const resolved=journeyResolvedCount(j);
     const prizeState=state==="finished"?finishedJourneyPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
-    const detail=state==="playing"?`${resolved}/15 resultados`:state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
+    const detail=state==="playing"?`${resolved}/15 resultados`:state==="confirmed"?"Apuesta confirmada · esperando partidos":state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
     return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-id="${j.id}">
       <span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small>
     </button>`;
@@ -2029,10 +2033,10 @@ function renderAll(){
     deadlineEl.className="journey-deadline"+(passed?" passed":"");
     deadlineEl.innerHTML=`<small>${passed?"PRONÓSTICOS CERRADOS":today?"HASTA":"CIERRE"}</small><b>${escapeHtml(formatJourneyDeadline(journey))}</b>`;
   }
-  const state=journeyDisplayState(journey),resolved=journeyResolvedCount(journey);
-  const statusLabels={open:"Abierta para pronósticos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
+  const state=journeyVisualState(journey),resolved=journeyResolvedCount(journey);
+  const statusLabels={open:"Abierta para pronósticos",confirmed:"Apuesta confirmada · esperando partidos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
   $(".status-text").textContent=statusLabels[state]||"Jornada";
-  const kicker=$(".journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
+  const kicker=$(".journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
   const journeyCard=$("#journeyCard");
   if(journeyCard){
     journeyCard.dataset.status=state;

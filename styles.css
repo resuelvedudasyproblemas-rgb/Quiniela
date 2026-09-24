@@ -8445,3 +8445,43 @@ html[data-theme="dark"] #compareView .compare-pick-box.result-box.official .comp
   background:#173729!important;
   color:#7fe0b1!important;
 }
+
+
+/* Jornada confirmada antes del inicio v151 */
+.journey-card[data-status="confirmed"],
+.qg-journey-card[data-status="confirmed"]{
+  background:linear-gradient(135deg,#4b5651,#68746f 62%,#7d8983)!important;
+  color:#fff!important;
+}
+.journey-card[data-status="confirmed"] .status-dot,
+.qg-journey-card[data-status="confirmed"] .status-dot{
+  background:#dce3df!important;
+  box-shadow:0 0 0 4px rgba(220,227,223,.15)!important;
+}
+.journey-choice.state-confirmed{
+  background:linear-gradient(145deg,#eef1ef,#e1e6e3)!important;
+  border-color:#b7c1bc!important;
+  color:#53615a!important;
+  box-shadow:0 5px 14px rgba(72,88,80,.08)!important;
+}
+.journey-choice.state-confirmed>span{
+  background:#d8dfdb!important;
+  color:#53615a!important;
+}
+.journey-choice.state-confirmed>strong,
+.journey-choice.state-confirmed>small{
+  color:#53615a!important;
+}
+html[data-theme="dark"] .journey-choice.state-confirmed{
+  background:#26302b!important;
+  border-color:#46524c!important;
+  color:#d2dad6!important;
+}
+html[data-theme="dark"] .journey-choice.state-confirmed>span{
+  background:#35413b!important;
+  color:#d2dad6!important;
+}
+html[data-theme="dark"] .journey-choice.state-confirmed>strong,
+html[data-theme="dark"] .journey-choice.state-confirmed>small{
+  color:#d2dad6!important;
+}
