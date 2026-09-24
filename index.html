@@ -1313,7 +1313,7 @@ function setFilter(f){activeFilter=["all","pending","live","correct","wrong"].in
 function setGame(g,persist=true){
   const previousGame=activeGame;
   activeGame=g==="quinigol"?"quinigol":"quiniela";if(persist)savePref("quiniela-active-game",activeGame);
-  $(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
+  $$(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
   const q=activeGame==="quinigol";
   const opponentEl=$("#opponentStatus");
 
