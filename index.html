@@ -376,7 +376,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=151"></script>
+  <script type="module" src="app.js?v=152"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -389,6 +389,7 @@ let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],al
 let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
+let qgCrossDeviceSyncTimer=null,qgCrossDeviceSyncBusy=false,qgCrossDeviceSyncBound=false;
 const drafts=new Map(),jointDrafts=new Map();
 const qgLoadedJourneyIds=new Set();
 let qgJourneySummaries=new Map();
@@ -1093,6 +1094,39 @@ function bind(){
   $$(".qg-tab").forEach(b=>b.addEventListener("click",()=>openQGView(b.dataset.qgView)));
   $$(".qg-filter").forEach(b=>b.addEventListener("click",()=>setFilter(b.dataset.qgFilter)));
 }
+async function qgRefreshCrossDeviceState(force=false){
+  if(!sb||!roomId||qgCrossDeviceSyncBusy)return;
+  if(document.documentElement.dataset.game!=="quinigol")return;
+  if(!force&&document.hidden)return;
+  if(saving||jointSaving)return;
+  qgCrossDeviceSyncBusy=true;
+  try{
+    await Promise.all([
+      qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),
+      qgLoadSummaries(),
+      qgLoadWalletData()
+    ]);
+    if(journey)matches=msFor(journey.id);
+    renderAll();
+  }catch(e){
+    console.warn("Sincronización Quinigol entre dispositivos:",e);
+  }finally{
+    qgCrossDeviceSyncBusy=false;
+  }
+}
+function qgStartCrossDeviceSync(){
+  if(qgCrossDeviceSyncTimer)clearInterval(qgCrossDeviceSyncTimer);
+  if(!qgCrossDeviceSyncBound){
+    const wake=()=>qgRefreshCrossDeviceState(true);
+    window.addEventListener("focus",wake);
+    window.addEventListener("pageshow",wake);
+    window.addEventListener("online",wake);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
+    qgCrossDeviceSyncBound=true;
+  }
+  qgCrossDeviceSyncTimer=setInterval(()=>qgRefreshCrossDeviceState(false),15000);
+}
+
 function subscribe(){
   if(channel)sb.removeChannel(channel);
   const refreshLoaded=async()=>{
@@ -1108,7 +1142,9 @@ function subscribe(){
     .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
-    .subscribe();
+    .subscribe(status=>{
+      if(status==="SUBSCRIBED")qgRefreshCrossDeviceState(true);
+    });
 }
 async function init(){
   if(!cfg.SUPABASE_URL||!cfg.SUPABASE_PUBLISHABLE_KEY)return;
@@ -1127,7 +1163,7 @@ async function init(){
   try{
     await load();
     if(activeView==="stats"||activeView==="history")await ensureAllQGJourneysLoaded();
-    bind();renderAll();setGame(activeGame,false);subscribe();
+    bind();renderAll();setGame(activeGame,false);subscribe();qgStartCrossDeviceSync();
     setInterval(()=>{if(journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;const d=$("#qgJourneyDate");if(d)d.textContent=qgCloseLabel(journey.close_at)}},30000);
   }catch(e){console.error("Quinigol:",e)}
 }

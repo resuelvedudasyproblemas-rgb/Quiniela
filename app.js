@@ -18,6 +18,9 @@ let elige8Saving = false;
 let jointSaving = false;
 let jointElige8Saving = false;
 let jointPlenoDraft = {journeyId:null,home:null,away:null};
+let crossDeviceSyncTimer = null;
+let crossDeviceSyncBusy = false;
+let crossDeviceSyncBound = false;
 let selectedJourneyId = null;
 function selectedJourneyStorageKey(){
   return identityUserId&&roomId?"quiniela-selected-journey:"+roomId+":"+identityUserId:"";
@@ -1818,6 +1821,7 @@ async function enterApp(){
   selectActiveJourney();
   renderAll();
   subscribeRealtime();
+  startCrossDeviceSync();
   await refreshPushSubscription();
   startCountdownTimer();
   await activateView(requestedView);
@@ -2521,6 +2525,42 @@ function openHistory(jid){
   $("#historyDialog").showModal();
 }
 
+async function refreshCrossDeviceState(force=false){
+  if(!sb||!roomId||crossDeviceSyncBusy)return;
+  if(document.documentElement.dataset.game==="quinigol")return;
+  if(!force&&document.hidden)return;
+  if(saving||elige8Saving||jointSaving||jointElige8Saving)return;
+  crossDeviceSyncBusy=true;
+  try{
+    await Promise.all([
+      loadAllPicks(),
+      loadAllElige8(),
+      loadAllJointPicks(),
+      loadAllJointElige8(),
+      loadWalletData()
+    ]);
+    if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
+    renderAll();
+    setSync("online","Sincronizado");
+  }catch(e){
+    console.warn("Sincronización entre dispositivos:",e);
+  }finally{
+    crossDeviceSyncBusy=false;
+  }
+}
+function startCrossDeviceSync(){
+  if(crossDeviceSyncTimer)clearInterval(crossDeviceSyncTimer);
+  if(!crossDeviceSyncBound){
+    const wake=()=>refreshCrossDeviceState(true);
+    window.addEventListener("focus",wake);
+    window.addEventListener("pageshow",wake);
+    window.addEventListener("online",wake);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
+    crossDeviceSyncBound=true;
+  }
+  crossDeviceSyncTimer=setInterval(()=>refreshCrossDeviceState(false),15000);
+}
+
 function subscribeRealtime(){
   if(channel)sb.removeChannel(channel);
   channel=sb.channel(`room-${roomId}`)
@@ -2534,7 +2574,14 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{await loadMembers();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`)})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();renderAll()})
-    .subscribe(status=>{if(status==="SUBSCRIBED")setSync("online","Sincronizado");else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setSync("error","Sin conexión")});
+    .subscribe(status=>{
+      if(status==="SUBSCRIBED"){
+        setSync("online","Sincronizado");
+        refreshCrossDeviceState(true);
+      }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
+        setSync("error","Sin conexión");
+      }
+    });
 }
 
 function openRenameDialog(){
