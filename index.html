@@ -376,7 +376,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=153"></script>
+  <script type="module" src="app.js?v=154"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -1097,7 +1097,7 @@ function bind(){
 }
 async function qgRefreshCrossDeviceState(force=false){
   if(!sb||!roomId||qgCrossDeviceSyncBusy)return;
-  if(document.documentElement.dataset.game!=="quinigol")return;
+  if(!force&&document.documentElement.dataset.game!=="quinigol")return;
   if(!force&&document.hidden)return;
   if(saving||jointSaving)return;
   qgCrossDeviceSyncBusy=true;
@@ -1167,20 +1167,22 @@ function subscribe(){
     if(journey)matches=msFor(journey.id);
     renderAll();
   };
-  channel=sb.channel(`quinigol-${roomId}`)
-    .on("postgres_changes",{event:"*",schema:"public",table:"qg_picks",filter:`room_id=eq.${roomId}`},refreshLoaded)
-    .on("postgres_changes",{event:"*",schema:"public",table:"qg_joint_picks",filter:`room_id=eq.${roomId}`},refreshLoaded)
-    .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderAll()})
+  const qgTables=new Set(["qg_picks","qg_joint_picks","room_wallets","wallet_transactions","bet_confirmations"]);
+  channel=sb.channel(`room:${roomId}`,{config:{private:true}})
+    .on("broadcast",{event:"db_change"},async message=>{
+      const table=message?.payload?.table;
+      if(!qgTables.has(table))return;
+      await qgRefreshCrossDeviceState(true);
+    })
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
-    .subscribe(status=>{
+    .subscribe((status,err)=>{
       qgRealtimeStatus=status;
       if(status==="SUBSCRIBED"){
         if(qgRealtimeReconnectTimer){clearTimeout(qgRealtimeReconnectTimer);qgRealtimeReconnectTimer=null}
         qgRefreshCrossDeviceState(true);
       }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
+        if(err)console.warn("Realtime Quinigol:",err);
         qgScheduleRealtimeReconnect();
       }
     });
@@ -1202,7 +1204,7 @@ async function init(){
   try{
     await load();
     if(activeView==="stats"||activeView==="history")await ensureAllQGJourneysLoaded();
-    bind();renderAll();setGame(activeGame,false);subscribe();qgStartCrossDeviceSync();
+    bind();renderAll();setGame(activeGame,false);await qgSyncRealtimeAuth();subscribe();qgStartCrossDeviceSync();
     setInterval(()=>{if(journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;const d=$("#qgJourneyDate");if(d)d.textContent=qgCloseLabel(journey.close_at)}},30000);
   }catch(e){console.error("Quinigol:",e)}
 }

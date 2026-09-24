@@ -1823,6 +1823,7 @@ async function enterApp(){
   await loadNotices();
   selectActiveJourney();
   renderAll();
+  await syncRealtimeAuth();
   subscribeRealtime();
   startCrossDeviceSync();
   await refreshPushSubscription();
@@ -2530,7 +2531,7 @@ function openHistory(jid){
 
 async function refreshCrossDeviceState(force=false){
   if(!sb||!roomId||crossDeviceSyncBusy)return;
-  if(document.documentElement.dataset.game==="quinigol")return;
+  if(!force&&document.documentElement.dataset.game==="quinigol")return;
   if(!force&&document.hidden)return;
   if(saving||elige8Saving||jointSaving||jointElige8Saving)return;
   crossDeviceSyncBusy=true;
@@ -2540,6 +2541,8 @@ async function refreshCrossDeviceState(force=false){
       loadAllElige8(),
       loadAllJointPicks(),
       loadAllJointElige8(),
+      loadJourneySummaries(),
+      loadMembers(),
       loadWalletData()
     ]);
     if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
@@ -2598,24 +2601,23 @@ function startCrossDeviceSync(){
 
 function subscribeRealtime(){
   if(channel)sb.removeChannel(channel);
-  channel=sb.channel(`room-${roomId}`)
-    .on("postgres_changes",{event:"*",schema:"public",table:"picks",filter:`room_id=eq.${roomId}`},async()=>{await Promise.all([loadAllPicks(),loadJourneySummaries()]);picks=allPicks.filter(p=>p.journey_id===journey.id);renderAll();setSync("online","Sincronizado")})
-    .on("postgres_changes",{event:"*",schema:"public",table:"elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllElige8();renderAll();setSync("online","Sincronizado")})
-    .on("postgres_changes",{event:"*",schema:"public",table:"joint_picks",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointPicks();renderJoint();setSync("online","Sincronizado")})
-    .on("postgres_changes",{event:"*",schema:"public",table:"joint_elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await Promise.all([loadAllJointElige8(),loadJourneySummaries()]);renderJoint();setSync("online","Sincronizado")})
-    .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderAll()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{await loadMembers();renderAll()})
+  const mainTables=new Set(["picks","elige8_selections","joint_picks","joint_elige8_selections","room_wallets","wallet_transactions","bet_confirmations","members"]);
+  channel=sb.channel(`room:${roomId}`,{config:{private:true}})
+    .on("broadcast",{event:"db_change"},async message=>{
+      const table=message?.payload?.table;
+      if(!mainTables.has(table))return;
+      await refreshCrossDeviceState(true);
+    })
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`)})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();renderAll()})
-    .subscribe(status=>{
+    .subscribe((status,err)=>{
       realtimeStatus=status;
       if(status==="SUBSCRIBED"){
         if(realtimeReconnectTimer){clearTimeout(realtimeReconnectTimer);realtimeReconnectTimer=null}
         setSync("online","Sincronizado");
         refreshCrossDeviceState(true);
       }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
+        if(err)console.warn("Realtime Quiniela:",err);
         if(status!=="CLOSED"||!realtimeRestarting)setSync("error","Reconectando");
         scheduleRealtimeReconnect();
       }
