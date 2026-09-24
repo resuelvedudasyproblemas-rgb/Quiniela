@@ -380,7 +380,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=173"></script>
+  <script type="module" src="app.js?v=174"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -933,7 +933,7 @@ function qgLiveStandingsProjection(baseRows=[],competitionId,journeyRows=[]){
   return {rows,isLive:live.length>0,liveMatches:live.length,direct:false};
 }
 
-function qgEnsureStandings(ids=[]){
+async function qgEnsureStandings(ids=[]){
   if(!sb)return;
   const clean=[...new Set(ids.map(Number).filter(Boolean))],missing=clean.filter(id=>!qgStandingsCache.has(id)&&!qgStandingsLoading.has(id));
   if(!missing.length)return;

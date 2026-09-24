@@ -2208,7 +2208,7 @@ function liveStandingsProjection(baseRows=[],competitionId,journeyRows=[]){
   return {rows,isLive:live.length>0,liveMatches:live.length,direct:false};
 }
 
-function ensureStandingsForCompetitions(ids=[]){
+async function ensureStandingsForCompetitions(ids=[]){
   if(!sb)return;
   const clean=[...new Set(ids.map(Number).filter(Boolean))];
   const missing=clean.filter(id=>!standingsCache.has(id)&&!standingsLoading.has(id));
