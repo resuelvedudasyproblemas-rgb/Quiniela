@@ -2069,16 +2069,17 @@ function renderJourneyLeagues(){
   const comps=journeyCompetitions();
   if(!comps.length){el.innerHTML="";el.classList.add("hidden");return}
   el.classList.remove("hidden");
-  const shown=comps.slice(0,3);
-  const logos=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${escapeHtml(c.name)}" aria-label="${escapeHtml(c.name)}"><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoStorageUrl(c.logo))}" data-logo-fallback="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${escapeHtml(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
   const canShow=journeyVisualState(journey)!=="finished";
-  const trigger=canShow?`<button type="button" class="journey-standings-btn ${standingsExpanded?"active":""}" data-standings-toggle aria-expanded="${standingsExpanded?"true":"false"}" title="Ver clasificación" aria-label="Ver clasificación"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16M4 11.5h16M4 17.5h16M8 3v18"/></svg></button>`:"";
-  el.innerHTML=logos+trigger;
-  el.querySelector("[data-standings-toggle]")?.addEventListener("click",()=>{
-    standingsExpanded=!standingsExpanded;
+  const shown=comps.slice(0,3);
+  const logos=shown.map((c,i)=>`<button type="button" class="journey-league-logo ${standingsExpanded&&Number(activeStandingCompetitionId)===Number(c.id)?"active":""}" style="--league-i:${i}" data-standing-logo="${c.id}" title="Ver clasificación de ${escapeHtml(c.name)}" aria-label="Ver clasificación de ${escapeHtml(c.name)}" ${canShow?"":"disabled"}><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoStorageUrl(c.logo))}" data-logo-fallback="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()}"></button>`).join("")+(comps.length>3?`<button type="button" class="journey-league-more" data-standing-logo="${comps[3].id}" title="Ver otras clasificaciones" aria-label="Ver otras clasificaciones" ${canShow?"":"disabled"}>+${comps.length-3}</button>`:"");
+  el.innerHTML=logos;
+  el.querySelectorAll("[data-standing-logo]").forEach(btn=>btn.addEventListener("click",()=>{
+    if(!canShow)return;
+    activeStandingCompetitionId=Number(btn.dataset.standingLogo);
+    standingsExpanded=true;
     renderStandingsPanel();
     renderJourneyLeagues();
-  });
+  }));
 }
 
 function standingsSeasonLabel(drawDate=""){

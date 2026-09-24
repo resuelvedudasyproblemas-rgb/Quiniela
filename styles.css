@@ -8938,19 +8938,31 @@ html[data-theme="dark"] .standings-journey-team,html[data-theme="dark"] .standin
 
 
 
-/* Clasificaciones mejoradas y acceso desde tarjeta de jornada v169 */
-.journey-standings-btn{
-  width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;flex:0 0 28px!important;
-  margin:0!important;padding:5px!important;border-radius:9px!important;
-  border:1px solid rgba(255,255,255,.46)!important;background:rgba(255,255,255,.94)!important;
-  color:var(--brand)!important;box-shadow:0 4px 12px rgba(0,0,0,.14)!important;backdrop-filter:blur(5px);
-  display:grid!important;place-items:center!important;cursor:pointer;
+/* Clasificaciones por toque directo en el logo de la competición v172 */
+.journey-league-logo,
+.journey-league-more{
+  padding:0!important;
+  font:inherit;
+  -webkit-appearance:none;
+  appearance:none;
+  cursor:pointer;
+  touch-action:manipulation;
 }
-.journey-standings-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
-.journey-standings-btn.active{background:var(--brand)!important;color:#fff!important;border-color:color-mix(in srgb,var(--brand) 78%,#fff)!important}
-@media(max-width:430px){
-  .journey-standings-btn{width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;flex-basis:26px!important;border-radius:8px!important;padding:4px!important}
-  .journey-standings-btn svg{width:16px;height:16px}
+.journey-league-logo:disabled,
+.journey-league-more:disabled{cursor:default}
+.journey-league-logo.active{
+  border-color:color-mix(in srgb,var(--brand) 76%,#fff)!important;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 28%,transparent),0 4px 12px rgba(0,0,0,.14)!important;
+  background:color-mix(in srgb,var(--brand) 10%,#fff)!important;
+}
+.journey-league-logo:focus-visible,
+.journey-league-more:focus-visible{
+  outline:2px solid var(--brand);
+  outline-offset:2px;
+}
+html[data-theme="dark"] .journey-league-logo.active{
+  background:color-mix(in srgb,var(--brand) 28%,var(--surface))!important;
+  border-color:color-mix(in srgb,var(--brand) 72%,#fff)!important;
 }
 .standings-panel{margin:8px 0 10px!important;animation:standingsReveal .18s ease-out}
 @keyframes standingsReveal{from{opacity:.25;transform:translateY(-5px)}to{opacity:1;transform:none}}

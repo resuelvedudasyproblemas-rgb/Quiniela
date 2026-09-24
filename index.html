@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=171" />
+  <link rel="stylesheet" href="styles.css?v=172" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -380,7 +380,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=171"></script>
+  <script type="module" src="app.js?v=172"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -803,16 +803,17 @@ function renderJourneyCompetitions(){
   const comps=[...seen.values()];
   if(!comps.length){el.innerHTML="";el.classList.add("hidden");return}
   el.classList.remove("hidden");
-  const shown=comps.slice(0,3);
-  const logos=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${esc(c.name)}" aria-label="${esc(c.name)}"><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${esc(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
   const canShow=qgVisualState(journey)!=="finished";
-  const trigger=canShow?`<button type="button" class="journey-standings-btn ${qgStandingsExpanded?"active":""}" data-qg-standings-toggle aria-expanded="${qgStandingsExpanded?"true":"false"}" title="Ver clasificación" aria-label="Ver clasificación"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16M4 11.5h16M4 17.5h16M8 3v18"/></svg></button>`:"";
-  el.innerHTML=logos+trigger;
-  el.querySelector("[data-qg-standings-toggle]")?.addEventListener("click",()=>{
-    qgStandingsExpanded=!qgStandingsExpanded;
+  const shown=comps.slice(0,3);
+  const logos=shown.map((c,i)=>`<button type="button" class="journey-league-logo ${qgStandingsExpanded&&Number(qgActiveStandingCompetitionId)===Number(c.id)?"active":""}" style="--league-i:${i}" data-qg-standing-logo="${c.id}" title="Ver clasificación de ${esc(c.name)}" aria-label="Ver clasificación de ${esc(c.name)}" ${canShow?"":"disabled"}><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()}"></button>`).join("")+(comps.length>3?`<button type="button" class="journey-league-more" data-qg-standing-logo="${comps[3].id}" title="Ver otras clasificaciones" aria-label="Ver otras clasificaciones" ${canShow?"":"disabled"}>+${comps.length-3}</button>`:"");
+  el.innerHTML=logos;
+  el.querySelectorAll("[data-qg-standing-logo]").forEach(btn=>btn.addEventListener("click",()=>{
+    if(!canShow)return;
+    qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingLogo);
+    qgStandingsExpanded=true;
     qgRenderStandings();
     renderJourneyCompetitions();
-  });
+  }));
 }
 
 function qgStandingsSeasonLabel(drawDate=""){
