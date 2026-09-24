@@ -8629,3 +8629,36 @@ html[data-theme="dark"] .match-filter[data-match-filter="pending"].active span{c
 html[data-theme="dark"] .qg-filter[data-qg-filter="correct"].active span,
 html[data-theme="dark"] .match-filter[data-match-filter="correct"].active span{color:#72dfad!important}
 html[data-theme="dark"] .match-filter[data-match-filter="e8"].active span{color:#f0ca6a!important}
+
+
+/* Resaltado visual de partidos fallados v161 */
+.match-card.is-wrong,
+.qg-match-card.is-wrong{
+  border-color:color-mix(in srgb,#d5545b 62%,var(--border))!important;
+  background:
+    linear-gradient(0deg,color-mix(in srgb,#d5545b 5%,transparent),color-mix(in srgb,#d5545b 5%,transparent)),
+    var(--surface)!important;
+  box-shadow:
+    inset 4px 0 0 color-mix(in srgb,#d5545b 78%,transparent),
+    0 8px 22px rgba(166,52,58,.10)!important;
+}
+.qg-match-card.is-wrong .qg-result.live{
+  background:color-mix(in srgb,#d5545b 13%,var(--surface-2))!important;
+  color:#b7464c!important;
+  border-color:color-mix(in srgb,#d5545b 38%,var(--border))!important;
+}
+html[data-theme="dark"] .match-card.is-wrong,
+html[data-theme="dark"] .qg-match-card.is-wrong{
+  border-color:#8f4147!important;
+  background:
+    linear-gradient(0deg,rgba(155,54,61,.10),rgba(155,54,61,.10)),
+    var(--surface)!important;
+  box-shadow:
+    inset 4px 0 0 #a84850,
+    0 9px 24px rgba(0,0,0,.24)!important;
+}
+html[data-theme="dark"] .qg-match-card.is-wrong .qg-result.live{
+  background:#3b2024!important;
+  color:#ffaaaa!important;
+  border-color:#6d3439!important;
+}
