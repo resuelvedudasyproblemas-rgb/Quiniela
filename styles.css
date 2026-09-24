@@ -9045,3 +9045,33 @@ html[data-theme="dark"] .standings-journey-team.live-team{
 html[data-theme="dark"] .live-standing-tag{
   color:#f4c66c!important;background:#3a2a12!important;border-color:#6b4b18!important;
 }
+
+
+/* Cuadrícula de clasificación corregida v171 */
+.standings-table{
+  width:100%;
+  box-sizing:border-box;
+}
+.standings-row{
+  width:100%;
+  box-sizing:border-box;
+  grid-template-columns:36px minmax(0,1fr) 42px 46px!important;
+  padding-left:8px!important;
+  padding-right:8px!important;
+}
+.standings-row.headings>span:first-child{
+  text-align:center;
+}
+.standings-row>span:nth-child(3),
+.standings-row.headings>span:nth-child(3){
+  text-align:center!important;
+}
+.standings-row>strong,
+.standings-row.headings>span:nth-child(4){
+  text-align:right!important;
+  padding-right:2px;
+}
+.standings-row.journey-team{
+  outline:none!important;
+  outline-offset:0!important;
+}

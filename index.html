@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=170" />
+  <link rel="stylesheet" href="styles.css?v=171" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -1317,12 +1317,13 @@ function setGame(g,persist=true){
   const q=activeGame==="quinigol";
   const opponentEl=$("#opponentStatus");
 
-  if(previousGame==="quiniela"&&q)window.dispatchEvent(new CustomEvent("quiniela:hide"));
-  if(previousGame==="quinigol"&&!q){
+  if(previousGame!==activeGame){
+    // Las clasificaciones son contextuales a cada juego: nunca deben quedar abiertas al cambiar.
     qgStandingsExpanded=false;
     const qgPanel=$("#qgStandingsPanel");
     if(qgPanel){qgPanel.classList.add("hidden");qgPanel.innerHTML=""}
-    renderJourneyCompetitions();
+    if(q)window.dispatchEvent(new CustomEvent("quiniela:hide"));
+    if(!q)renderJourneyCompetitions();
   }
 
   if(q){
