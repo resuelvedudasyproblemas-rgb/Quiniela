@@ -376,7 +376,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=149"></script>
+  <script type="module" src="app.js?v=150"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -498,7 +498,9 @@ function state(j){
   if(j.status==="open"&&Date.now()<new Date(j.close_at).getTime())return "open";
   return ms.some(m=>m.kickoff&&Date.now()>=new Date(m.kickoff).getTime())?"playing":"closed";
 }
-function canEdit(j=journey){return Boolean(j&&j.status==="open"&&Date.now()<new Date(j.close_at).getTime())}
+function qgBetConfirmed(j=journey){return Boolean(j&&qgWalletConfirmation(j.id))}
+function canEdit(j=journey){return Boolean(j&&j.status==="open"&&!qgBetConfirmed(j)&&Date.now()<new Date(j.close_at).getTime())}
+function qgEditBlockedMessage(j=journey){return qgBetConfirmed(j)?"Apuesta confirmada: pronósticos y conjunta bloqueados":"Esta jornada de Quinigol ya está cerrada"}
 function pick(uid,n,jid=journey?.id){return allPicks.find(p=>p.user_id===uid&&p.journey_id===jid&&p.match_number===n)||null}
 function jointOverride(n,jid=journey?.id){return allJoint.find(p=>p.journey_id===jid&&p.match_number===n)||null}
 function pickText(p){return p?.home_goals&&p?.away_goals?`${p.home_goals}-${p.away_goals}`:"—"}
@@ -656,7 +658,7 @@ function renderQGWallet(){
   const estimated=plan?.ready?Number(plan.cost):null;
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
   const status=conf
-    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))}</small></div>`
+    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))} · Pronósticos y conjunta bloqueados</small></div>`
     : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${esc(qgEuro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
   const controls=manager?`
     <div class="wallet-confirm-controls">
@@ -681,14 +683,14 @@ async function qgConfirmWalletBet(){
   try{
     const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id,p_cost:cost});
     if(error)throw error;
-    await qgLoadWalletData();renderJoint();window.dispatchEvent(new CustomEvent("wallet:refresh"));toast("✓ Quinigol confirmado y descontado del monedero");
+    await qgLoadWalletData();renderAll();window.dispatchEvent(new CustomEvent("wallet:refresh"));toast("✓ Quinigol confirmado · pronósticos bloqueados");
   }catch(e){console.error(e);toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
 }
 async function qgUnconfirmWalletBet(){
   try{
     const {error}=await sb.rpc("wallet_unconfirm_bet",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id});
     if(error)throw error;
-    await qgLoadWalletData();renderJoint();window.dispatchEvent(new CustomEvent("wallet:refresh"));toast("Confirmación anulada · importe devuelto");
+    await qgLoadWalletData();renderAll();window.dispatchEvent(new CustomEvent("wallet:refresh"));toast("Confirmación anulada · importe devuelto · edición desbloqueada");
   }catch(e){console.error(e);toast("No se pudo anular")}
 }
 async function qgAddWalletCredit(kind){
@@ -710,7 +712,7 @@ function currentJointDraft(n){
   return {home_goals:d.home_goals??e.home_goals??null,away_goals:d.away_goals??e.away_goals??null};
 }
 async function saveGoal(n,side,val){
-  if(!canEdit()){toast("Esta jornada de Quinigol ya está cerrada");return}
+  if(!canEdit()){toast(qgEditBlockedMessage(journey));return}
   if(saving)return;
   const k=`${journey.id}:${n}`,cur=currentDraft(n),next={home_goals:side==="home"?val:cur.home_goals,away_goals:side==="away"?val:cur.away_goals};
   drafts.set(k,next);renderPlay();
@@ -731,7 +733,7 @@ async function deletePick(n){
   allPicks=allPicks.filter(p=>!(p.journey_id===journey.id&&p.match_number===n&&p.user_id===identityUserId));drafts.delete(`${journey.id}:${n}`);renderAll();
 }
 async function saveJointGoal(n,side,val){
-  if(!canEdit()){toast("Esta jornada de Quinigol ya está cerrada");return}
+  if(!canEdit()){toast(qgEditBlockedMessage(journey));return}
   if(jointSaving)return;
   const k=`${journey.id}:${n}`,cur=currentJointDraft(n),next={home_goals:side==="home"?val:cur.home_goals,away_goals:side==="away"?val:cur.away_goals};
   jointDrafts.set(k,next);renderJoint();
@@ -1099,7 +1101,7 @@ function subscribe(){
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_joint_picks",filter:`room_id=eq.${roomId}`},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await qgLoadWalletData();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},refreshLoaded)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
     .subscribe();

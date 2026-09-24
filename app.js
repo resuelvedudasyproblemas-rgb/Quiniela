@@ -317,10 +317,18 @@ function renderNextJourneyCountdown(){
   el.classList.remove("hidden");
   el.innerHTML=`<small>PRÓXIMO CIERRE · J${next.j.number}</small><strong>Cierra en <b>${escapeHtml(journeyStartCountdownText(next.start))}</b></strong>`;
 }
+function journeyBetConfirmed(j=journey){
+  return Boolean(j&&walletConfirmation("quiniela",j.id));
+}
 function journeyCanEdit(j){
-  if(!j || j.status!=="open") return false;
+  if(!j || j.status!=="open" || journeyBetConfirmed(j)) return false;
   const deadline=journeyDeadline(j);
   return Boolean(deadline && Date.now()<deadline.getTime());
+}
+function journeyEditBlockedMessage(j=journey){
+  return journeyBetConfirmed(j)
+    ?"Apuesta confirmada: pronósticos y conjunta bloqueados"
+    :"La jornada ya ha empezado o está cerrada";
 }
 function journeyStateLabel(j){
   const state=journeyDisplayState(j);
@@ -789,7 +797,7 @@ function jointSelectionKind(n,jid=journey?.id){
   return a&&b?"Automática":"Provisional";
 }
 async function saveJointSelection(n,selection){
-  if(!journeyCanEdit(journey)){toast("La jornada ya ha empezado o está cerrada");return}
+  if(!journeyCanEdit(journey)){toast(journeyEditBlockedMessage(journey));return}
   if(jointSaving)return;
   const clean=normalizeJointSelection(selection);if(!clean){toast("Debe quedar al menos un signo");return}
   jointSaving=true;setSync("","Guardando");
@@ -885,7 +893,7 @@ function jointPlenoEditorHtml(jid=journey?.id,locked=false){
   return `<div class="joint-pleno-editor"><div><small>LOCAL</small>${side("home",cur.home)}</div><span>–</span><div><small>VISIT.</small>${side("away",cur.away)}</div></div>`;
 }
 async function saveJointPlenoPart(team,val){
-  if(!journeyCanEdit(journey)){toast("La jornada ya ha empezado o está cerrada");return}
+  if(!journeyCanEdit(journey)){toast(journeyEditBlockedMessage(journey));return}
   if(jointSaving)return;
   const current=jointPlenoEditorState(journey.id);
   jointPlenoDraft={
@@ -983,7 +991,7 @@ function renderJointWallet(){
   const manager=walletCanManage(),conf=walletConfirmation("quiniela",journey.id),estimated=estimatedQuinielaWalletCost();
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
   const status=conf
-    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))}</small></div>`
+    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${escapeHtml(euro(conf.cost))}</strong><small>${escapeHtml(walletDate(conf.confirmed_at))} · Pronósticos y conjunta bloqueados</small></div>`
     : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${escapeHtml(euro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
   const controls=manager?`
     <div class="wallet-confirm-controls">
@@ -1010,7 +1018,7 @@ async function confirmQuinielaWalletBet(){
     setSync("","Guardando");
     const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id,p_cost:cost});
     if(error)throw error;
-    await loadWalletData();renderJoint();setSync("online","Sincronizado");toast("✓ Apuesta confirmada y descontada del monedero");
+    await loadWalletData();renderAll();setSync("online","Sincronizado");toast("✓ Apuesta confirmada · pronósticos bloqueados");
   }catch(e){console.error(e);setSync("error","Error");toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
 }
 async function unconfirmQuinielaWalletBet(){
@@ -1018,7 +1026,7 @@ async function unconfirmQuinielaWalletBet(){
     setSync("","Guardando");
     const {error}=await sb.rpc("wallet_unconfirm_bet",{p_room_id:roomId,p_game:"quiniela",p_journey_id:journey.id});
     if(error)throw error;
-    await loadWalletData();renderJoint();setSync("online","Sincronizado");toast("Confirmación anulada · importe devuelto");
+    await loadWalletData();renderAll();setSync("online","Sincronizado");toast("Confirmación anulada · importe devuelto · edición desbloqueada");
   }catch(e){console.error(e);setSync("error","Error");toast("No se pudo anular")}
 }
 async function addWalletCredit(kind){
@@ -1317,7 +1325,7 @@ function projectedScoreJointElige8(j=journey){
 }
 
 async function saveJointElige8Set(numbers,successText="Elige 8 conjunto actualizado"){
-  if(!journeyCanEdit(journey)){toast("La jornada ya ha empezado o está cerrada");return}
+  if(!journeyCanEdit(journey)){toast(journeyEditBlockedMessage(journey));return}
   if(jointElige8Saving)return;
   const clean=[...new Set((numbers||[]).map(Number).filter(n=>n>=1&&n<=14))].slice(0,8).sort((a,b)=>a-b);
   jointElige8Saving=true;
@@ -2087,7 +2095,7 @@ function renderPleno(){
 }
 
 async function toggleElige8(n){
-  if(!journeyCanEdit(journey)){ toast("La jornada ya ha empezado o está cerrada"); return; }
+  if(!journeyCanEdit(journey)){ toast(journeyEditBlockedMessage(journey)); return; }
   if(elige8Saving) return;
 
   const selected=isElige8(identityUserId,n);
@@ -2137,7 +2145,7 @@ async function toggleElige8(n){
 }
 
 async function deletePick(n){
-  if(!journeyCanEdit(journey)){toast("Solo puedes borrar antes de que empiece la jornada");return}
+  if(!journeyCanEdit(journey)){toast(journeyEditBlockedMessage(journey));return}
   if(saving)return;
   const previous=myPickFor(n);
   if(!previous)return;
@@ -2165,7 +2173,7 @@ async function deletePick(n){
 }
 
 async function saveNormalPick(n,val){
-  if(!journeyCanEdit(journey)){ toast("La jornada ya ha empezado o está cerrada"); return; }
+  if(!journeyCanEdit(journey)){ toast(journeyEditBlockedMessage(journey)); return; }
   if(saving) return; saving=true; setSync("","Guardando");
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(n);
@@ -2182,7 +2190,7 @@ async function saveNormalPick(n,val){
 }
 
 async function savePleno(team,val){
-  if(!journeyCanEdit(journey)){ toast("La jornada ya ha empezado o está cerrada"); return; }
+  if(!journeyCanEdit(journey)){ toast(journeyEditBlockedMessage(journey)); return; }
   if(saving) return; saving=true; setSync("","Guardando");
   $$(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(15);
@@ -2518,7 +2526,7 @@ function subscribeRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await Promise.all([loadAllJointElige8(),loadJourneySummaries()]);renderJoint();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{await loadMembers();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`)})
     .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();renderAll()})
