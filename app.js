@@ -2076,6 +2076,7 @@ function renderJourneyLeagues(){
   el.querySelectorAll("[data-standing-logo]").forEach(btn=>btn.addEventListener("click",()=>{
     if(!canShow)return;
     activeStandingCompetitionId=Number(btn.dataset.standingLogo);
+    standingsCache.delete(activeStandingCompetitionId);
     standingsExpanded=true;
     renderStandingsPanel();
     renderJourneyLeagues();
@@ -2150,13 +2151,35 @@ function liveStandingsProjection(baseRows=[],competitionId,journeyRows=[]){
     _base_position:Number(r.position)||999,
     _live:false
   }));
-  if(!rows.length)return {rows,isLive:false,liveMatches:0};
+  if(!rows.length)return {rows,isLive:false,liveMatches:0,direct:false};
   const byId=new Map(rows.map(r=>[Number(r.sofascore_team_id),r]));
   const live=(journeyRows||[]).filter(m=>
     Number(m.competition_id)===Number(competitionId) &&
     m.live_status==="inprogress" &&
     m.live_home_score!=null && m.live_away_score!=null
   );
+
+  if(live.length){
+    const liveIds=new Set(live.flatMap(m=>[Number(m.home_team_id),Number(m.away_team_id)]).filter(Boolean));
+    const relevant=rows.filter(r=>liveIds.has(Number(r.sofascore_team_id)));
+    const sourceTimes=relevant.map(r=>new Date(r.updated_at||0).getTime()).filter(Number.isFinite);
+    const sourceUpdated=sourceTimes.length?Math.min(...sourceTimes):0;
+    let required=0;
+    for(const m of live){
+      const kickoff=new Date(m.kickoff||0).getTime();
+      if(Number.isFinite(kickoff))required=Math.max(required,kickoff);
+      const scorers=Array.isArray(m.live_scorers)?m.live_scorers:[];
+      for(const g of scorers){
+        const minute=Number(g?.time||0)+(Number(g?.added_time||0)||0);
+        if(Number.isFinite(kickoff)&&minute>0)required=Math.max(required,kickoff+Math.max(0,minute-2)*60000);
+      }
+    }
+    if(sourceUpdated>0&&required>0&&sourceUpdated>=required){
+      rows.forEach(r=>{if(liveIds.has(Number(r.sofascore_team_id)))r._live=true});
+      return {rows,isLive:true,liveMatches:live.length,direct:true};
+    }
+  }
+
   for(const m of live){
     const h=byId.get(Number(m.home_team_id)),a=byId.get(Number(m.away_team_id));
     if(!h||!a)continue;
@@ -2182,10 +2205,10 @@ function liveStandingsProjection(baseRows=[],competitionId,journeyRows=[]){
       gr.forEach((r,i)=>r.position=i+1);
     }
   }
-  return {rows,isLive:live.length>0,liveMatches:live.length};
+  return {rows,isLive:live.length>0,liveMatches:live.length,direct:false};
 }
 
-async function ensureStandingsForCompetitions(ids=[]){
+function ensureStandingsForCompetitions(ids=[]){
   if(!sb)return;
   const clean=[...new Set(ids.map(Number).filter(Boolean))];
   const missing=clean.filter(id=>!standingsCache.has(id)&&!standingsLoading.has(id));
@@ -2247,7 +2270,7 @@ function renderStandingsPanel(){
   }).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
   el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>${liveTable.isLive?"CLASIFICACIÓN EN DIRECTO":"CLASIFICACIONES"}</span><strong>Jornada ${journey.number}${liveTable.isLive?" · provisional":""}</strong></div><button type="button" class="standings-close" data-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-standing-comp="${c.id}">${matchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${escapeHtml(c.name)}</span></button>`).join("")}</div>${nationsExplanationHtml(active)}${standingsLegendHtml(active)}${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${standingsTableHtml(rows,teamIds,active)}</details></div>`;
   el.querySelector("[data-standings-close]")?.addEventListener("click",()=>{standingsExpanded=false;renderStandingsPanel();renderJourneyLeagues()});
-  el.querySelectorAll("[data-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{activeStandingCompetitionId=Number(btn.dataset.standingComp);renderStandingsPanel()}));
+  el.querySelectorAll("[data-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{activeStandingCompetitionId=Number(btn.dataset.standingComp);standingsCache.delete(activeStandingCompetitionId);renderStandingsPanel()}));
 }
 
 function renderAll(){
@@ -2843,7 +2866,7 @@ function subscribeRealtime(){
       await refreshCrossDeviceState(true);
     })
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`)})
-    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();renderAll()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();if(standingsExpanded&&activeStandingCompetitionId)standingsCache.delete(Number(activeStandingCompetitionId));renderAll()})
     .subscribe((status,err)=>{
       realtimeStatus=status;
       if(status==="SUBSCRIBED"){

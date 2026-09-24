@@ -380,7 +380,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=172"></script>
+  <script type="module" src="app.js?v=173"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -810,6 +810,7 @@ function renderJourneyCompetitions(){
   el.querySelectorAll("[data-qg-standing-logo]").forEach(btn=>btn.addEventListener("click",()=>{
     if(!canShow)return;
     qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingLogo);
+    qgStandingsCache.delete(qgActiveStandingCompetitionId);
     qgStandingsExpanded=true;
     qgRenderStandings();
     renderJourneyCompetitions();
@@ -875,13 +876,35 @@ function qgLiveStandingsProjection(baseRows=[],competitionId,journeyRows=[]){
     _base_position:Number(r.position)||999,
     _live:false
   }));
-  if(!rows.length)return {rows,isLive:false,liveMatches:0};
+  if(!rows.length)return {rows,isLive:false,liveMatches:0,direct:false};
   const byId=new Map(rows.map(r=>[Number(r.sofascore_team_id),r]));
   const live=(journeyRows||[]).filter(m=>
     Number(m.competition_id)===Number(competitionId) &&
     m.live_status==="inprogress" &&
     m.live_home_score!=null && m.live_away_score!=null
   );
+
+  if(live.length){
+    const liveIds=new Set(live.flatMap(m=>[Number(m.home_team_id),Number(m.away_team_id)]).filter(Boolean));
+    const relevant=rows.filter(r=>liveIds.has(Number(r.sofascore_team_id)));
+    const sourceTimes=relevant.map(r=>new Date(r.updated_at||0).getTime()).filter(Number.isFinite);
+    const sourceUpdated=sourceTimes.length?Math.min(...sourceTimes):0;
+    let required=0;
+    for(const m of live){
+      const kickoff=new Date(m.kickoff||0).getTime();
+      if(Number.isFinite(kickoff))required=Math.max(required,kickoff);
+      const scorers=Array.isArray(m.live_scorers)?m.live_scorers:[];
+      for(const g of scorers){
+        const minute=Number(g?.time||0)+(Number(g?.added_time||0)||0);
+        if(Number.isFinite(kickoff)&&minute>0)required=Math.max(required,kickoff+Math.max(0,minute-2)*60000);
+      }
+    }
+    if(sourceUpdated>0&&required>0&&sourceUpdated>=required){
+      rows.forEach(r=>{if(liveIds.has(Number(r.sofascore_team_id)))r._live=true});
+      return {rows,isLive:true,liveMatches:live.length,direct:true};
+    }
+  }
+
   for(const m of live){
     const h=byId.get(Number(m.home_team_id)),a=byId.get(Number(m.away_team_id));
     if(!h||!a)continue;
@@ -907,10 +930,10 @@ function qgLiveStandingsProjection(baseRows=[],competitionId,journeyRows=[]){
       gr.forEach((r,i)=>r.position=i+1);
     }
   }
-  return {rows,isLive:live.length>0,liveMatches:live.length};
+  return {rows,isLive:live.length>0,liveMatches:live.length,direct:false};
 }
 
-async function qgEnsureStandings(ids=[]){
+function qgEnsureStandings(ids=[]){
   if(!sb)return;
   const clean=[...new Set(ids.map(Number).filter(Boolean))],missing=clean.filter(id=>!qgStandingsCache.has(id)&&!qgStandingsLoading.has(id));
   if(!missing.length)return;
@@ -960,7 +983,7 @@ function qgRenderStandings(){
   const compact=highlights.length?`<div class="standings-subtitle">Equipos de esta jornada</div><div class="standings-journey-teams">${highlights.map(r=>{const gr=rows.filter(x=>String(x.group_name||"")===String(r.group_name||"")),zone=qgStandingZoneClass(active.id,r.group_name,r.position,gr.length),display=qgStandingNationName(r.team_name);return `<div class="standings-journey-team ${zone} ${r._live?"live-team":""}">${crest(display,r.team_logo_url)}<span><b>${esc(display)}</b><small>${r._live?"En directo · provisional":esc(qgStandingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`}).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
   el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>${liveTable.isLive?"CLASIFICACIÓN EN DIRECTO":"CLASIFICACIONES"}</span><strong>Jornada ${journey.number}${liveTable.isLive?" · provisional":""}</strong></div><button type="button" class="standings-close" data-qg-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-qg-standing-comp="${c.id}">${qgMatchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${esc(c.name)}</span></button>`).join("")}</div>${qgNationsExplanationHtml(active)}${qgStandingsLegendHtml(active)}${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${qgStandingsTableHtml(rows,teamIds,active)}</details></div>`;
   el.querySelector("[data-qg-standings-close]")?.addEventListener("click",()=>{qgStandingsExpanded=false;qgRenderStandings();renderJourneyCompetitions()});
-  el.querySelectorAll("[data-qg-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingComp);qgRenderStandings()}));
+  el.querySelectorAll("[data-qg-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingComp);qgStandingsCache.delete(qgActiveStandingCompetitionId);qgRenderStandings()}));
 }
 
 function renderHero(){
@@ -1366,6 +1389,7 @@ async function qgRefreshCrossDeviceState(force=false){
       qgLoadWalletData()
     ]);
     if(journey)matches=msFor(journey.id);
+    if(qgStandingsExpanded&&qgActiveStandingCompetitionId)qgStandingsCache.delete(Number(qgActiveStandingCompetitionId));
     renderAll();
   }catch(e){
     console.warn("Sincronización Quinigol entre dispositivos:",e);
