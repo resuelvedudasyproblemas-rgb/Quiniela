@@ -2050,7 +2050,7 @@ function renderAll(){
   const state=journeyVisualState(journey),resolved=journeyResolvedCount(journey);
   const statusLabels={open:"Abierta para pronósticos",confirmed:"Apuesta confirmada · esperando partidos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
   $(".status-text").textContent=statusLabels[state]||"Jornada";
-  const kicker=$(".journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
+  const kicker=$("#journeyCard .journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
   const journeyCard=$("#journeyCard");
   if(journeyCard){
     journeyCard.dataset.status=state;
