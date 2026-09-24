@@ -2124,6 +2124,7 @@ function standingsTableHtml(rows=[],journeyTeamIds=new Set(),comp=null){
 }
 function renderStandingsPanel(){
   const el=$("#standingsPanel");if(!el||!journey)return;
+  if(journeyVisualState(journey)==="finished"){el.classList.add("hidden");el.innerHTML="";return}
   const wasOpen=Boolean(el.querySelector(".standings-shell")?.open);
   const comps=journeyCompetitions();
   if(!comps.length){el.classList.add("hidden");el.innerHTML="";return}
