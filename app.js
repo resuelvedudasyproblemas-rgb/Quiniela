@@ -1604,6 +1604,12 @@ async function activateView(view){
   $$("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
   if(next==="joint")renderJoint();if(next==="compare")renderCompare();if(next==="stats")renderStats();if(next==="history")renderHistory();
 }
+window.addEventListener("quiniela:hide",()=>{
+  standingsExpanded=false;
+  const panel=$("#standingsPanel");
+  if(panel){panel.classList.add("hidden");panel.innerHTML=""}
+  renderJourneyLeagues();
+});
 window.addEventListener("quiniela:show",async()=>{
   try{
     document.documentElement.dataset.game="quiniela";

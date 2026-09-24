@@ -380,7 +380,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=170"></script>
+  <script type="module" src="app.js?v=171"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -1311,10 +1311,20 @@ function setView(v,persist=true){
 }
 function setFilter(f){activeFilter=["all","pending","live","correct","wrong"].includes(f)?f:"all";savePref("quinigol-filter",activeFilter);renderPlay()}
 function setGame(g,persist=true){
+  const previousGame=activeGame;
   activeGame=g==="quinigol"?"quinigol":"quiniela";if(persist)savePref("quiniela-active-game",activeGame);
-  $$(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
+  $(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
   const q=activeGame==="quinigol";
   const opponentEl=$("#opponentStatus");
+
+  if(previousGame==="quiniela"&&q)window.dispatchEvent(new CustomEvent("quiniela:hide"));
+  if(previousGame==="quinigol"&&!q){
+    qgStandingsExpanded=false;
+    const qgPanel=$("#qgStandingsPanel");
+    if(qgPanel){qgPanel.classList.add("hidden");qgPanel.innerHTML=""}
+    renderJourneyCompetitions();
+  }
+
   if(q){
     if(opponentEl&&document.documentElement.dataset.game!=="quinigol")quinielaOpponentText=opponentEl.textContent||"";
     document.documentElement.dataset.game="quinigol";
