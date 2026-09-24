@@ -378,7 +378,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=157"></script>
+  <script type="module" src="app.js?v=159"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -628,7 +628,7 @@ async function load(){
   journeys=jr.data||[];members=mem.data||[];
   const saved=Number(readPref("quinigol-journey",""));selectedJourneyId=Number.isFinite(saved)&&saved>0?saved:null;
   const v=readPref("quinigol-view","play");activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
-  const f=readPref("quinigol-filter","all");activeFilter=["all","pending","correct","wrong"].includes(f)?f:"all";
+  const f=readPref("quinigol-filter","all");activeFilter=["all","pending","live","correct","wrong"].includes(f)?f:"all";
   const g=readPref("quiniela-active-game","quiniela");activeGame=g==="quinigol"?"quinigol":"quiniela";
   for(const id of qgInitialJourneyIds())qgLoadedJourneyIds.add(id);
   await Promise.all([qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),qgLoadSummaries(),qgLoadWalletData()]);

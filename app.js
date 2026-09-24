@@ -42,8 +42,28 @@ function saveSelectedJourneyId(id){
 }
 const MATCH_FILTER_KEY="quiniela-match-filter";
 const MATCH_FILTER_MODES=new Set(["all","pending","live","correct","wrong","e8"]);
-const savedMatchFilter=localStorage.getItem(MATCH_FILTER_KEY);
-let activeMatchFilter = MATCH_FILTER_MODES.has(savedMatchFilter)?savedMatchFilter:"all";
+let activeMatchFilter="all";
+function matchFilterStorageKey(){
+  return identityUserId&&roomId?`${MATCH_FILTER_KEY}:${roomId}:${identityUserId}`:"";
+}
+function loadSavedMatchFilter(){
+  const scopedKey=matchFilterStorageKey();
+  if(!scopedKey)return "all";
+  let value=localStorage.getItem(scopedKey);
+  // Migración suave del valor antiguo global al nuevo valor individual.
+  if(!value){
+    const legacy=localStorage.getItem(MATCH_FILTER_KEY);
+    if(MATCH_FILTER_MODES.has(legacy)){
+      value=legacy;
+      localStorage.setItem(scopedKey,legacy);
+    }
+  }
+  return MATCH_FILTER_MODES.has(value)?value:"all";
+}
+function saveMatchFilter(mode){
+  const key=matchFilterStorageKey();
+  if(key&&MATCH_FILTER_MODES.has(mode))localStorage.setItem(key,mode);
+}
 let notices = [];
 let pushSubscribed = false;
 let pushStateChecked = false;
@@ -596,7 +616,7 @@ function applyMatchFilter(){
 }
 function setMatchFilter(mode){
   activeMatchFilter=MATCH_FILTER_MODES.has(mode)?mode:"all";
-  localStorage.setItem(MATCH_FILTER_KEY,activeMatchFilter);
+  saveMatchFilter(activeMatchFilter);
   applyMatchFilter();
 }
 function noticeStorageKey(){return roomId?`quiniela-notices-${roomId}`:"quiniela-notices"}
@@ -1823,6 +1843,7 @@ async function joinRoom(){
 async function enterApp(){
   show("app");
   $("#myName").textContent=myMember.display_name;
+  activeMatchFilter=loadSavedMatchFilter();
   setSync("","Cargando");
   await Promise.all([loadAllJourneys(),loadMembers()]);
   await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries(),loadWalletData()]);
