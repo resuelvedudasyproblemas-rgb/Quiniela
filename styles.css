@@ -8553,3 +8553,79 @@ html[data-theme="dark"] .qg-filter[data-qg-filter="wrong"].active span,
 html[data-theme="dark"] .match-filter[data-match-filter="wrong"].active span{
   color:#ff858a!important;
 }
+
+
+/* Colores semánticos de filtros Quiniela / Quinigol v160 */
+.qg-filter[data-qg-filter="all"].active,
+.match-filter[data-match-filter="all"].active{
+  border-color:#3278d4!important;
+  background:color-mix(in srgb,#3278d4 14%,var(--surface))!important;
+  color:#3278d4!important;
+}
+.qg-filter[data-qg-filter="pending"].active,
+.match-filter[data-match-filter="pending"].active{
+  border-color:#707b8b!important;
+  background:color-mix(in srgb,#707b8b 13%,var(--surface))!important;
+  color:#657181!important;
+}
+.qg-filter[data-qg-filter="correct"].active,
+.match-filter[data-match-filter="correct"].active{
+  border-color:#1f9a68!important;
+  background:color-mix(in srgb,#1f9a68 14%,var(--surface))!important;
+  color:#17875a!important;
+}
+.match-filter[data-match-filter="e8"].active{
+  border-color:#b68618!important;
+  background:color-mix(in srgb,#d3a326 15%,var(--surface))!important;
+  color:#a2730c!important;
+}
+.qg-filter[data-qg-filter="all"].active span,
+.match-filter[data-match-filter="all"].active span{
+  background:color-mix(in srgb,#3278d4 12%,var(--surface-3))!important;
+  color:#3278d4!important;
+}
+.qg-filter[data-qg-filter="pending"].active span,
+.match-filter[data-match-filter="pending"].active span{
+  background:color-mix(in srgb,#707b8b 12%,var(--surface-3))!important;
+  color:#657181!important;
+}
+.qg-filter[data-qg-filter="correct"].active span,
+.match-filter[data-match-filter="correct"].active span{
+  background:color-mix(in srgb,#1f9a68 12%,var(--surface-3))!important;
+  color:#17875a!important;
+}
+.match-filter[data-match-filter="e8"].active span{
+  background:color-mix(in srgb,#d3a326 13%,var(--surface-3))!important;
+  color:#a2730c!important;
+}
+
+html[data-theme="dark"] .qg-filter[data-qg-filter="all"].active,
+html[data-theme="dark"] .match-filter[data-match-filter="all"].active{
+  border-color:#4d8fe8!important;
+  background:color-mix(in srgb,#3278d4 15%,var(--surface))!important;
+  color:#82b2ff!important;
+}
+html[data-theme="dark"] .qg-filter[data-qg-filter="pending"].active,
+html[data-theme="dark"] .match-filter[data-match-filter="pending"].active{
+  border-color:#697686!important;
+  background:color-mix(in srgb,#707b8b 15%,var(--surface))!important;
+  color:#b8c3cf!important;
+}
+html[data-theme="dark"] .qg-filter[data-qg-filter="correct"].active,
+html[data-theme="dark"] .match-filter[data-match-filter="correct"].active{
+  border-color:#299d70!important;
+  background:color-mix(in srgb,#1f9a68 15%,var(--surface))!important;
+  color:#72dfad!important;
+}
+html[data-theme="dark"] .match-filter[data-match-filter="e8"].active{
+  border-color:#b88b25!important;
+  background:color-mix(in srgb,#d3a326 15%,var(--surface))!important;
+  color:#f0ca6a!important;
+}
+html[data-theme="dark"] .qg-filter[data-qg-filter="all"].active span,
+html[data-theme="dark"] .match-filter[data-match-filter="all"].active span{color:#82b2ff!important}
+html[data-theme="dark"] .qg-filter[data-qg-filter="pending"].active span,
+html[data-theme="dark"] .match-filter[data-match-filter="pending"].active span{color:#b8c3cf!important}
+html[data-theme="dark"] .qg-filter[data-qg-filter="correct"].active span,
+html[data-theme="dark"] .match-filter[data-match-filter="correct"].active span{color:#72dfad!important}
+html[data-theme="dark"] .match-filter[data-match-filter="e8"].active span{color:#f0ca6a!important}
