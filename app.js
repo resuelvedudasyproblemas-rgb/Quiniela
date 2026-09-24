@@ -228,21 +228,26 @@ function journeyResolvedCount(j){
 }
 function journeyDisplayState(j){
   if(!j)return "closed";
+  const deadline=journeyDeadline(j);
   if(!loadedJourneyIds.has(j.id)){
     if(j.status==="finished")return "finished";
-    if(j.status==="open")return "open";
+    if(j.status==="open"&&(!deadline||Date.now()<deadline.getTime()))return "open";
     return "closed";
   }
   const resolved=journeyResolvedCount(j);
   const total=matchesForJourney(j.id).length;
   if(total===15 && resolved===15) return "finished";
-  if(j.status==="open") return "open";
+  if(j.status==="open"&&(!deadline||Date.now()<deadline.getTime())) return "open";
   const firstKickoff=matchesForJourney(j.id).map(m=>m.kickoff).filter(Boolean).sort()[0];
   if(resolved>0 || (firstKickoff && Date.now()>=new Date(firstKickoff).getTime())) return "playing";
   return "closed";
 }
 function journeyDeadline(j){
   if(!j) return null;
+  if(j.close_at){
+    const official=new Date(j.close_at);
+    if(Number.isFinite(official.getTime()))return official;
+  }
   const kickoffs=matchesForJourney(j.id)
     .map(m=>m.kickoff)
     .filter(Boolean)
@@ -264,6 +269,20 @@ function formatJourneyDeadline(j){
     minute:"2-digit"
   }).format(deadline);
   return parts.replace(","," ·");
+}
+function madridDayKey(value){
+  const d=value instanceof Date?value:new Date(value);
+  if(!Number.isFinite(d.getTime()))return "";
+  return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Madrid",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+}
+function journeyDeadlineIsToday(j){
+  const deadline=journeyDeadline(j);
+  return Boolean(deadline&&madridDayKey(deadline)===madridDayKey(new Date()));
+}
+function formatJourneyDeadlineTime(j){
+  const deadline=journeyDeadline(j);
+  if(!deadline)return "—";
+  return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",hour:"2-digit",minute:"2-digit"}).format(deadline);
 }
 function nextUpcomingJourney(){
   const now=Date.now();
@@ -296,7 +315,7 @@ function renderNextJourneyCountdown(){
     return;
   }
   el.classList.remove("hidden");
-  el.innerHTML=`<small>SIGUIENTE JORNADA · J${next.j.number}</small><strong>Empieza en <b>${escapeHtml(journeyStartCountdownText(next.start))}</b></strong>`;
+  el.innerHTML=`<small>PRÓXIMO CIERRE · J${next.j.number}</small><strong>Cierra en <b>${escapeHtml(journeyStartCountdownText(next.start))}</b></strong>`;
 }
 function journeyCanEdit(j){
   if(!j || j.status!=="open") return false;
@@ -1998,8 +2017,9 @@ function renderAll(){
   const deadlineEl=$("#journeyDate");
   if(deadlineEl){
     const passed=deadline&&Date.now()>=deadline.getTime();
+    const today=!passed&&journeyDeadlineIsToday(journey);
     deadlineEl.className="journey-deadline"+(passed?" passed":"");
-    deadlineEl.innerHTML=`<small>${passed?"CIERRE DE PRONÓSTICOS":"DÍA LÍMITE"}</small><b>${escapeHtml(formatJourneyDeadline(journey))}</b>`;
+    deadlineEl.innerHTML=`<small>${passed?"PRONÓSTICOS CERRADOS":today?"HASTA":"CIERRE"}</small><b>${escapeHtml(today?formatJourneyDeadlineTime(journey):formatJourneyDeadline(journey))}</b>`;
   }
   const state=journeyDisplayState(journey),resolved=journeyResolvedCount(journey);
   const statusLabels={open:"Abierta para pronósticos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};

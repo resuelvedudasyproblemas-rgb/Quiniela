@@ -376,7 +376,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=147"></script>
+  <script type="module" src="app.js?v=148"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -464,6 +464,18 @@ function tvHtml(m){
 function fullDate(v){
   if(!v)return "Fecha pendiente";
   return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
+}
+function qgMadridDayKey(v){
+  const d=new Date(v);if(!Number.isFinite(d.getTime()))return "";
+  return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Madrid",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+}
+function qgCloseTime(v){
+  if(!v)return "—";
+  return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",hour:"2-digit",minute:"2-digit"}).format(new Date(v));
+}
+function qgCloseLabel(v){
+  if(!v)return "Cierre pendiente";
+  return qgMadridDayKey(v)===qgMadridDayKey(new Date())?`Hasta ${qgCloseTime(v)}`:`Cierre · ${fullDate(v)}`;
 }
 function timeLeft(v){
   const diff=new Date(v).getTime()-Date.now();
@@ -777,8 +789,8 @@ function renderHero(){
   $("#qgJourneyNumber").textContent=`Jornada ${journey.number}`;
   $("#qgJourneyKicker").textContent=st==="open"?"PRÓXIMO QUINIGOL":st==="playing"?"SEGUIMIENTO DE RESULTADOS":st==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
   $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="playing"?`En juego · ${res}/6 resultados`:st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
-  $("#qgJourneyDate").textContent=`Cierre · ${fullDate(journey.close_at)}`;
-  $("#qgJourneyCountdown").textContent=st==="open"?`Empieza en ${timeLeft(journey.close_at)}`:st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
+  $("#qgJourneyDate").textContent=qgCloseLabel(journey.close_at);
+  $("#qgJourneyCountdown").textContent=st==="open"?`Cierra en ${timeLeft(journey.close_at)}`:st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
   renderJourneyCompetitions();
   const card=$("#qgJourneyCard");
   card.dataset.status=st;
@@ -1104,7 +1116,7 @@ async function init(){
     await load();
     if(activeView==="stats"||activeView==="history")await ensureAllQGJourneysLoaded();
     bind();renderAll();setGame(activeGame,false);subscribe();
-    setInterval(()=>{if(journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Empieza en ${timeLeft(journey.close_at)}`}},30000);
+    setInterval(()=>{if(journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;const d=$("#qgJourneyDate");if(d)d.textContent=qgCloseLabel(journey.close_at)}},30000);
   }catch(e){console.error("Quinigol:",e)}
 }
 init();

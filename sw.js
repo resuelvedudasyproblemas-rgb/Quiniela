@@ -1,5 +1,5 @@
-const CACHE="quiniela-v147";
-const CORE=["./","index.html","styles.css","app.js?v=147","config.js","manifest.webmanifest","icon-192.svg","icon-512.svg"];
+const CACHE="quiniela-v148";
+const CORE=["./","index.html","styles.css","app.js?v=148","config.js","manifest.webmanifest","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install",event=>{
   event.waitUntil(
@@ -37,17 +37,35 @@ self.addEventListener("fetch",event=>{
 });
 
 
+function pushVisual(tag=""){
+  const t=String(tag||"").toLowerCase();
+  if(t.startsWith("reminder-"))return {emoji:"⏰",vibrate:[180,80,180]};
+  if(t.includes("prize")||t.startsWith("elige8-"))return {emoji:"🏆",vibrate:[220,90,220]};
+  if(t.startsWith("wallet-"))return {emoji:"💰",vibrate:[160,70,160]};
+  if(t.startsWith("bet-confirm-"))return {emoji:"🎟️",vibrate:[160,70,160]};
+  if(t.includes("final-"))return {emoji:"📊",vibrate:[180,70,180]};
+  if(t.startsWith("result-")||t.startsWith("qg-result-"))return {emoji:"⚽",vibrate:[140,60,140]};
+  if(t.includes("both-complete")||t.includes("complete-"))return {emoji:"✅",vibrate:[140,60,140]};
+  if(t.startsWith("journey-")||t.startsWith("qg-journey-"))return {emoji:"📅",vibrate:[120,60,120]};
+  if(t.startsWith("room-complete-"))return {emoji:"👥",vibrate:[120,60,120]};
+  return {emoji:"🔔",vibrate:[120]};
+}
 self.addEventListener("push",event=>{
   let data={};
   try{data=event.data?event.data.json():{}}catch{data={body:event.data?event.data.text():""}}
-  const title=data.title||"Nuestra Quiniela";
+  const tag=data.tag||"quiniela-push";
+  const visual=pushVisual(tag);
+  const rawTitle=data.title||"Nuestra Quiniela";
+  const title=/^[\p{Extended_Pictographic}]/u.test(rawTitle)?rawTitle:`${visual.emoji} ${rawTitle}`;
   event.waitUntil(self.registration.showNotification(title,{
     body:data.body||"",
     icon:"icon-192.svg",
     badge:"icon-192.svg",
-    tag:data.tag||"quiniela-push",
+    tag,
     data:{url:data.url||"./"},
-    renotify:true
+    renotify:true,
+    timestamp:Date.now(),
+    vibrate:visual.vibrate
   }));
 });
 
