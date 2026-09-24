@@ -40,6 +40,10 @@ const savedMatchFilter=localStorage.getItem(MATCH_FILTER_KEY);
 let activeMatchFilter = MATCH_FILTER_MODES.has(savedMatchFilter)?savedMatchFilter:"all";
 let notices = [];
 let pushSubscribed = false;
+let pushStateChecked = false;
+let pushRegistering = false;
+let pushActivationError = "";
+let pushRegistrationPromise = null;
 const VAPID_PUBLIC_KEY = "BFmY1Uy8yquoZDQ57fxY2awxtrfSXYh-Nj0LtK4fuWKbrTRoSH6Z9hYtfShACqyMeeWMLo1LlLx52FwZuuE3W0o";
 let installPrompt = null;
 let countdownTimer = null;
@@ -605,40 +609,73 @@ function recordNotice(title,body){
   notices.unshift({id:Date.now()+Math.random(),title,body,at:new Date().toISOString(),read:false});
   notices=notices.slice(0,30);saveNotices();renderNotificationBadge();renderNotifications();
 }
-async function registerPushSubscription(){
-  if(!pushCapable()||Notification.permission!=="granted"||!sb||!user)return false;
-  const reg=await navigator.serviceWorker.ready;
-  let subscription=await reg.pushManager.getSubscription();
-  if(!subscription){
-    subscription=await reg.pushManager.subscribe({
-      userVisibleOnly:true,
-      applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-    });
-  }
-  const {error}=await sb.functions.invoke("push-register",{body:subscription.toJSON()});
-  if(error)throw error;
-  pushSubscribed=true;
-  renderNotifications();
+async function ensureServiceWorkerReady(){
+  let reg=await navigator.serviceWorker.getRegistration();
+  if(!reg)reg=await navigator.serviceWorker.register("./sw.js");
+  try{await reg.update()}catch{}
+  return navigator.serviceWorker.ready;
+}
+function pushKeyMatches(subscription,expected){
+  const current=subscription?.options?.applicationServerKey;
+  if(!current)return true;
+  const a=new Uint8Array(current),b=expected instanceof Uint8Array?expected:new Uint8Array(expected);
+  if(a.length!==b.length)return false;
+  for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;
   return true;
 }
-async function refreshPushSubscription(){
-  if(!pushCapable()||Notification.permission!=="granted")return;
-  try{await registerPushSubscription()}catch(e){
-    pushSubscribed=false;
-    console.warn("Push:",e);
+async function registerPushSubscription(){
+  if(pushRegistrationPromise)return pushRegistrationPromise;
+  pushRegistrationPromise=(async()=>{
+    if(!pushCapable()||Notification.permission!=="granted"||!sb||!user)return false;
+    pushRegistering=true;
+    pushActivationError="";
     renderNotifications();
-  }
+    try{
+      const reg=await ensureServiceWorkerReady();
+      const serverKey=urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      let subscription=await reg.pushManager.getSubscription();
+      if(subscription&&!pushKeyMatches(subscription,serverKey)){
+        try{await subscription.unsubscribe()}catch{}
+        subscription=null;
+      }
+      if(!subscription){
+        subscription=await reg.pushManager.subscribe({
+          userVisibleOnly:true,
+          applicationServerKey:serverKey
+        });
+      }
+      const {data,error}=await sb.functions.invoke("push-register",{body:subscription.toJSON()});
+      if(error)throw error;
+      if(data?.ok===false)throw new Error(data.error||"No se pudo registrar el dispositivo");
+      pushSubscribed=true;
+      pushStateChecked=true;
+      pushActivationError="";
+      return true;
+    }catch(e){
+      pushSubscribed=false;
+      pushStateChecked=true;
+      pushActivationError=String(e?.message||e||"Error de activación");
+      console.warn("Push:",e);
+      throw e;
+    }finally{
+      pushRegistering=false;
+      renderNotifications();
+    }
+  })();
+  try{return await pushRegistrationPromise}
+  finally{pushRegistrationPromise=null}
 }
-async function notifyUser(title,body){
+async function refreshPushSubscription(){
+  if(!pushCapable()||Notification.permission!=="granted"){
+    pushStateChecked=true;
+    renderNotifications();
+    return false;
+  }
+  try{return await registerPushSubscription()}
+  catch{return false}
+}
+function notifyUser(title,body){
   recordNotice(title,body);
-  if(pushSubscribed)return;
-  if(!("Notification" in window)||Notification.permission!=="granted")return;
-  try{
-    if("serviceWorker" in navigator){
-      const reg=await navigator.serviceWorker.ready;
-      await reg.showNotification(title,{body,icon:"icon-192.svg",badge:"icon-192.svg",tag:"quiniela-"+title});
-    }else new Notification(title,{body,icon:"icon-192.svg"});
-  }catch(e){console.warn("Notificación:",e)}
 }
 function renderNotifications(){
   const list=$("#notificationList"),btn=$("#enableNotificationsBtn"),status=$("#pushStatusText");
@@ -652,9 +689,15 @@ function renderNotifications(){
     }else if(Notification.permission==="granted"&&pushSubscribed){
       btn.textContent="✓ Notificaciones push activadas";btn.disabled=true;
       if(status)status.textContent="Te llegarán aunque Nuestra Quiniela esté cerrada.";
+    }else if(Notification.permission==="granted"&&pushCapable()&&pushRegistering){
+      btn.textContent="Activando push…";btn.disabled=true;
+      if(status)status.textContent="Registrando este dispositivo.";
+    }else if(Notification.permission==="granted"&&pushCapable()&&!pushStateChecked){
+      btn.textContent="Comprobando activación…";btn.disabled=true;
+      if(status)status.textContent="Estamos comprobando si este dispositivo ya está registrado.";
     }else if(Notification.permission==="granted"&&pushCapable()){
-      btn.textContent="Completar activación push";btn.disabled=false;
-      if(status)status.textContent="El permiso está concedido, falta registrar este dispositivo.";
+      btn.textContent=pushActivationError?"Reintentar activación push":"Completar activación push";btn.disabled=false;
+      if(status)status.textContent=pushActivationError?"No se pudo completar el registro. Toca para reintentarlo.":"El permiso está concedido, falta registrar este dispositivo.";
     }else if(Notification.permission==="granted"){
       btn.textContent="✓ Avisos con la app abierta";btn.disabled=true;
       if(status)status.textContent="Este navegador no admite Web Push en este modo.";
@@ -664,7 +707,7 @@ function renderNotifications(){
     }
   }
   if(!list)return;
-  if(!notices.length){list.innerHTML=`<div class="notification-empty">Aquí aparecerán resultados oficiales, nuevas jornadas y avisos cuando el otro jugador complete su quiniela.</div>`;return}
+  if(!notices.length){list.innerHTML=`<div class="notification-empty">Aquí aparecerán jornadas y cierres, resultados oficiales, avisos de Salva/Ferran, premios, apuestas conjuntas y movimientos del monedero.</div>`;return}
   const fmt=new Intl.DateTimeFormat("es-ES",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
   list.innerHTML=notices.map(n=>`<article class="notification-item ${n.read?"":"unread"}"><strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(n.body)}</p><small>${fmt.format(new Date(n.at))}</small></article>`).join("");
 }
@@ -673,21 +716,26 @@ async function requestNotifications(){
   try{
     let permission=Notification.permission;
     if(permission==="default")permission=await Notification.requestPermission();
+    pushStateChecked=false;
+    pushActivationError="";
     if(permission==="granted"){
       if(pushCapable()){
         const ok=await registerPushSubscription();
         if(ok)toast("Notificaciones push activadas");
       }else{
+        pushStateChecked=true;
         toast("Notificaciones activadas mientras la app esté abierta");
       }
     }
   }catch(e){
     console.error(e);
+    pushActivationError=String(e?.message||e||"Error de activación");
     toast("No se pudieron activar las notificaciones");
   }
   renderNotifications();
 }
 async function openNotificationCenter(){
+  if(Notification.permission==="granted"&&pushCapable()&&!pushStateChecked)await refreshPushSubscription();
   await loadNotices();
   const serverIds=notices.filter(n=>n.serverId&&!n.read).map(n=>n.serverId);
   if(serverIds.length&&sb){
@@ -1609,7 +1657,6 @@ function maybeCelebrateBothComplete(){
   if(localStorage.getItem(key)) return;
   localStorage.setItem(key,"1");
   toast("✓ Los dos habéis completado la jornada");
-  notifyUser("Quinielas completas",`Los dos habéis terminado la Jornada ${journey.number}.`);
 }
 
 async function init(){
@@ -1740,7 +1787,7 @@ async function enterApp(){
   selectActiveJourney();
   renderAll();
   subscribeRealtime();
-  refreshPushSubscription();
+  await refreshPushSubscription();
   startCountdownTimer();
   await activateView(requestedView);
   setSync("online","Sincronizado");
@@ -2445,16 +2492,16 @@ function openHistory(jid){
 function subscribeRealtime(){
   if(channel)sb.removeChannel(channel);
   channel=sb.channel(`room-${roomId}`)
-    .on("postgres_changes",{event:"*",schema:"public",table:"picks",filter:`room_id=eq.${roomId}`},async()=>{const opponent=members.find(m=>m.user_id!==identityUserId),before=opponent?completedCountForUser(opponent.user_id):0;await Promise.all([loadAllPicks(),loadJourneySummaries()]);picks=allPicks.filter(p=>p.journey_id===journey.id);const after=opponent?completedCountForUser(opponent.user_id):0;if(opponent&&before<15&&after===15)notifyUser(`${opponent.display_name} ha completado la jornada`,`Jornada ${journey.number}: ya tiene sus 15 pronósticos.`);renderAll();setSync("online","Sincronizado")})
+    .on("postgres_changes",{event:"*",schema:"public",table:"picks",filter:`room_id=eq.${roomId}`},async()=>{await Promise.all([loadAllPicks(),loadJourneySummaries()]);picks=allPicks.filter(p=>p.journey_id===journey.id);renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await loadAllElige8();renderAll();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_picks",filter:`room_id=eq.${roomId}`},async()=>{await loadAllJointPicks();renderJoint();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"joint_elige8_selections",filter:`room_id=eq.${roomId}`},async()=>{await Promise.all([loadAllJointElige8(),loadJourneySummaries()]);renderJoint();setSync("online","Sincronizado")})
     .on("postgres_changes",{event:"*",schema:"public",table:"room_wallets",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"wallet_transactions",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
     .on("postgres_changes",{event:"*",schema:"public",table:"bet_confirmations",filter:`room_id=eq.${roomId}`},async()=>{await loadWalletData();renderGlobalWallet();renderJoint()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{const before=members.length;await loadMembers();if(before<2&&members.length===2){const other=members.find(m=>m.user_id!==identityUserId);if(other)notifyUser("Sala completa",`${other.display_name} ya está dentro de vuestra sala.`)}renderAll()})
-    .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax){notifyUser(`Jornada ${newMax} disponible`,"Ya podéis empezar a rellenar la nueva Quiniela.");toast(`Nueva jornada: ${newMax}`)}})
-    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{const before=allMatches.map(m=>({...m}));await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();detectNewResults(before);renderAll()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"members",filter:`room_id=eq.${roomId}`},async()=>{await loadMembers();renderAll()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`)})
+    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();renderAll()})
     .subscribe(status=>{if(status==="SUBSCRIBED")setSync("online","Sincronizado");else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setSync("error","Sin conexión")});
 }
 
