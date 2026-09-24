@@ -2128,6 +2128,56 @@ function standingsRowsForCompetition(id,j=journey){
   const seasonId=latest[0]?.season_id;
   return seasonId!=null?all.filter(r=>Number(r.season_id)===Number(seasonId)):all;
 }
+function liveStandingsProjection(baseRows=[],competitionId,journeyRows=[]){
+  const rows=(baseRows||[]).map(r=>({
+    ...r,
+    position:Number(r.position)||null,
+    played:Number(r.played)||0,
+    wins:Number(r.wins)||0,
+    draws:Number(r.draws)||0,
+    losses:Number(r.losses)||0,
+    goals_for:Number(r.goals_for)||0,
+    goals_against:Number(r.goals_against)||0,
+    goal_diff:Number(r.goal_diff)||0,
+    points:Number(r.points)||0,
+    _base_position:Number(r.position)||999,
+    _live:false
+  }));
+  if(!rows.length)return {rows,isLive:false,liveMatches:0};
+  const byId=new Map(rows.map(r=>[Number(r.sofascore_team_id),r]));
+  const live=(journeyRows||[]).filter(m=>
+    Number(m.competition_id)===Number(competitionId) &&
+    m.live_status==="inprogress" &&
+    m.live_home_score!=null && m.live_away_score!=null
+  );
+  for(const m of live){
+    const h=byId.get(Number(m.home_team_id)),a=byId.get(Number(m.away_team_id));
+    if(!h||!a)continue;
+    const hs=Number(m.live_home_score),as=Number(m.live_away_score);
+    if(!Number.isFinite(hs)||!Number.isFinite(as))continue;
+    h.played++;a.played++;
+    h.goals_for+=hs;h.goals_against+=as;h.goal_diff=h.goals_for-h.goals_against;
+    a.goals_for+=as;a.goals_against+=hs;a.goal_diff=a.goals_for-a.goals_against;
+    if(hs>as){h.points+=3;h.wins++;a.losses++}
+    else if(hs<as){a.points+=3;a.wins++;h.losses++}
+    else{h.points++;a.points++;h.draws++;a.draws++}
+    h._live=true;a._live=true;
+  }
+  if(live.length){
+    const groups=[...new Set(rows.map(r=>String(r.group_name||"")))];
+    for(const group of groups){
+      const gr=rows.filter(r=>String(r.group_name||"")===group).sort((a,b)=>
+        (b.points-a.points) ||
+        (b.goal_diff-a.goal_diff) ||
+        (b.goals_for-a.goals_for) ||
+        (a._base_position-b._base_position)
+      );
+      gr.forEach((r,i)=>r.position=i+1);
+    }
+  }
+  return {rows,isLive:live.length>0,liveMatches:live.length};
+}
+
 async function ensureStandingsForCompetitions(ids=[]){
   if(!sb)return;
   const clean=[...new Set(ids.map(Number).filter(Boolean))];
@@ -2159,7 +2209,7 @@ function standingsTableHtml(rows=[],journeyTeamIds=new Set(),comp=null){
       const highlighted=journeyTeamIds.has(Number(r.sofascore_team_id));
       const zone=standingZoneClass(comp?.id,group,r.position,groupRows.length);
       const display=standingNationName(r.team_name);
-      return `<div class="standings-row ${zone} ${highlighted?"journey-team":""}"><span class="standing-pos">${r.position??"—"}</span><span class="standing-team">${teamCrestHtml(display,"xs",r.team_logo_url)}<b>${escapeHtml(display)}</b>${highlighted?'<em>En jornada</em>':""}</span><span>${r.played??"—"}</span><strong>${r.points??"—"}</strong></div>`;
+      return `<div class="standings-row ${zone} ${highlighted?"journey-team":""} ${r._live?"live-team":""}"><span class="standing-pos">${r.position??"—"}</span><span class="standing-team">${teamCrestHtml(display,"xs",r.team_logo_url)}<b>${escapeHtml(display)}</b>${r._live?'<em class="live-standing-tag">En directo</em>':highlighted?'<em>En jornada</em>':""}</span><span>${r.played??"—"}</span><strong>${r.points??"—"}</strong></div>`;
     }).join("")}</div></div>`;
   }).join("");
 }
@@ -2176,17 +2226,19 @@ function renderStandingsPanel(){
   const missing=ids.filter(id=>!standingsCache.has(id));
   if(missing.length)ensureStandingsForCompetitions(missing);
   const active=comps.find(c=>Number(c.id)===Number(activeStandingCompetitionId))||comps[0];
-  const rows=standingsRowsForCompetition(active.id,journey);
   const journeyRows=matchesForJourney(journey.id);
+  const baseRows=standingsRowsForCompetition(active.id,journey);
+  const liveTable=liveStandingsProjection(baseRows,active.id,journeyRows);
+  const rows=liveTable.rows;
   const teamIds=new Set(journeyRows.flatMap(m=>[Number(m.home_team_id),Number(m.away_team_id)]).filter(Boolean));
   const highlights=rows.filter(r=>teamIds.has(Number(r.sofascore_team_id))).sort((a,b)=>(Number(a.position)||99)-(Number(b.position)||99));
   const compact=highlights.length?`<div class="standings-subtitle">Equipos de esta jornada</div><div class="standings-journey-teams">${highlights.map(r=>{
     const groupRows=rows.filter(x=>String(x.group_name||"")===String(r.group_name||""));
     const zone=standingZoneClass(active.id,r.group_name,r.position,groupRows.length);
     const display=standingNationName(r.team_name);
-    return `<div class="standings-journey-team ${zone}">${teamCrestHtml(display,"xs",r.team_logo_url)}<span><b>${escapeHtml(display)}</b><small>${escapeHtml(standingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`;
+    return `<div class="standings-journey-team ${zone} ${r._live?"live-team":""}">${teamCrestHtml(display,"xs",r.team_logo_url)}<span><b>${escapeHtml(display)}</b><small>${r._live?"En directo · provisional":escapeHtml(standingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`;
   }).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
-  el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>CLASIFICACIONES</span><strong>Jornada ${journey.number}</strong></div><button type="button" class="standings-close" data-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-standing-comp="${c.id}">${matchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${escapeHtml(c.name)}</span></button>`).join("")}</div>${nationsExplanationHtml(active)}${standingsLegendHtml(active)}${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${standingsTableHtml(rows,teamIds,active)}</details></div>`;
+  el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>${liveTable.isLive?"CLASIFICACIÓN EN DIRECTO":"CLASIFICACIONES"}</span><strong>Jornada ${journey.number}${liveTable.isLive?" · provisional":""}</strong></div><button type="button" class="standings-close" data-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-standing-comp="${c.id}">${matchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${escapeHtml(c.name)}</span></button>`).join("")}</div>${nationsExplanationHtml(active)}${standingsLegendHtml(active)}${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${standingsTableHtml(rows,teamIds,active)}</details></div>`;
   el.querySelector("[data-standings-close]")?.addEventListener("click",()=>{standingsExpanded=false;renderStandingsPanel();renderJourneyLeagues()});
   el.querySelectorAll("[data-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{activeStandingCompetitionId=Number(btn.dataset.standingComp);renderStandingsPanel()}));
 }

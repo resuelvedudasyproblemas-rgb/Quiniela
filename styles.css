@@ -9006,3 +9006,42 @@ html[data-theme="dark"] .standings-row.zone-blue .standing-pos{background:#182d4
 html[data-theme="dark"] .standings-row.zone-purple .standing-pos{background:#2b2344;color:#c0a9ff}
 html[data-theme="dark"] .standings-row.zone-amber .standing-pos{background:#392b14;color:#f1be65}
 html[data-theme="dark"] .standings-row.zone-red .standing-pos{background:#3d2024;color:#ff9da2}
+
+
+/* Clasificación provisional en directo v170 */
+.standings-row.live-team{
+  background:linear-gradient(90deg,color-mix(in srgb,#f3a51f 9%,var(--surface)),var(--surface))!important;
+}
+.standings-journey-team.live-team{
+  background:linear-gradient(90deg,color-mix(in srgb,#f3a51f 10%,var(--surface-2)),var(--surface-2))!important;
+  border-color:color-mix(in srgb,#f3a51f 34%,var(--border))!important;
+}
+.live-standing-tag{
+  color:#b8780c!important;
+  background:#fff1d2!important;
+  border:1px solid #ecc46e!important;
+  padding:2px 5px!important;
+  border-radius:999px!important;
+  font-size:.39rem!important;
+  font-weight:950!important;
+  white-space:nowrap;
+}
+.standings-sheet-head>div>span:first-child{
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.standings-sheet-head>div>span:first-child::before{
+  content:"";
+  width:6px;height:6px;border-radius:50%;
+  background:currentColor;opacity:.55;
+}
+html[data-theme="dark"] .standings-row.live-team{
+  background:linear-gradient(90deg,rgba(243,165,31,.10),transparent)!important;
+}
+html[data-theme="dark"] .standings-journey-team.live-team{
+  background:linear-gradient(90deg,rgba(243,165,31,.12),var(--surface-2))!important;
+}
+html[data-theme="dark"] .live-standing-tag{
+  color:#f4c66c!important;background:#3a2a12!important;border-color:#6b4b18!important;
+}
