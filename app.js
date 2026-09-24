@@ -2780,6 +2780,9 @@ function hasLiveMatch(m){
     && m.live_away_score!=null
     && (m.live_status==="inprogress" || m.live_status==="finished");
 }
+function liveMatchPaused(m){
+  return String(m?.live_status_text||"").trim().toLowerCase()==="descanso";
+}
 function liveMatchLabel(m){
   if(!m) return "";
   if(m.live_status==="inprogress") return m.live_status_text || "En directo";
@@ -2863,7 +2866,7 @@ function buildLiveScoreNode(m){
   var pickState=livePickState(m);
   score.className="fixture-score live-fixture-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
   var small=document.createElement("small");
-  if(m.live_status==="inprogress"){
+  if(m.live_status==="inprogress"&&!liveMatchPaused(m)){
     var dot=document.createElement("i");
     dot.className="live-dot";
     small.appendChild(dot);
@@ -2966,7 +2969,7 @@ function decorateLivePleno(){
   }
   box.className="pleno-live-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
   var small=document.createElement("small");
-  if(m.live_status==="inprogress"){
+  if(m.live_status==="inprogress"&&!liveMatchPaused(m)){
     var dot=document.createElement("i");
     dot.className="live-dot";
     small.appendChild(dot);
@@ -3036,7 +3039,7 @@ openMatchDetail=function(n,jid){
   score.innerHTML="";
   var small=document.createElement("small");
   small.className=m.live_status==="inprogress"?"detail-live":"detail-provisional";
-  small.textContent=(m.live_status==="inprogress"?"● ":"")+liveMatchLabel(m);
+  small.textContent=(m.live_status==="inprogress"&&!liveMatchPaused(m)?"● ":"")+liveMatchLabel(m);
   var strong=document.createElement("strong");
   strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
   var note=document.createElement("em");

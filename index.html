@@ -378,7 +378,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=165"></script>
+  <script type="module" src="app.js?v=166"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -515,10 +515,11 @@ function pickText(p){return p?.home_goals&&p?.away_goals?`${p.home_goals}-${p.aw
 function goalNum(v){return v==="M"?3:Number(v)}
 function goalToken(v){const n=Math.max(0,Math.min(3,Math.round(Number(v)||0)));return n>=3?"M":String(n)}
 function actual(m){return resolved(m)?`${m.home_score>=3?"M":m.home_score}-${m.away_score>=3?"M":m.away_score}`:"—"}
+function qgIsHalftime(m){return String(m?.live_status_text||"").trim().toLowerCase()==="descanso"}
 function qgHeaderScore(m){
   if(resolved(m))return {home:String(m.home_score),away:String(m.away_score),cls:"official",label:"FINAL"};
   if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
-    const label=m.live_status==="inprogress"?(m.live_minute?m.live_minute+"′":"EN DIRECTO"):"FINAL";
+    const label=m.live_status==="inprogress"?(qgIsHalftime(m)?"DESCANSO":(m.live_minute?m.live_minute+"′":"EN DIRECTO")):"FINAL";
     return {home:String(m.live_home_score),away:String(m.live_away_score),cls:"live",label};
   }
   return {home:"–",away:"–",cls:"pending",label:""};
@@ -956,7 +957,7 @@ function renderPlay(){
     const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
-    else if(proj!=="—")result=`<div class="qg-result live"><span>En directo · provisional</span><strong>${esc(proj)}</strong></div>`;
+    else if(proj!=="—")result=`<div class="qg-result live"><span>${qgIsHalftime(m)?"Descanso · provisional":"En directo · provisional"}</span><strong>${esc(proj)}</strong></div>`;
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
     return `<article class="qg-match-card ${show?"":"hidden"} result-state-${playerState}"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.home)}</strong></div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}<strong class="qg-head-score ${hs.cls}">${esc(hs.away)}</strong></div>${hs.label?`<span class="qg-head-score-label ${hs.cls}">${esc(hs.label)}</span>`:""}</div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${jointLine}${result}${scorers}</article>`;
