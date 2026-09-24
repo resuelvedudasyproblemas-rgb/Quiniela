@@ -8508,3 +8508,48 @@ html[data-theme="dark"] .journey-choice.state-confirmed>strong,
 html[data-theme="dark"] .journey-choice.state-confirmed>small{
   color:#d2dad6!important;
 }
+
+
+/* Colores de filtros En directo / Fallados v158 */
+.qg-filter[data-qg-filter="live"].active,
+.match-filter[data-match-filter="live"].active{
+  border-color:#c97828!important;
+  background:color-mix(in srgb,#e58a2b 14%,var(--surface))!important;
+  color:#e58a2b!important;
+}
+.qg-filter[data-qg-filter="live"].active span,
+.match-filter[data-match-filter="live"].active span{
+  background:color-mix(in srgb,#e58a2b 12%,var(--surface-3))!important;
+  color:#e58a2b!important;
+}
+.qg-filter[data-qg-filter="wrong"].active,
+.match-filter[data-match-filter="wrong"].active{
+  border-color:#c24f54!important;
+  background:color-mix(in srgb,#d95a60 14%,var(--surface))!important;
+  color:#d95a60!important;
+}
+.qg-filter[data-qg-filter="wrong"].active span,
+.match-filter[data-match-filter="wrong"].active span{
+  background:color-mix(in srgb,#d95a60 12%,var(--surface-3))!important;
+  color:#d95a60!important;
+}
+html[data-theme="dark"] .qg-filter[data-qg-filter="live"].active,
+html[data-theme="dark"] .match-filter[data-match-filter="live"].active{
+  border-color:#c97828!important;
+  background:color-mix(in srgb,#e58a2b 14%,var(--surface))!important;
+  color:#ffb45f!important;
+}
+html[data-theme="dark"] .qg-filter[data-qg-filter="live"].active span,
+html[data-theme="dark"] .match-filter[data-match-filter="live"].active span{
+  color:#ffb45f!important;
+}
+html[data-theme="dark"] .qg-filter[data-qg-filter="wrong"].active,
+html[data-theme="dark"] .match-filter[data-match-filter="wrong"].active{
+  border-color:#b84b51!important;
+  background:color-mix(in srgb,#d95a60 14%,var(--surface))!important;
+  color:#ff858a!important;
+}
+html[data-theme="dark"] .qg-filter[data-qg-filter="wrong"].active span,
+html[data-theme="dark"] .match-filter[data-match-filter="wrong"].active span{
+  color:#ff858a!important;
+}
