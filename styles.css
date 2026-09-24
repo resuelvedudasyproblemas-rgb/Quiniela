@@ -8891,3 +8891,48 @@ html[data-theme="dark"] .qg-joint-pick.wrong{color:#ff9ca1}
 }
 html[data-theme="dark"] .qg-history-picks .pj.history-joint-correct{color:#72dfad!important}
 html[data-theme="dark"] .qg-history-picks .pj.history-joint-wrong{color:#ff9ca1!important}
+
+/* Clasificaciones por competición v167 */
+
+.standings-panel{margin:0 0 11px}
+.standings-shell{border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden}
+.standings-shell>summary{list-style:none;cursor:pointer;min-height:48px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none}
+.standings-shell>summary::-webkit-details-marker,.standings-full>summary::-webkit-details-marker{display:none}
+.standings-shell>summary>span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.standings-shell>summary b{font-size:.7rem;color:var(--text)}
+.standings-shell>summary small{font-size:.5rem;color:var(--muted)}
+.standings-shell>summary i{font-style:normal;color:var(--muted);transition:transform .18s ease}
+.standings-shell[open]>summary i{transform:rotate(180deg)}
+.standings-content{border-top:1px solid var(--border);padding:10px}
+.standings-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:8px}
+.standings-chips::-webkit-scrollbar{display:none}
+.standings-chip{flex:0 0 auto;display:flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:999px;background:var(--surface-2);color:var(--muted);padding:5px 8px;font-size:.53rem;font-weight:850}
+.standings-chip.active{border-color:color-mix(in srgb,var(--brand) 45%,var(--border));background:color-mix(in srgb,var(--brand) 10%,var(--surface));color:var(--brand)}
+.standings-chip .match-competition-badge{width:18px!important;height:18px!important;min-width:18px!important}
+.standings-journey-teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.standings-journey-team{min-width:0;display:grid;grid-template-columns:24px minmax(0,1fr) auto auto;align-items:center;gap:6px;padding:7px 8px;border:1px solid color-mix(in srgb,var(--brand) 18%,var(--border));border-radius:11px;background:color-mix(in srgb,var(--brand) 4%,var(--surface-2))}
+.standings-journey-team>span{min-width:0}
+.standings-journey-team b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.57rem;color:var(--text)}
+.standings-journey-team small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.44rem;color:var(--muted);margin-top:1px}
+.standings-journey-team>strong{font-size:.67rem;color:var(--brand)}
+.standings-journey-team>em{font-size:.48rem;font-style:normal;color:var(--muted);white-space:nowrap}
+.standings-full{margin-top:8px;border-top:1px solid var(--border);padding-top:7px}
+.standings-full>summary{cursor:pointer;color:var(--brand);font-size:.54rem;font-weight:900;text-align:center;padding:4px}
+.standings-group{margin-top:8px}
+.standings-group-title{font-size:.5rem;font-weight:950;color:var(--muted);letter-spacing:.04em;margin:0 0 5px 3px}
+.standings-table{border:1px solid var(--border);border-radius:11px;overflow:hidden}
+.standings-row{display:grid;grid-template-columns:38px minmax(0,1fr) 34px 38px;align-items:center;min-height:34px;padding:0 7px;border-bottom:1px solid var(--border);font-size:.53rem}
+.standings-row:last-child{border-bottom:0}
+.standings-row.headings{min-height:27px;background:var(--surface-3);color:var(--muted);font-size:.44rem;font-weight:900}
+.standings-row.journey-team{background:color-mix(in srgb,var(--brand) 7%,var(--surface))}
+.standing-pos{font-weight:950;color:var(--muted)}
+.standing-team{display:flex;align-items:center;gap:6px;min-width:0}
+.standing-team b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.standing-team em{font-style:normal;font-size:.42rem;color:var(--brand);font-weight:900;margin-left:auto}
+.standings-row>strong{text-align:right;color:var(--text)}
+.standings-row>span:nth-child(3){text-align:center;color:var(--muted)}
+.standings-empty{padding:12px;text-align:center;color:var(--muted);font-size:.55rem}
+@media(max-width:600px){.standings-journey-teams{grid-template-columns:1fr}.standings-journey-team{grid-template-columns:24px minmax(0,1fr) auto auto}}
+html[data-theme="dark"] .standings-chip.active{color:#73d9ad;border-color:#2d6f58;background:#143126}
+html[data-theme="dark"] .standings-journey-team,html[data-theme="dark"] .standings-row.journey-team{background:color-mix(in srgb,var(--brand) 8%,var(--surface))}
+

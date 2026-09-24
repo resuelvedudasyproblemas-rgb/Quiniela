@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=165" />
+  <link rel="stylesheet" href="styles.css?v=167" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -121,6 +121,7 @@
       <div class="qg-main">
         <section id="qgPlayView" class="qg-view active">
           <section id="qgDashboard" class="journey-dashboard qg-dashboard"></section>
+          <section id="qgStandingsPanel" class="standings-panel hidden" aria-label="Clasificaciones de las competiciones"></section>
           <div class="progress-row"><span id="qgProgressText">0 de 6 completados</span><span>En la nube</span></div>
           <div class="progress"><div id="qgProgressBar"></div></div>
           <div class="qg-filter-wrap" aria-label="Filtrar partidos de Quinigol">
@@ -187,6 +188,7 @@
     <main id="quinielaMain">
       <section id="playView" class="view active">
         <section id="journeyDashboard" class="journey-dashboard"></section>
+        <section id="standingsPanel" class="standings-panel hidden" aria-label="Clasificaciones de las competiciones"></section>
 
         <div class="progress-row">
           <span id="progressText">0 de 15 completados</span>
@@ -378,7 +380,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=166"></script>
+  <script type="module" src="app.js?v=167"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -397,6 +399,9 @@ const drafts=new Map(),jointDrafts=new Map();
 const qgLoadedJourneyIds=new Set();
 let qgJourneySummaries=new Map();
 let qgHistoryFullyLoaded=false;
+const qgStandingsCache=new Map();
+const qgStandingsLoading=new Set();
+let qgActiveStandingCompetitionId=null;
 
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function toast(msg){
@@ -800,6 +805,72 @@ function renderJourneyCompetitions(){
   const shown=comps.slice(0,3);
   el.innerHTML=shown.map((c,i)=>`<span class="journey-league-logo" style="--league-i:${i}" title="${esc(c.name)}" aria-label="${esc(c.name)}"><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`).join("")+(comps.length>3?`<span class="journey-league-more" title="${esc(comps.slice(3).map(c=>c.name).join(", "))}">+${comps.length-3}</span>`:"");
 }
+
+function qgStandingsSeasonLabel(drawDate=""){
+  const p=String(drawDate||"").split("-").map(Number),y=p[0]||new Date().getFullYear(),m=p[1]||8,start=m>=7?y:y-1;
+  return String(start).slice(-2)+"/"+String(start+1).slice(-2);
+}
+function qgStandingGroupLabel(raw="",compName="",seasonLabel=""){
+  let s=String(raw||"").trim();if(!s)return "Clasificación";
+  if(compName&&s.toLowerCase().startsWith(String(compName).toLowerCase()))s=s.slice(String(compName).length).trim();
+  if(seasonLabel&&s.startsWith(seasonLabel))s=s.slice(seasonLabel.length).trim();
+  s=s.replace(/^[-,·\s]+/,"").replace(/\bLeague\b/gi,"Liga").replace(/\bGroup\b/gi,"Grupo");
+  return s||"Clasificación";
+}
+function qgStandingsRows(id,j=journey){
+  const all=qgStandingsCache.get(Number(id))||[];if(!all.length)return [];
+  const label=qgStandingsSeasonLabel(j?.draw_date),exact=all.filter(r=>String(r.season_label||"")===label);
+  if(exact.length)return exact;
+  const latest=[...all].sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0)),sid=latest[0]?.season_id;
+  return sid!=null?all.filter(r=>Number(r.season_id)===Number(sid)):all;
+}
+async function qgEnsureStandings(ids=[]){
+  if(!sb)return;
+  const clean=[...new Set(ids.map(Number).filter(Boolean))],missing=clean.filter(id=>!qgStandingsCache.has(id)&&!qgStandingsLoading.has(id));
+  if(!missing.length)return;
+  missing.forEach(id=>qgStandingsLoading.add(id));
+  try{
+    const {data,error}=await sb.from("competition_standings").select("*").in("competition_id",missing).order("group_name").order("position");
+    if(error)throw error;
+    missing.forEach(id=>qgStandingsCache.set(id,(data||[]).filter(r=>Number(r.competition_id)===id)));
+  }catch(e){
+    console.warn("Clasificaciones Quinigol:",e);missing.forEach(id=>qgStandingsCache.set(id,[]));
+  }finally{
+    missing.forEach(id=>qgStandingsLoading.delete(id));qgRenderStandings();
+  }
+}
+function qgCompetitionList(){
+  const seen=new Map();
+  (matches||[]).forEach(m=>{const id=Number(m.competition_id),name=String(m.competition_name||"").trim(),logo=String(m.competition_logo_url||"").trim();if(id&&name&&!seen.has(id))seen.set(id,{id,name,logo})});
+  return [...seen.values()];
+}
+function qgStandingsTableHtml(rows=[],teamIds=new Set(),comp=null){
+  if(!rows.length)return '<div class="standings-empty">Clasificación todavía no disponible.</div>';
+  const relevant=new Set(rows.filter(r=>teamIds.has(Number(r.sofascore_team_id))).map(r=>String(r.group_name||"")));
+  const groups=[...new Set(rows.map(r=>String(r.group_name||"")))].filter(g=>!relevant.size||relevant.has(g));
+  return groups.map(group=>{
+    const rr=rows.filter(r=>String(r.group_name||"")===group).sort((a,b)=>(Number(a.position)||99)-(Number(b.position)||99));
+    return `<div class="standings-group"><div class="standings-group-title">${esc(qgStandingGroupLabel(group,comp?.name,rr[0]?.season_label))}</div><div class="standings-table"><div class="standings-row headings"><span>Pos.</span><span>Equipo</span><span>PJ</span><span>Pts</span></div>${rr.map(r=>{const h=teamIds.has(Number(r.sofascore_team_id));return `<div class="standings-row ${h?"journey-team":""}"><span class="standing-pos">${r.position??"—"}</span><span class="standing-team">${crest(r.team_name,r.team_logo_url)}<b>${esc(r.team_name||"Equipo")}</b>${h?'<em>Jornada</em>':""}</span><span>${r.played??"—"}</span><strong>${r.points??"—"}</strong></div>`}).join("")}</div></div>`;
+  }).join("");
+}
+function qgRenderStandings(){
+  const el=$("#qgStandingsPanel");if(!el||!journey)return;
+  const wasOpen=Boolean(el.querySelector(".standings-shell")?.open);
+  const comps=qgCompetitionList();
+  if(!comps.length){el.classList.add("hidden");el.innerHTML="";return}
+  el.classList.remove("hidden");
+  const ids=comps.map(c=>Number(c.id));
+  if(!qgActiveStandingCompetitionId||!ids.includes(Number(qgActiveStandingCompetitionId)))qgActiveStandingCompetitionId=ids[0];
+  const missing=ids.filter(id=>!qgStandingsCache.has(id));if(missing.length)qgEnsureStandings(missing);
+  const active=comps.find(c=>Number(c.id)===Number(qgActiveStandingCompetitionId))||comps[0];
+  const rows=qgStandingsRows(active.id,journey),teamIds=new Set((matches||[]).flatMap(m=>[Number(m.home_team_id),Number(m.away_team_id)]).filter(Boolean));
+  const highlights=rows.filter(r=>teamIds.has(Number(r.sofascore_team_id))).sort((a,b)=>(Number(a.position)||99)-(Number(b.position)||99));
+  const compact=highlights.length?`<div class="standings-journey-teams">${highlights.map(r=>`<div class="standings-journey-team">${crest(r.team_name,r.team_logo_url)}<span><b>${esc(r.team_name||"Equipo")}</b><small>${esc(qgStandingGroupLabel(r.group_name,active.name,r.season_label))}</small></span><strong>${r.position??"—"}º</strong><em>${r.points??"—"} pts</em></div>`).join("")}</div>`:'<div class="standings-empty">Cargando equipos de esta jornada…</div>';
+  el.innerHTML=`<details class="standings-shell"><summary><span><b>Clasificaciones</b><small>${comps.length} competición${comps.length===1?"":"es"} · equipos de esta jornada</small></span><i>⌄</i></summary><div class="standings-content"><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-qg-standing-comp="${c.id}">${qgMatchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${esc(c.name)}</span></button>`).join("")}</div>${compact}<details class="standings-full"><summary>Ver clasificación completa</summary>${qgStandingsTableHtml(rows,teamIds,active)}</details></div></details>`;
+  if(wasOpen)el.querySelector(".standings-shell")?.setAttribute("open","");
+  el.querySelectorAll("[data-qg-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingComp);qgRenderStandings();el.querySelector(".standings-shell")?.setAttribute("open","")}));
+}
+
 function renderHero(){
   if(!journey)return;
   const st=qgVisualState(journey),res=msFor(journey.id).filter(resolved).length;
@@ -1166,7 +1237,7 @@ function setGame(g,persist=true){
 }
 function renderAll(){
   if(!journey)return;
-  renderHero();renderSwitcher();renderDashboard();renderPlay();renderJoint();renderCompare();renderStats();renderHistory();setView(activeView,false);
+  renderHero();renderSwitcher();renderDashboard();qgRenderStandings();renderPlay();renderJoint();renderCompare();renderStats();renderHistory();setView(activeView,false);
 }
 async function openQGView(v){
   if((v==="stats"||v==="history")&&!qgHistoryFullyLoaded){
