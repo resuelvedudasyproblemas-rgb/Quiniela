@@ -653,7 +653,7 @@ async function loadNotices(){
   notices=Array.isArray(local)?local:[];
   if(sb&&user){
     const {data,error}=await sb.from("push_notifications")
-      .select("id,title,body,created_at,read_at")
+      .select("id,title,body,created_at,read_at,push_sent_at")
       .eq("user_id",identityUserId)
       .order("created_at",{ascending:false})
       .limit(30);
@@ -664,7 +664,8 @@ async function loadNotices(){
         title:n.title,
         body:n.body,
         at:n.created_at,
-        read:Boolean(n.read_at)
+        read:Boolean(n.read_at),
+        pushSent:Boolean(n.push_sent_at)
       }));
       const serverKeys=new Set(server.map(n=>n.title+"\n"+n.body));
       const localOnly=notices.filter(n=>!serverKeys.has(n.title+"\n"+n.body));
@@ -760,17 +761,17 @@ function notifyUser(title,body){
 }
 async function clearNotificationHistory(){
   if(!notices.length)return;
-  if(!window.confirm("¿Borrar todas las notificaciones ya enviadas de tu historial?"))return;
   try{
-    if(sb&&identityUserId){
-      const {error}=await sb.from("push_notifications")
-        .delete()
-        .eq("user_id",identityUserId)
-        .not("push_sent_at","is",null);
+    const serverIds=notices.filter(n=>n.serverId&&n.pushSent).map(n=>n.serverId);
+    if(sb&&serverIds.length){
+      const {error}=await sb.from("push_notifications").delete().in("id",serverIds);
       if(error)throw error;
     }
     try{localStorage.removeItem(noticeStorageKey())}catch{}
-    await loadNotices();
+    notices=[];
+    saveNotices();
+    renderNotificationBadge();
+    renderNotifications();
     toast("Notificaciones borradas");
   }catch(e){
     console.error("Borrar notificaciones:",e);
