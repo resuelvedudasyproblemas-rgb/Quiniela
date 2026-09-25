@@ -2863,6 +2863,57 @@ async function refreshCrossDeviceTable(table){
   }
 }
 
+function applyBroadcastListChange(list,payload,keyFn){
+  const row=payload?.record&&Object.keys(payload.record).length?payload.record:null;
+  const oldRow=payload?.old_record&&Object.keys(payload.old_record).length?payload.old_record:null;
+  const keyRow=row||oldRow;
+  if(!keyRow)return list;
+  const key=keyFn(keyRow);
+  if(String(payload?.operation||"").toUpperCase()==="DELETE"){
+    return (list||[]).filter(x=>keyFn(x)!==key);
+  }
+  if(!row)return list;
+  return mergeJourneyRows(list,[row],keyFn);
+}
+async function applyRoomBroadcastChange(message){
+  const payload=message?.payload||{};
+  const table=payload.table;
+  const row=payload.record&&Object.keys(payload.record).length?payload.record:null;
+  const oldRow=payload.old_record&&Object.keys(payload.old_record).length?payload.old_record:null;
+  const keyRow=row||oldRow;
+
+  // Compatibilidad con broadcasts antiguos durante una actualización escalonada.
+  if(!keyRow)return refreshCrossDeviceTable(table);
+  if(keyRow.room_id&&String(keyRow.room_id)!==String(roomId))return;
+
+  if(table==="picks"){
+    allPicks=applyBroadcastListChange(allPicks,payload,x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  }else if(table==="elige8_selections"){
+    allElige8=applyBroadcastListChange(allElige8,payload,x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  }else if(table==="joint_picks"){
+    allJointPicks=applyBroadcastListChange(allJointPicks,payload,x=>`${x.journey_id}:${x.match_number}`);
+  }else if(table==="joint_elige8_selections"){
+    allJointElige8=applyBroadcastListChange(allJointElige8,payload,x=>`${x.journey_id}:${x.match_number}`);
+  }else if(table==="members"){
+    members=applyBroadcastListChange(members,payload,x=>String(x.user_id)).sort((a,b)=>Number(a.slot)-Number(b.slot));
+    myMember=members.find(m=>String(m.user_id)===String(identityUserId))||myMember;
+  }else if(table==="room_wallets"){
+    if(row&&row.balance!=null)walletBalance=Number(row.balance||0);
+  }else if(table==="wallet_transactions"){
+    walletTransactions=applyBroadcastListChange(walletTransactions,payload,x=>String(x.id))
+      .sort((a,b)=>new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime())
+      .slice(0,12);
+  }else if(table==="bet_confirmations"){
+    betConfirmations=applyBroadcastListChange(betConfirmations,payload,x=>`${x.game}:${x.journey_id}`);
+  }else{
+    return refreshCrossDeviceTable(table);
+  }
+
+  if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
+  renderAll();
+  setSync("online","Sincronizado");
+}
+
 async function applyRealtimeMatchChange(payload){
   const row=payload?.new&&Object.keys(payload.new).length?payload.new:null;
   const oldRow=payload?.old&&Object.keys(payload.old).length?payload.old:null;
@@ -2888,7 +2939,7 @@ async function applyRealtimeMatchChange(payload){
     matches=matchesForJourney(journey.id);
     picks=allPicks.filter(p=>p.journey_id===journey.id);
   }
-  if(officialChanged)await loadJourneySummaries();
+  if(officialChanged&&!loadedJourneyIds.has(Number(keyRow.journey_id)))await loadJourneySummaries();
   if(standingsExpanded&&activeStandingCompetitionId)standingsCache.delete(Number(activeStandingCompetitionId));
   renderAll();
 }
@@ -2944,7 +2995,7 @@ function subscribeRealtime(){
     .on("broadcast",{event:"db_change"},async message=>{
       const table=message?.payload?.table;
       if(!mainTables.has(table))return;
-      await refreshCrossDeviceTable(table);
+      await applyRoomBroadcastChange(message);
     })
     .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{
       const oldMax=Math.max(0,...journeys.map(j=>j.number));
