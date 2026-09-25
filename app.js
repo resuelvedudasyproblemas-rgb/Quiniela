@@ -24,6 +24,7 @@ let realtimeStatus = "CLOSED";
 let realtimeReconnectTimer = null;
 let realtimeRestarting = false;
 let realtimeWakeTimer = null;
+let lastCrossDeviceRefreshAt = 0;
 let selectedJourneyId = null;
 const standingsCache=new Map();
 const standingsLoading=new Set();
@@ -1630,6 +1631,7 @@ window.addEventListener("quiniela:hide",()=>{
   standingsExpanded=false;
   const panel=$("#standingsPanel");
   if(panel){panel.classList.add("hidden");panel.innerHTML=""}
+  if(channel){sb?.removeChannel(channel);channel=null;realtimeStatus="CLOSED"}
   renderJourneyLeagues();
 });
 window.addEventListener("quiniela:show",async()=>{
@@ -1642,6 +1644,8 @@ window.addEventListener("quiniela:show",async()=>{
     $("#journeySwitcher")?.classList.remove("hidden");
     renderAll();
     await activateView(savedQuinielaView());
+    await syncRealtimeAuth();
+    if(!channel)subscribeRealtime();
     setSync("online","Sincronizado");
   }catch(e){
     console.error("Restaurar Quiniela:",e);
@@ -2816,8 +2820,8 @@ function openHistory(jid){
 
 async function refreshCrossDeviceState(force=false){
   if(!sb||!roomId||crossDeviceSyncBusy)return;
-  if(!force&&document.documentElement.dataset.game==="quinigol")return;
-  if(!force&&document.hidden)return;
+  if(document.documentElement.dataset.game==="quinigol"||document.hidden)return;
+  if(!force&&Date.now()-lastCrossDeviceRefreshAt<60000)return;
   if(saving||elige8Saving||jointSaving||jointElige8Saving)return;
   crossDeviceSyncBusy=true;
   try{
@@ -2830,6 +2834,7 @@ async function refreshCrossDeviceState(force=false){
       loadMembers(),
       loadWalletData()
     ]);
+    lastCrossDeviceRefreshAt=Date.now();
     if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
     renderAll();
     setSync("online","Sincronizado");
@@ -2838,6 +2843,54 @@ async function refreshCrossDeviceState(force=false){
   }finally{
     crossDeviceSyncBusy=false;
   }
+}
+
+async function refreshCrossDeviceTable(table){
+  if(!sb||!roomId||document.documentElement.dataset.game==="quinigol")return;
+  try{
+    if(table==="picks")await Promise.all([loadAllPicks(),loadJourneySummaries()]);
+    else if(table==="elige8_selections")await loadAllElige8();
+    else if(table==="joint_picks")await loadAllJointPicks();
+    else if(table==="joint_elige8_selections")await loadAllJointElige8();
+    else if(table==="members")await loadMembers();
+    else if(table==="room_wallets"||table==="wallet_transactions"||table==="bet_confirmations")await loadWalletData();
+    else return;
+    if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
+    renderAll();
+    setSync("online","Sincronizado");
+  }catch(e){
+    console.warn("Actualización Realtime "+table+":",e);
+  }
+}
+
+async function applyRealtimeMatchChange(payload){
+  const row=payload?.new&&Object.keys(payload.new).length?payload.new:null;
+  const oldRow=payload?.old&&Object.keys(payload.old).length?payload.old:null;
+  const keyRow=row||oldRow;
+  if(!keyRow)return;
+
+  const previous=allMatches.find(m=>
+    (keyRow.id!=null&&m.id===keyRow.id) ||
+    (Number(m.journey_id)===Number(keyRow.journey_id)&&Number(m.number)===Number(keyRow.number))
+  )||null;
+  const officialChanged=Boolean(row&&previous&&(
+    previous.home_score!==row.home_score || previous.away_score!==row.away_score
+  ));
+
+  if(payload.eventType==="DELETE"){
+    allMatches=allMatches.filter(m=>!((keyRow.id!=null&&m.id===keyRow.id) ||
+      (Number(m.journey_id)===Number(keyRow.journey_id)&&Number(m.number)===Number(keyRow.number))));
+  }else if(row){
+    allMatches=mergeJourneyRows(allMatches,[row],m=>m.id!=null?"id:"+m.id:`${m.journey_id}:${m.number}`);
+  }
+
+  if(journey){
+    matches=matchesForJourney(journey.id);
+    picks=allPicks.filter(p=>p.journey_id===journey.id);
+  }
+  if(officialChanged)await loadJourneySummaries();
+  if(standingsExpanded&&activeStandingCompetitionId)standingsCache.delete(Number(activeStandingCompetitionId));
+  renderAll();
 }
 async function syncRealtimeAuth(){
   try{
@@ -2871,7 +2924,7 @@ async function wakeRealtime(){
       realtimeRestarting=true;
       try{subscribeRealtime()}finally{realtimeRestarting=false}
     }
-    await refreshCrossDeviceState(true);
+    await refreshCrossDeviceState(false);
   },200);
 }
 function startCrossDeviceSync(){
@@ -2891,16 +2944,22 @@ function subscribeRealtime(){
     .on("broadcast",{event:"db_change"},async message=>{
       const table=message?.payload?.table;
       if(!mainTables.has(table))return;
-      await refreshCrossDeviceState(true);
+      await refreshCrossDeviceTable(table);
     })
-    .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{const oldMax=Math.max(0,...journeys.map(j=>j.number));await loadAllJourneys();await loadAllPicks();selectActiveJourney();const newMax=Math.max(0,...journeys.map(j=>j.number));renderAll();if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`)})
-    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},async()=>{await loadAllJourneys();await Promise.all([loadAllPicks(),loadJourneySummaries()]);selectActiveJourney();if(standingsExpanded&&activeStandingCompetitionId)standingsCache.delete(Number(activeStandingCompetitionId));renderAll()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"journeys"},async()=>{
+      const oldMax=Math.max(0,...journeys.map(j=>j.number));
+      await loadAllJourneys();
+      selectActiveJourney();
+      const newMax=Math.max(0,...journeys.map(j=>j.number));
+      renderAll();
+      if(newMax>oldMax)toast(`Nueva jornada: ${newMax}`);
+    })
+    .on("postgres_changes",{event:"*",schema:"public",table:"matches"},applyRealtimeMatchChange)
     .subscribe((status,err)=>{
       realtimeStatus=status;
       if(status==="SUBSCRIBED"){
         if(realtimeReconnectTimer){clearTimeout(realtimeReconnectTimer);realtimeReconnectTimer=null}
         setSync("online","Sincronizado");
-        refreshCrossDeviceState(true);
       }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
         if(err)console.warn("Realtime Quiniela:",err);
         if(status!=="CLOSED"||!realtimeRestarting)setSync("error","Reconectando");
