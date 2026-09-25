@@ -758,6 +758,25 @@ async function refreshPushSubscription(){
 function notifyUser(title,body){
   recordNotice(title,body);
 }
+async function clearNotificationHistory(){
+  if(!notices.length)return;
+  if(!window.confirm("¿Borrar todas las notificaciones ya enviadas de tu historial?"))return;
+  try{
+    if(sb&&identityUserId){
+      const {error}=await sb.from("push_notifications")
+        .delete()
+        .eq("user_id",identityUserId)
+        .not("push_sent_at","is",null);
+      if(error)throw error;
+    }
+    try{localStorage.removeItem(noticeStorageKey())}catch{}
+    await loadNotices();
+    toast("Notificaciones borradas");
+  }catch(e){
+    console.error("Borrar notificaciones:",e);
+    toast("No se pudieron borrar las notificaciones");
+  }
+}
 function renderNotifications(){
   const list=$("#notificationList"),btn=$("#enableNotificationsBtn"),status=$("#pushStatusText");
   if(btn){
@@ -790,7 +809,9 @@ function renderNotifications(){
   if(!list)return;
   if(!notices.length){list.innerHTML=`<div class="notification-empty">Aquí aparecerán jornadas y cierres, resultados oficiales, avisos de Salva/Ferran, premios, apuestas conjuntas y movimientos del monedero.</div>`;return}
   const fmt=new Intl.DateTimeFormat("es-ES",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
-  list.innerHTML=notices.map(n=>`<article class="notification-item ${n.read?"":"unread"}"><strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(n.body)}</p><small>${fmt.format(new Date(n.at))}</small></article>`).join("");
+  list.innerHTML=`<div class="clear-pick-row"><button id="clearNotificationsBtn" class="clear-pick-btn" type="button">Borrar todas</button></div>`+
+    notices.map(n=>`<article class="notification-item ${n.read?"":"unread"}"><strong>${escapeHtml(n.title)}</strong><p>${escapeHtml(n.body)}</p><small>${fmt.format(new Date(n.at))}</small></article>`).join("");
+  list.querySelector("#clearNotificationsBtn")?.addEventListener("click",clearNotificationHistory);
 }
 async function requestNotifications(){
   if(!("Notification" in window))return;
