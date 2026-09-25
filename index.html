@@ -584,6 +584,19 @@ function selectJourney(){
   journey=saved||open[0]||playing[0]||[...journeys].sort((a,b)=>b.number-a.number)[0];
   selectedJourneyId=journey.id;savePref("quinigol-journey",journey.id);matches=msFor(journey.id);
 }
+async function qgSelectOpenOnEntry(){
+  if(!journeys.length)return;
+  if(journey&&qgVisualState(journey)!=="finished")return;
+  const open=[...journeys].filter(j=>qgVisualState(j)==="open").sort((a,b)=>new Date(a.close_at)-new Date(b.close_at));
+  const playing=[...journeys].filter(j=>qgVisualState(j)==="playing").sort((a,b)=>b.number-a.number);
+  const target=open[0]||playing[0]||[...journeys].sort((a,b)=>b.number-a.number)[0];
+  if(!target)return;
+  await ensureQGJourneyLoaded(target.id,{quiet:true});
+  journey=target;
+  selectedJourneyId=target.id;
+  savePref("quinigol-journey",target.id);
+  matches=msFor(target.id);
+}
 function qgMergeRows(base,incoming,keyFn){
   const map=new Map((base||[]).map(x=>[keyFn(x),x]));
   for(const row of incoming||[])map.set(keyFn(row),row);
@@ -1512,8 +1525,11 @@ function setGame(g,persist=true){
   $("#qgRoot")?.classList.toggle("hidden",!q);$("#journeyCard")?.classList.toggle("hidden",q);$("#journeySwitcher")?.classList.toggle("hidden",q);$("#quinielaTabs")?.classList.toggle("hidden",q);$("#quinielaMain")?.classList.toggle("hidden",q);
   if(q){
     if(qgDataReady){
-      if(!channel)void (async()=>{await qgSyncRealtimeAuth();subscribe()})();
-      renderAll();
+      void (async()=>{
+        if(previousGame!==activeGame)await qgSelectOpenOnEntry();
+        if(!channel){await qgSyncRealtimeAuth();subscribe()}
+        renderAll();
+      })().catch(e=>{console.error("Entrar en Quinigol:",e);toast("No se pudo cargar Quinigol")});
     }else{
       void qgEnsureDataReady().catch(e=>{console.error("Cargar Quinigol:",e);toast("No se pudo cargar Quinigol")});
     }
@@ -1649,6 +1665,7 @@ async function qgEnsureDataReady(){
       await load();
     }
     if(activeView==="stats"||activeView==="history")await ensureAllQGJourneysLoaded();
+    if(activeGame==="quinigol")await qgSelectOpenOnEntry();
     qgDataReady=true;
     if(activeGame==="quinigol"){
       await qgSyncRealtimeAuth();
