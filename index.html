@@ -590,7 +590,12 @@ function qgMergeRows(base,incoming,keyFn){
   return [...map.values()];
 }
 function qgInitialJourneyIds(){
-  const ids=journeys.slice(0,3).map(j=>j.id);
+  const relevant=[...journeys]
+    .filter(j=>j.status!=="finished")
+    .sort((a,b)=>a.number-b.number)
+    .slice(0,3);
+  const base=relevant.length?relevant:[...journeys].sort((a,b)=>b.number-a.number).slice(0,3);
+  const ids=base.map(j=>j.id);
   const saved=Number(readPref("quinigol-journey",""));
   if(Number.isFinite(saved)&&saved>0&&journeys.some(j=>j.id===saved)&&!ids.includes(saved))ids.push(saved);
   return ids;
