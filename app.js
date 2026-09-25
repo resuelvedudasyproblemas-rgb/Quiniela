@@ -408,18 +408,16 @@ function renderJourneySwitcher(){
     el.classList.add("hidden");
     return;
   }
-  const available=[...journeys].sort((a,b)=>b.number-a.number);
+  const available=[...journeys].sort((a,b)=>a.number-b.number);
   if(!available.length){ el.classList.add("hidden"); el.innerHTML=""; return; }
   el.classList.remove("hidden");
-  const active=available.find(j=>j.id===journey.id);
-  const primary=[];
-  if(active)primary.push(active);
-  for(const j of available){
-    if(primary.length>=3)break;
-    if(!primary.some(x=>x.id===j.id))primary.push(j);
-  }
-  primary.sort((a,b)=>b.number-a.number);
-  const archived=available.filter(j=>!primary.some(x=>x.id===j.id));
+  const upcoming=available.filter(j=>journeyVisualState(j)!=="finished");
+  const primary=upcoming.slice(0,3);
+  const archivedFinished=available
+    .filter(j=>journeyVisualState(j)==="finished")
+    .sort((a,b)=>b.number-a.number);
+  const archivedFuture=upcoming.slice(3).sort((a,b)=>b.number-a.number);
+  const archived=[...archivedFinished,...archivedFuture];
 
   const buttonHtml=j=>{
     const state=journeyVisualState(j);
