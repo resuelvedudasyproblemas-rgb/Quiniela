@@ -393,8 +393,9 @@ let sb,roomId,identityUserId,members=[],journeys=[],allMatches=[],allPicks=[],al
 let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
-let qgCrossDeviceSyncBusy=false,qgCrossDeviceSyncBound=false;
+let qgCrossDeviceSyncBusy=false,qgCrossDeviceSyncBound=false,qgLastCrossDeviceRefreshAt=0;
 let qgRealtimeStatus="CLOSED",qgRealtimeReconnectTimer=null,qgRealtimeRestarting=false,qgRealtimeWakeTimer=null;
+let qgDataReady=false,qgDataLoading=null;
 const drafts=new Map(),jointDrafts=new Map();
 const qgLoadedJourneyIds=new Set();
 let qgJourneySummaries=new Map();
@@ -612,6 +613,59 @@ async function qgLoadBundle(ids,{replace=false}={}){
   allPicks=qgMergeRows(allPicks,pr.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
   allJoint=qgMergeRows(allJoint,jpr.data||[],x=>`${x.journey_id}:${x.match_number}`);
   clean.forEach(id=>qgLoadedJourneyIds.add(id));
+}
+async function qgLoadPicksOnly(ids,{replace=true}={}){
+  const clean=[...new Set((ids||[]).map(Number).filter(Boolean))];
+  if(!clean.length)return;
+  const {data,error}=await sb.from("qg_picks").select("*").eq("room_id",roomId).in("journey_id",clean);
+  if(error)throw error;
+  if(replace)allPicks=allPicks.filter(x=>!clean.includes(x.journey_id));
+  allPicks=qgMergeRows(allPicks,data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+}
+async function qgLoadJointOnly(ids,{replace=true}={}){
+  const clean=[...new Set((ids||[]).map(Number).filter(Boolean))];
+  if(!clean.length)return;
+  const {data,error}=await sb.from("qg_joint_picks").select("*").eq("room_id",roomId).in("journey_id",clean);
+  if(error)throw error;
+  if(replace)allJoint=allJoint.filter(x=>!clean.includes(x.journey_id));
+  allJoint=qgMergeRows(allJoint,data||[],x=>`${x.journey_id}:${x.match_number}`);
+}
+async function qgRefreshRealtimeTable(table){
+  if(!qgDataReady||document.documentElement.dataset.game!=="quinigol")return;
+  try{
+    const ids=[...qgLoadedJourneyIds];
+    if(table==="qg_picks")await Promise.all([qgLoadPicksOnly(ids),qgLoadSummaries()]);
+    else if(table==="qg_joint_picks")await qgLoadJointOnly(ids);
+    else if(table==="room_wallets"||table==="wallet_transactions"||table==="bet_confirmations")await qgLoadWalletData();
+    else return;
+    if(journey)matches=msFor(journey.id);
+    renderAll();
+  }catch(e){
+    console.warn("Actualización Realtime Quinigol "+table+":",e);
+  }
+}
+async function qgApplyRealtimeMatchChange(payload){
+  const row=payload?.new&&Object.keys(payload.new).length?payload.new:null;
+  const oldRow=payload?.old&&Object.keys(payload.old).length?payload.old:null;
+  const keyRow=row||oldRow;
+  if(!keyRow||!qgLoadedJourneyIds.has(Number(keyRow.journey_id)))return;
+  const previous=allMatches.find(m=>
+    Number(m.journey_id)===Number(keyRow.journey_id)&&Number(m.number)===Number(keyRow.number)
+  )||null;
+  const officialChanged=Boolean(row&&previous&&(
+    previous.home_score!==row.home_score||previous.away_score!==row.away_score
+  ));
+  if(payload.eventType==="DELETE"){
+    allMatches=allMatches.filter(m=>!(
+      Number(m.journey_id)===Number(keyRow.journey_id)&&Number(m.number)===Number(keyRow.number)
+    ));
+  }else if(row){
+    allMatches=qgMergeRows(allMatches,[row],x=>`${x.journey_id}:${x.number}`);
+  }
+  if(journey)matches=msFor(journey.id);
+  if(officialChanged)await qgLoadSummaries();
+  if(qgStandingsExpanded&&qgActiveStandingCompetitionId)qgStandingsCache.delete(Number(qgActiveStandingCompetitionId));
+  renderAll();
 }
 async function ensureQGJourneyLoaded(jid,{quiet=false}={}){
   const id=Number(jid);
@@ -1341,12 +1395,11 @@ function setFilter(f){activeFilter=["all","pending","live","correct","wrong"].in
 function setGame(g,persist=true){
   const previousGame=activeGame;
   activeGame=g==="quinigol"?"quinigol":"quiniela";if(persist)savePref("quiniela-active-game",activeGame);
-  $$(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
+  $(".game-choice").forEach(b=>b.classList.toggle("active",b.dataset.game===activeGame));
   const q=activeGame==="quinigol";
   const opponentEl=$("#opponentStatus");
 
   if(previousGame!==activeGame){
-    // Las clasificaciones son contextuales a cada juego: nunca deben quedar abiertas al cambiar.
     qgStandingsExpanded=false;
     const qgPanel=$("#qgStandingsPanel");
     if(qgPanel){qgPanel.classList.add("hidden");qgPanel.innerHTML=""}
@@ -1360,10 +1413,18 @@ function setGame(g,persist=true){
   }else{
     document.documentElement.dataset.game="quiniela";
     if(opponentEl&&quinielaOpponentText)opponentEl.textContent=quinielaOpponentText;
+    if(channel){sb?.removeChannel(channel);channel=null;qgRealtimeStatus="CLOSED"}
     window.dispatchEvent(new CustomEvent("quiniela:show"));
   }
   $("#qgRoot")?.classList.toggle("hidden",!q);$("#journeyCard")?.classList.toggle("hidden",q);$("#journeySwitcher")?.classList.toggle("hidden",q);$("#quinielaTabs")?.classList.toggle("hidden",q);$("#quinielaMain")?.classList.toggle("hidden",q);
-  if(q)renderAll();
+  if(q){
+    if(qgDataReady){
+      if(!channel)void (async()=>{await qgSyncRealtimeAuth();subscribe()})();
+      renderAll();
+    }else{
+      void qgEnsureDataReady().catch(e=>{console.error("Cargar Quinigol:",e);toast("No se pudo cargar Quinigol")});
+    }
+  }
 }
 function renderAll(){
   if(!journey)return;
@@ -1381,9 +1442,9 @@ function bind(){
   $$(".qg-filter").forEach(b=>b.addEventListener("click",()=>setFilter(b.dataset.qgFilter)));
 }
 async function qgRefreshCrossDeviceState(force=false){
-  if(!sb||!roomId||qgCrossDeviceSyncBusy)return;
-  if(!force&&document.documentElement.dataset.game!=="quinigol")return;
-  if(!force&&document.hidden)return;
+  if(!sb||!roomId||!qgDataReady||qgCrossDeviceSyncBusy)return;
+  if(document.documentElement.dataset.game!=="quinigol"||document.hidden)return;
+  if(!force&&Date.now()-qgLastCrossDeviceRefreshAt<60000)return;
   if(saving||jointSaving)return;
   qgCrossDeviceSyncBusy=true;
   try{
@@ -1392,6 +1453,7 @@ async function qgRefreshCrossDeviceState(force=false){
       qgLoadSummaries(),
       qgLoadWalletData()
     ]);
+    qgLastCrossDeviceRefreshAt=Date.now();
     if(journey)matches=msFor(journey.id);
     if(qgStandingsExpanded&&qgActiveStandingCompetitionId)qgStandingsCache.delete(Number(qgActiveStandingCompetitionId));
     renderAll();
@@ -1424,7 +1486,7 @@ function qgScheduleRealtimeReconnect(){
   },2500);
 }
 async function qgWakeRealtime(){
-  if(!sb||!roomId||document.hidden)return;
+  if(!sb||!roomId||!qgDataReady||document.hidden||document.documentElement.dataset.game!=="quinigol")return;
   clearTimeout(qgRealtimeWakeTimer);
   qgRealtimeWakeTimer=setTimeout(async()=>{
     await qgSyncRealtimeAuth();
@@ -1433,7 +1495,7 @@ async function qgWakeRealtime(){
       qgRealtimeRestarting=true;
       try{subscribe()}finally{qgRealtimeRestarting=false}
     }
-    await qgRefreshCrossDeviceState(true);
+    await qgRefreshCrossDeviceState(false);
   },200);
 }
 function qgStartCrossDeviceSync(){
@@ -1447,31 +1509,44 @@ function qgStartCrossDeviceSync(){
 }
 
 function subscribe(){
+  if(!qgDataReady)return;
   if(channel)sb.removeChannel(channel);
-  const refreshLoaded=async()=>{
-    await Promise.all([qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),qgLoadSummaries()]);
-    if(journey)matches=msFor(journey.id);
-    renderAll();
-  };
   const qgTables=new Set(["qg_picks","qg_joint_picks","room_wallets","wallet_transactions","bet_confirmations"]);
   channel=sb.channel(`room:${roomId}`,{config:{private:true}})
     .on("broadcast",{event:"db_change"},async message=>{
       const table=message?.payload?.table;
       if(!qgTables.has(table))return;
-      await qgRefreshCrossDeviceState(true);
+      await qgRefreshRealtimeTable(table);
     })
-    .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},refreshLoaded)
+    .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},qgApplyRealtimeMatchChange)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
     .subscribe((status,err)=>{
       qgRealtimeStatus=status;
       if(status==="SUBSCRIBED"){
         if(qgRealtimeReconnectTimer){clearTimeout(qgRealtimeReconnectTimer);qgRealtimeReconnectTimer=null}
-        qgRefreshCrossDeviceState(true);
       }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
         if(err)console.warn("Realtime Quinigol:",err);
         qgScheduleRealtimeReconnect();
       }
     });
+}
+async function qgEnsureDataReady(){
+  if(qgDataReady){
+    if(activeGame==="quinigol"&&!channel){await qgSyncRealtimeAuth();subscribe()}
+    return;
+  }
+  if(qgDataLoading)return qgDataLoading;
+  qgDataLoading=(async()=>{
+    await load();
+    if(activeView==="stats"||activeView==="history")await ensureAllQGJourneysLoaded();
+    qgDataReady=true;
+    if(activeGame==="quinigol"){
+      await qgSyncRealtimeAuth();
+      subscribe();
+      renderAll();
+    }
+  })();
+  try{await qgDataLoading}finally{qgDataLoading=null}
 }
 async function init(){
   if(!cfg.SUPABASE_URL||!cfg.SUPABASE_PUBLISHABLE_KEY)return;
@@ -1488,10 +1563,13 @@ async function init(){
   if(!mine)return;
   roomId=mine.room_id;identityUserId=mine.member_user_id;
   try{
-    await load();
-    if(activeView==="stats"||activeView==="history")await ensureAllQGJourneysLoaded();
-    bind();renderAll();setGame(activeGame,false);await qgSyncRealtimeAuth();subscribe();qgStartCrossDeviceSync();
-    setInterval(()=>{if(journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;const d=$("#qgJourneyDate");if(d){d.classList.remove("hidden");d.textContent=qgCloseLabel(journey.close_at)}}},30000);
+    const savedGame=readPref("quiniela-active-game","quiniela");
+    activeGame=savedGame==="quinigol"?"quinigol":"quiniela";
+    bind();
+    qgStartCrossDeviceSync();
+    setGame(activeGame,false);
+    if(activeGame==="quinigol")await qgEnsureDataReady();
+    setInterval(()=>{if(qgDataReady&&journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;const d=$("#qgJourneyDate");if(d){d.classList.remove("hidden");d.textContent=qgCloseLabel(journey.close_at)}}},30000);
   }catch(e){console.error("Quinigol:",e)}
 }
 init();
