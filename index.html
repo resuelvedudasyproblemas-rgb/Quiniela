@@ -380,7 +380,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=181"></script>
+  <script type="module" src="app.js?v=182"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -394,6 +394,7 @@ let qgWalletBalance=0,qgWalletTransactions=[],qgBetConfirmations=[];
 let journey=null,matches=[],selectedJourneyId=null,activeView="play",activeFilter="all",activeGame="quiniela";
 let saving=false,jointSaving=false,channel=null,quinielaOpponentText="";
 let qgCrossDeviceSyncBusy=false,qgCrossDeviceSyncBound=false,qgLastCrossDeviceRefreshAt=0;
+const QG_CROSS_DEVICE_SAFETY_MS=15*60*1000;
 let qgRealtimeStatus="CLOSED",qgRealtimeReconnectTimer=null,qgRealtimeRestarting=false,qgRealtimeWakeTimer=null;
 let qgDataReady=false,qgDataLoading=null;
 const drafts=new Map(),jointDrafts=new Map();
@@ -594,6 +595,41 @@ function qgInitialJourneyIds(){
   if(Number.isFinite(saved)&&saved>0&&journeys.some(j=>j.id===saved)&&!ids.includes(saved))ids.push(saved);
   return ids;
 }
+function qgPublishWalletState(notify=false){
+  const state={
+    balance:Number(qgWalletBalance||0),
+    transactions:[...(qgWalletTransactions||[])],
+    confirmations:[...(qgBetConfirmations||[])]
+  };
+  window.__NQ_WALLET_STATE__=state;
+  if(notify)window.dispatchEvent(new CustomEvent("wallet:refresh",{detail:state}));
+}
+function qgAdoptSharedWallet(){
+  const shared=window.__NQ_WALLET_STATE__;
+  if(!shared)return false;
+  qgWalletBalance=Number(shared.balance||0);
+  qgWalletTransactions=Array.isArray(shared.transactions)?shared.transactions:[];
+  qgBetConfirmations=Array.isArray(shared.confirmations)?shared.confirmations:[];
+  return true;
+}
+function qgHydrateBootstrap(b){
+  if(!b?.identity||String(b.identity.room_id)!==String(roomId))return false;
+  members=Array.isArray(b.members)?b.members:[];
+  journeys=Array.isArray(b.qg_journeys)?b.qg_journeys:[];
+  allMatches=Array.isArray(b.qg_matches)?b.qg_matches:[];
+  allPicks=Array.isArray(b.qg_picks)?b.qg_picks:[];
+  allJoint=Array.isArray(b.qg_joint_picks)?b.qg_joint_picks:[];
+  qgLoadedJourneyIds.clear();
+  for(const id of (b.qg_loaded_ids||[]))qgLoadedJourneyIds.add(Number(id));
+  qgJourneySummaries=new Map((b.qg_summaries||[]).map(x=>[Number(x.journey_id),x]));
+  qgWalletBalance=Number(b?.wallet?.balance||0);
+  qgWalletTransactions=Array.isArray(b.wallet_transactions)?b.wallet_transactions:[];
+  qgBetConfirmations=Array.isArray(b.bet_confirmations)?b.bet_confirmations:[];
+  qgPublishWalletState(false);
+  qgLastCrossDeviceRefreshAt=Date.now();
+  window.__NQ_BOOTSTRAP__=b;
+  return true;
+}
 async function qgLoadSummaries(){
   const {data,error}=await sb.rpc("get_qg_journey_summaries",{p_room_id:roomId});
   if(error){console.warn("Resumen Quinigol:",error);return}
@@ -687,6 +723,7 @@ async function qgApplyRoomBroadcastChange(message){
     return qgRefreshRealtimeTable(table);
   }
 
+  if(["room_wallets","wallet_transactions","bet_confirmations"].includes(table))qgPublishWalletState(true);
   if(journey)matches=msFor(journey.id);
   renderAll();
 }
@@ -717,7 +754,13 @@ async function ensureQGJourneyLoaded(jid,{quiet=false}={}){
   const id=Number(jid);
   if(qgLoadedJourneyIds.has(id)&&msFor(id).length)return;
   if(!quiet)toast("Cargando jornada completa…");
-  await qgLoadBundle([id]);
+  const {data,error}=await sb.rpc("get_journey_bundle",{p_game:"quinigol",p_journey_id:id});
+  if(error)throw error;
+  const bundle=data||{};
+  allMatches=qgMergeRows(allMatches,bundle.matches||[],x=>`${x.journey_id}:${x.number}`);
+  allPicks=qgMergeRows(allPicks,bundle.picks||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  allJoint=qgMergeRows(allJoint,bundle.joint_picks||[],x=>`${x.journey_id}:${x.match_number}`);
+  qgLoadedJourneyIds.add(id);
 }
 async function ensureAllQGJourneysLoaded(){
   if(qgHistoryFullyLoaded)return;
@@ -753,6 +796,7 @@ async function qgLoadWalletData(){
   qgWalletBalance=Number(wr.data?.balance||0);
   qgWalletTransactions=tr.data||[];
   qgBetConfirmations=cr.data||[];
+  qgPublishWalletState(true);
 }
 function qgWalletCanManage(){return Number(member(1)?.user_id===identityUserId?1:0)===1}
 function qgWalletConfirmation(jid=journey?.id){
@@ -1488,7 +1532,9 @@ function bind(){
 async function qgRefreshCrossDeviceState(force=false){
   if(!sb||!roomId||!qgDataReady||qgCrossDeviceSyncBusy)return;
   if(document.documentElement.dataset.game!=="quinigol"||document.hidden)return;
-  if(!force&&Date.now()-qgLastCrossDeviceRefreshAt<60000)return;
+  const stale=Date.now()-qgLastCrossDeviceRefreshAt>=QG_CROSS_DEVICE_SAFETY_MS;
+  if(!force&&qgRealtimeStatus==="SUBSCRIBED"&&!stale)return;
+  if(!force&&!stale)return;
   if(saving||jointSaving)return;
   qgCrossDeviceSyncBusy=true;
   try{
@@ -1533,13 +1579,14 @@ async function qgWakeRealtime(){
   if(!sb||!roomId||!qgDataReady||document.hidden||document.documentElement.dataset.game!=="quinigol")return;
   clearTimeout(qgRealtimeWakeTimer);
   qgRealtimeWakeTimer=setTimeout(async()=>{
+    const wasSubscribed=qgRealtimeStatus==="SUBSCRIBED";
     await qgSyncRealtimeAuth();
-    if(qgRealtimeStatus!=="SUBSCRIBED"){
+    if(!wasSubscribed){
       if(qgRealtimeReconnectTimer){clearTimeout(qgRealtimeReconnectTimer);qgRealtimeReconnectTimer=null}
       qgRealtimeRestarting=true;
       try{subscribe()}finally{qgRealtimeRestarting=false}
     }
-    await qgRefreshCrossDeviceState(false);
+    await qgRefreshCrossDeviceState(!wasSubscribed);
   },200);
 }
 function qgStartCrossDeviceSync(){
@@ -1576,12 +1623,26 @@ function subscribe(){
 }
 async function qgEnsureDataReady(){
   if(qgDataReady){
+    qgAdoptSharedWallet();
     if(activeGame==="quinigol"&&!channel){await qgSyncRealtimeAuth();subscribe()}
     return;
   }
   if(qgDataLoading)return qgDataLoading;
   qgDataLoading=(async()=>{
-    await load();
+    const shared=window.__NQ_BOOTSTRAP__;
+    const hydrated=qgHydrateBootstrap(shared);
+    if(hydrated){
+      const saved=Number(readPref("quinigol-journey",""));
+      selectedJourneyId=Number.isFinite(saved)&&saved>0?saved:null;
+      if(selectedJourneyId&&journeys.some(j=>j.id===selectedJourneyId)&&!qgLoadedJourneyIds.has(selectedJourneyId)){
+        await ensureQGJourneyLoaded(selectedJourneyId,{quiet:true});
+      }
+      const v=readPref("quinigol-view","play");activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
+      const f=readPref("quinigol-filter","all");activeFilter=["all","pending","live","correct","wrong"].includes(f)?f:"all";
+      selectJourney();
+    }else{
+      await load();
+    }
     if(activeView==="stats"||activeView==="history")await ensureAllQGJourneysLoaded();
     qgDataReady=true;
     if(activeGame==="quinigol"){
@@ -1595,17 +1656,27 @@ async function qgEnsureDataReady(){
 async function init(){
   if(!cfg.SUPABASE_URL||!cfg.SUPABASE_PUBLISHABLE_KEY)return;
   sb=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-  let mine=null;
-  for(let i=0;i<40&&!mine;i++){
-    const {data:{session}}=await sb.auth.getSession();
-    if(session){
-      const r=await sb.rpc("get_my_identity");
-      if(!r.error){const x=Array.isArray(r.data)?r.data[0]:r.data;if(x){mine=x;break}}
+
+  let shared=null;
+  try{
+    if(window.__NQ_APP_READY__)shared=await window.__NQ_APP_READY__;
+  }catch(e){console.warn("Bootstrap compartido Quinigol:",e)}
+
+  let mine=shared?.identity||window.__NQ_BOOTSTRAP__?.identity||null;
+  if(!mine){
+    for(let i=0;i<40&&!mine;i++){
+      const {data:{session}}=await sb.auth.getSession();
+      if(session){
+        const r=await sb.rpc("get_my_identity");
+        if(!r.error){const x=Array.isArray(r.data)?r.data[0]:r.data;if(x){mine=x;break}}
+      }
+      await wait(250);
     }
-    await wait(250);
   }
   if(!mine)return;
   roomId=mine.room_id;identityUserId=mine.member_user_id;
+  if(shared)window.__NQ_BOOTSTRAP__=shared;
+
   try{
     const savedGame=readPref("quiniela-active-game","quiniela");
     activeGame=savedGame==="quinigol"?"quinigol":"quiniela";
