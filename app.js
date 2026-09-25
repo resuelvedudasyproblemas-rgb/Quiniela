@@ -339,15 +339,19 @@ function journeyStartCountdownText(value){
 }
 function renderNextJourneyCountdown(){
   const el=$("#nextJourneyCountdown");
-  if(!el)return;
-  const next=nextUpcomingJourney();
-  if(!next){
-    el.classList.add("hidden");
-    el.innerHTML="";
-    return;
-  }
+  if(!el||!journey)return;
+  const state=journeyVisualState(journey);
+  const deadline=journeyDeadline(journey);
   el.classList.remove("hidden");
-  el.innerHTML=`<small>PRÓXIMO CIERRE · J${next.j.number}</small><strong>Cierra en <b>${escapeHtml(journeyStartCountdownText(next.start))}</b></strong>`;
+  if(state==="open"&&deadline&&deadline.getTime()>Date.now()){
+    el.innerHTML=`<strong>Cierra en <b>${escapeHtml(journeyStartCountdownText(deadline))}</b></strong>`;
+  }else if(state==="confirmed"){
+    el.textContent="Pronósticos bloqueados";
+  }else if(state==="finished"){
+    el.textContent="Resultados oficiales completos";
+  }else{
+    el.textContent="Pronósticos cerrados";
+  }
 }
 function journeyBetConfirmed(j=journey){
   return Boolean(j&&walletConfirmation("quiniela",j.id));
