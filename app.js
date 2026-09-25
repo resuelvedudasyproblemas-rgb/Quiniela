@@ -25,6 +25,7 @@ let realtimeReconnectTimer = null;
 let realtimeRestarting = false;
 let realtimeWakeTimer = null;
 let lastCrossDeviceRefreshAt = 0;
+const CROSS_DEVICE_SAFETY_MS = 15*60*1000;
 let selectedJourneyId = null;
 const standingsCache=new Map();
 const standingsLoading=new Set();
@@ -646,17 +647,20 @@ function urlBase64ToUint8Array(value){
   const raw=atob(base64);
   return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)));
 }
-async function loadNotices(){
+async function loadNotices(serverData=null){
   let local=[];
   try{local=JSON.parse(localStorage.getItem(noticeStorageKey())||"[]")}catch{local=[]}
   notices=Array.isArray(local)?local:[];
-  if(sb&&user){
-    const {data,error}=await sb.from("push_notifications")
+  let data=Array.isArray(serverData)?serverData:null,error=null;
+  if(!data&&sb&&user){
+    const result=await sb.from("push_notifications")
       .select("id,title,body,created_at,read_at,push_sent_at")
       .eq("user_id",identityUserId)
       .order("created_at",{ascending:false})
       .limit(30);
-    if(!error&&data){
+    data=result.data;error=result.error;
+  }
+  if(!error&&data){
       const server=data.map(n=>({
         id:"server-"+n.id,
         serverId:n.id,
@@ -669,7 +673,6 @@ async function loadNotices(){
       const serverKeys=new Set(server.map(n=>n.title+"\n"+n.body));
       const localOnly=notices.filter(n=>!serverKeys.has(n.title+"\n"+n.body));
       notices=[...server,...localOnly].sort((a,b)=>new Date(b.at)-new Date(a.at)).slice(0,30);
-    }
   }
   renderNotificationBadge();
   renderNotifications();
@@ -1017,6 +1020,7 @@ async function loadWalletData(){
   walletBalance=Number(wr.data?.balance||0);
   walletTransactions=tr.data||[];
   betConfirmations=cr.data||[];
+  publishWalletState();
 }
 function walletCanManage(){return Number(myMember?.slot)===1}
 function walletConfirmation(game="quiniela",jid=journey?.id){
@@ -1652,7 +1656,20 @@ window.addEventListener("quiniela:show",async()=>{
   }
 });
 
-window.addEventListener("wallet:refresh",async()=>{try{await loadWalletData();renderGlobalWallet();renderJoint()}catch(e){console.error("Monedero:",e)}});
+window.addEventListener("wallet:refresh",async e=>{
+  try{
+    const shared=e.detail||window.__NQ_WALLET_STATE__;
+    if(shared){
+      walletBalance=Number(shared.balance||0);
+      walletTransactions=Array.isArray(shared.transactions)?shared.transactions:[];
+      betConfirmations=Array.isArray(shared.confirmations)?shared.confirmations:[];
+      publishWalletState();
+    }else{
+      await loadWalletData();
+    }
+    renderGlobalWallet();renderJoint();
+  }catch(err){console.error("Monedero:",err)}
+});
 
 function roomSummaryText(){
   const ordered=[...members].sort((a,b)=>a.slot-b.slot).map(m=>m.display_name).filter(Boolean);
@@ -1820,24 +1837,28 @@ async function init(){
     const roomInput=$("#roomCodeInput");
     if(roomInput) roomInput.value=UNIQUE_ROOM_CODE;
 
+    const {data:bootstrap,error:bootstrapError}=await sb.rpc("get_app_bootstrap");
+    if(!bootstrapError){
+      if(!bootstrap?.identity){ show("onboarding"); return null; }
+      await enterApp(bootstrap);
+      return bootstrap;
+    }
+
+    // Respaldo temporal si el RPC de arranque no estuviera disponible.
+    console.warn("Bootstrap único:",bootstrapError);
     const {data:identity,error:identityError}=await sb.rpc("get_my_identity");
     if(identityError) throw identityError;
     const mine=Array.isArray(identity)?identity[0]:identity;
-
-    if(!mine){ show("onboarding"); return; }
+    if(!mine){ show("onboarding"); return null; }
 
     identityUserId=mine.member_user_id;
-    myMember={
-      room_id:mine.room_id,
-      user_id:mine.member_user_id,
-      slot:mine.slot,
-      display_name:mine.display_name
-    };
+    myMember={room_id:mine.room_id,user_id:mine.member_user_id,slot:mine.slot,display_name:mine.display_name};
     roomId=mine.room_id;
     const {data:r,error:re}=await sb.from("rooms").select("code").eq("id",roomId).single();
     if(re) throw re;
     roomCode=r.code;
     await enterApp();
+    return null;
   }catch(err){
     console.error(err);
     show("setupMissing");
@@ -1888,14 +1909,61 @@ async function joinRoom(){
   }finally{$("#joinRoomBtn").disabled=false}
 }
 
-async function enterApp(){
+function publishWalletState(){
+  window.__NQ_WALLET_STATE__={
+    balance:Number(walletBalance||0),
+    transactions:[...(walletTransactions||[])],
+    confirmations:[...(betConfirmations||[])]
+  };
+}
+function hydrateBootstrapData(b){
+  const id=b?.identity;
+  if(!id?.room_id||!id?.member_user_id)return false;
+  identityUserId=id.member_user_id;
+  roomId=id.room_id;
+  roomCode=b?.room?.code||roomCode;
+  members=Array.isArray(b.members)?b.members:[];
+  myMember=members.find(m=>String(m.user_id)===String(identityUserId))||{
+    room_id:roomId,user_id:identityUserId,slot:id.slot,display_name:id.display_name
+  };
+
+  journeys=Array.isArray(b.quiniela_journeys)?b.quiniela_journeys:[];
+  loadedJourneyIds.clear();
+  for(const id of (b.quiniela_loaded_ids||[]))loadedJourneyIds.add(Number(id));
+  allMatches=Array.isArray(b.quiniela_matches)?b.quiniela_matches:[];
+  allPicks=Array.isArray(b.quiniela_picks)?b.quiniela_picks:[];
+  allElige8=Array.isArray(b.quiniela_elige8)?b.quiniela_elige8:[];
+  allJointPicks=Array.isArray(b.quiniela_joint_picks)?b.quiniela_joint_picks:[];
+  allJointElige8=Array.isArray(b.quiniela_joint_elige8)?b.quiniela_joint_elige8:[];
+  journeySummaries=new Map((b.quiniela_summaries||[]).map(x=>[Number(x.journey_id),x]));
+
+  walletBalance=Number(b?.wallet?.balance||0);
+  walletTransactions=Array.isArray(b.wallet_transactions)?b.wallet_transactions:[];
+  betConfirmations=Array.isArray(b.bet_confirmations)?b.bet_confirmations:[];
+  publishWalletState();
+
+  lastCrossDeviceRefreshAt=Date.now();
+  window.__NQ_BOOTSTRAP__=b;
+  return true;
+}
+
+async function enterApp(bootstrap=null){
   show("app");
+  const bootstrapped=hydrateBootstrapData(bootstrap);
+  if(!bootstrapped){
+    await Promise.all([loadAllJourneys(),loadMembers()]);
+    await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries(),loadWalletData()]);
+    lastCrossDeviceRefreshAt=Date.now();
+  }
   $("#myName").textContent=myMember.display_name;
   activeMatchFilter=loadSavedMatchFilter();
   setSync("","Cargando");
-  await Promise.all([loadAllJourneys(),loadMembers()]);
-  await Promise.all([loadAllPicks(),loadAllElige8(),loadAllJointPicks(),loadAllJointElige8(),loadJourneySummaries(),loadWalletData()]);
-  await loadNotices();
+  await loadNotices(bootstrapped?(bootstrap.notifications||[]):null);
+
+  selectedJourneyId=loadSavedJourneyId();
+  const savedTarget=journeys.find(j=>j.id===selectedJourneyId);
+  if(savedTarget&&!loadedJourneyIds.has(savedTarget.id))await ensureJourneyLoaded(savedTarget.id,{quiet:true});
+
   selectActiveJourney();
   renderAll();
   await syncRealtimeAuth();
@@ -2002,19 +2070,14 @@ async function ensureJourneyLoaded(jid,{quiet=false}={}){
   const id=Number(jid);
   if(loadedJourneyIds.has(id)&&matchesForJourney(id).length)return;
   if(!quiet){setSync("","Cargando jornada");toast("Cargando jornada completa…")}
-  const [mr,pr,er,jr,jer]=await Promise.all([
-    sb.from("matches").select("*").eq("journey_id",id).order("number"),
-    sb.from("picks").select("*").eq("room_id",roomId).eq("journey_id",id),
-    sb.from("elige8_selections").select("*").eq("room_id",roomId).eq("journey_id",id),
-    sb.from("joint_picks").select("*").eq("room_id",roomId).eq("journey_id",id),
-    sb.from("joint_elige8_selections").select("*").eq("room_id",roomId).eq("journey_id",id)
-  ]);
-  for(const r of [mr,pr,er,jr,jer])if(r.error)throw r.error;
-  allMatches=mergeJourneyRows(allMatches,mr.data||[],m=>`${m.journey_id}:${m.number}`);
-  allPicks=mergeJourneyRows(allPicks,pr.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
-  allElige8=mergeJourneyRows(allElige8,er.data||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
-  allJointPicks=mergeJourneyRows(allJointPicks,jr.data||[],x=>`${x.journey_id}:${x.match_number}`);
-  allJointElige8=mergeJourneyRows(allJointElige8,jer.data||[],x=>`${x.journey_id}:${x.match_number}`);
+  const {data,error}=await sb.rpc("get_journey_bundle",{p_game:"quiniela",p_journey_id:id});
+  if(error)throw error;
+  const bundle=data||{};
+  allMatches=mergeJourneyRows(allMatches,bundle.matches||[],m=>`${m.journey_id}:${m.number}`);
+  allPicks=mergeJourneyRows(allPicks,bundle.picks||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  allElige8=mergeJourneyRows(allElige8,bundle.elige8||[],x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  allJointPicks=mergeJourneyRows(allJointPicks,bundle.joint_picks||[],x=>`${x.journey_id}:${x.match_number}`);
+  allJointElige8=mergeJourneyRows(allJointElige8,bundle.joint_elige8||[],x=>`${x.journey_id}:${x.match_number}`);
   loadedJourneyIds.add(id);
   if(!quiet)setSync("online","Sincronizado");
 }
@@ -2819,7 +2882,11 @@ function openHistory(jid){
 async function refreshCrossDeviceState(force=false){
   if(!sb||!roomId||crossDeviceSyncBusy)return;
   if(document.documentElement.dataset.game==="quinigol"||document.hidden)return;
-  if(!force&&Date.now()-lastCrossDeviceRefreshAt<60000)return;
+  const stale=Date.now()-lastCrossDeviceRefreshAt>=CROSS_DEVICE_SAFETY_MS;
+  // Si Realtime sigue conectado, no volvemos a descargar el estado al recuperar foco.
+  // Solo hacemos una comprobación de seguridad tras 15 min o después de una reconexión.
+  if(!force&&realtimeStatus==="SUBSCRIBED"&&!stale)return;
+  if(!force&&!stale)return;
   if(saving||elige8Saving||jointSaving||jointElige8Saving)return;
   crossDeviceSyncBusy=true;
   try{
@@ -2907,6 +2974,7 @@ async function applyRoomBroadcastChange(message){
     return refreshCrossDeviceTable(table);
   }
 
+  if(["room_wallets","wallet_transactions","bet_confirmations"].includes(table))publishWalletState();
   if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
   renderAll();
   setSync("online","Sincronizado");
@@ -2967,13 +3035,14 @@ async function wakeRealtime(){
   if(!sb||!roomId||document.hidden)return;
   clearTimeout(realtimeWakeTimer);
   realtimeWakeTimer=setTimeout(async()=>{
+    const wasSubscribed=realtimeStatus==="SUBSCRIBED";
     await syncRealtimeAuth();
-    if(realtimeStatus!=="SUBSCRIBED"){
+    if(!wasSubscribed){
       if(realtimeReconnectTimer){clearTimeout(realtimeReconnectTimer);realtimeReconnectTimer=null}
       realtimeRestarting=true;
       try{subscribeRealtime()}finally{realtimeRestarting=false}
     }
-    await refreshCrossDeviceState(false);
+    await refreshCrossDeviceState(!wasSubscribed);
   },200);
 }
 function startCrossDeviceSync(){
@@ -3096,7 +3165,7 @@ $("#enableNotificationsBtn").addEventListener("click",requestNotifications);
 $("#closeMatchDetailDialog").addEventListener("click",()=>$("#matchDetailDialog").close());
 
 renderNotifications();
-init();
+window.__NQ_APP_READY__=init();
 
 
 if ("serviceWorker" in navigator) {
