@@ -644,6 +644,48 @@ async function qgRefreshRealtimeTable(table){
     console.warn("Actualización Realtime Quinigol "+table+":",e);
   }
 }
+
+function qgApplyBroadcastListChange(list,payload,keyFn){
+  const row=payload?.record&&Object.keys(payload.record).length?payload.record:null;
+  const oldRow=payload?.old_record&&Object.keys(payload.old_record).length?payload.old_record:null;
+  const keyRow=row||oldRow;
+  if(!keyRow)return list;
+  const key=keyFn(keyRow);
+  if(String(payload?.operation||"").toUpperCase()==="DELETE"){
+    return (list||[]).filter(x=>keyFn(x)!==key);
+  }
+  if(!row)return list;
+  return qgMergeRows(list,[row],keyFn);
+}
+async function qgApplyRoomBroadcastChange(message){
+  const payload=message?.payload||{};
+  const table=payload.table;
+  const row=payload.record&&Object.keys(payload.record).length?payload.record:null;
+  const oldRow=payload.old_record&&Object.keys(payload.old_record).length?payload.old_record:null;
+  const keyRow=row||oldRow;
+
+  if(!keyRow)return qgRefreshRealtimeTable(table);
+  if(keyRow.room_id&&String(keyRow.room_id)!==String(roomId))return;
+
+  if(table==="qg_picks"){
+    allPicks=qgApplyBroadcastListChange(allPicks,payload,x=>`${x.journey_id}:${x.match_number}:${x.user_id}`);
+  }else if(table==="qg_joint_picks"){
+    allJoint=qgApplyBroadcastListChange(allJoint,payload,x=>`${x.journey_id}:${x.match_number}`);
+  }else if(table==="room_wallets"){
+    if(row&&row.balance!=null)qgWalletBalance=Number(row.balance||0);
+  }else if(table==="wallet_transactions"){
+    qgWalletTransactions=qgApplyBroadcastListChange(qgWalletTransactions,payload,x=>String(x.id))
+      .sort((a,b)=>new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime())
+      .slice(0,12);
+  }else if(table==="bet_confirmations"){
+    qgBetConfirmations=qgApplyBroadcastListChange(qgBetConfirmations,payload,x=>`${x.game}:${x.journey_id}`);
+  }else{
+    return qgRefreshRealtimeTable(table);
+  }
+
+  if(journey)matches=msFor(journey.id);
+  renderAll();
+}
 async function qgApplyRealtimeMatchChange(payload){
   const row=payload?.new&&Object.keys(payload.new).length?payload.new:null;
   const oldRow=payload?.old&&Object.keys(payload.old).length?payload.old:null;
@@ -663,7 +705,7 @@ async function qgApplyRealtimeMatchChange(payload){
     allMatches=qgMergeRows(allMatches,[row],x=>`${x.journey_id}:${x.number}`);
   }
   if(journey)matches=msFor(journey.id);
-  if(officialChanged)await qgLoadSummaries();
+  if(officialChanged&&!qgLoadedJourneyIds.has(Number(keyRow.journey_id)))await qgLoadSummaries();
   if(qgStandingsExpanded&&qgActiveStandingCompetitionId)qgStandingsCache.delete(Number(qgActiveStandingCompetitionId));
   renderAll();
 }
@@ -1516,7 +1558,7 @@ function subscribe(){
     .on("broadcast",{event:"db_change"},async message=>{
       const table=message?.payload?.table;
       if(!qgTables.has(table))return;
-      await qgRefreshRealtimeTable(table);
+      await qgApplyRoomBroadcastChange(message);
     })
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_matches"},qgApplyRealtimeMatchChange)
     .on("postgres_changes",{event:"*",schema:"public",table:"qg_journeys"},async()=>{await load();renderAll()})
