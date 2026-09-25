@@ -501,7 +501,11 @@ function state(j){
   if(!j)return "closed";
   if(!qgLoadedJourneyIds.has(j.id)){
     if(j.status==="finished")return "finished";
-    if(j.status==="open"&&Date.now()<new Date(j.close_at).getTime())return "open";
+    const closeAt=j.close_at?new Date(j.close_at).getTime():NaN;
+    if(j.status==="open"&&Number.isFinite(closeAt)&&Date.now()<closeAt)return "open";
+    // close_at es el límite online, 15 min antes del primer partido.
+    // Tras ese margen la jornada ya está en curso aunque sus partidos aún no se hayan cargado.
+    if((j.status==="closed"||j.status==="open")&&Number.isFinite(closeAt)&&Date.now()>=closeAt+15*60000)return "playing";
     return "closed";
   }
   const ms=msFor(j.id);
@@ -1115,7 +1119,7 @@ function renderSwitcher(){
     const st=qgVisualState(j);
     const prizeState=st==="finished"?qgPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
-    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":fullDate(j.close_at)}</small></button>`;
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?"Jornada en curso":fullDate(j.close_at)}</small></button>`;
   };
   el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
     archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
