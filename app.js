@@ -438,7 +438,7 @@ function renderJourneySwitcher(){
   el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
     archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
   }`;
-  $$$("#journeySwitcher [data-journey-id]").forEach(btn=>btn.addEventListener("click",async()=>{
+  $("#journeySwitcher [data-journey-id]").forEach(btn=>btn.addEventListener("click",async()=>{
     const id=Number(btn.dataset.journeyId);
     try{
       await ensureJourneyLoaded(id);
@@ -480,7 +480,7 @@ function liveFreshnessMeta(value){
   return {label:`Actualizado hace ${mins} min`,delayed:false};
 }
 function updateLiveFreshness(){
-  $$$("[data-live-updated]").forEach(el=>{
+  $("[data-live-updated]").forEach(el=>{
     const info=liveFreshnessMeta(el.dataset.liveUpdated);
     el.textContent=info.label;
     el.classList.toggle("delayed",info.delayed);
@@ -489,7 +489,7 @@ function updateLiveFreshness(){
 }
 function updateCountdowns(){
   renderNextJourneyCountdown();
-  $$$("[data-countdown]").forEach(el=>{
+  $("[data-countdown]").forEach(el=>{
     const value=el.dataset.countdown;
     if(value) el.textContent=countdownText(value);
   });
@@ -613,8 +613,8 @@ function renderMatchFilterCounts(){
   Object.entries(map).forEach(([id,key])=>{const el=$("#"+id);if(el)el.textContent=counts[key]});
 }
 function applyMatchFilter(){
-  $$$(".match-filter").forEach(b=>b.classList.toggle("active",b.dataset.matchFilter===activeMatchFilter));
-  $$$(".match-card").forEach(card=>{
+  $(".match-filter").forEach(b=>b.classList.toggle("active",b.dataset.matchFilter===activeMatchFilter));
+  $(".match-card").forEach(card=>{
     let visible=true;
     if(activeMatchFilter==="pending") visible=card.dataset.resolved!=="true"&&card.dataset.live!=="true";
     if(activeMatchFilter==="live") visible=card.dataset.live==="true";
@@ -1339,9 +1339,9 @@ function renderJoint(){
       </div>
     </article>`);
   }
-  $$$(".joint-sign").forEach(btn=>btn.addEventListener("click",()=>{const n=Number(btn.dataset.jointMatch),sign=btn.dataset.jointSign,current=effectiveJointSelection(n),next=current.includes(sign)?current.replace(sign,""):current+sign;saveJointSelection(n,next)}));
+  $(".joint-sign").forEach(btn=>btn.addEventListener("click",()=>{const n=Number(btn.dataset.jointMatch),sign=btn.dataset.jointSign,current=effectiveJointSelection(n),next=current.includes(sign)?current.replace(sign,""):current+sign;saveJointSelection(n,next)}));
   $$(".joint-reset:not(.joint-pleno-reset)").forEach(btn=>btn.addEventListener("click",()=>resetJointSelection(Number(btn.dataset.jointReset))));
-  $$$(".joint-pleno-goal").forEach(btn=>btn.addEventListener("click",()=>saveJointPlenoPart(btn.dataset.jointPlenoTeam,btn.dataset.jointPlenoGoal)));
+  $(".joint-pleno-goal").forEach(btn=>btn.addEventListener("click",()=>saveJointPlenoPart(btn.dataset.jointPlenoTeam,btn.dataset.jointPlenoGoal)));
   $(".joint-pleno-reset")?.addEventListener("click",resetJointPlenoSelection);
 }
 function jointElige8Selections(jid=journey?.id){
@@ -1609,8 +1609,8 @@ async function activateView(view){
     try{await ensureAllJourneysLoaded()}catch(e){console.error(e);toast("No se pudo cargar todo el historial")}
   }
   saveQuinielaView(next);
-  $$$("#quinielaTabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));
-  $$$("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
+  $("#quinielaTabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===next));
+  $("#quinielaMain .view").forEach(v=>v.classList.toggle("active",v.id===next+"View"));
   if(next==="joint")renderJoint();if(next==="compare")renderCompare();if(next==="stats")renderStats();if(next==="history")renderHistory();
 }
 window.addEventListener("quiniela:hide",()=>{
@@ -2422,7 +2422,7 @@ function renderPleno(){
   $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
   const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></div>`:tvBroadcastHtml(m);
   const mp=myPickFor(15),locked=!journeyCanEdit(journey);
-  $$$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
+  $(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
   let plenoClear=$("#plenoClearAction");
   if(!plenoClear){
     plenoClear=document.createElement("div");
@@ -2435,7 +2435,7 @@ function renderPleno(){
   if(oppEl){const reveal=Boolean(mp?.home_goals&&mp?.away_goals);oppEl.classList.toggle("hidden",!reveal);if(reveal)oppEl.innerHTML=`<span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${opp?.home_goals&&opp?.away_goals?`${opp.home_goals}-${opp.away_goals}`:"pendiente"}</strong>`}
   const resultEl=$("#plenoResult"),resultHtml=resultBarHtml(m,mp);resultEl.className="match-result-bar";
   if(resultHtml){const wrapper=document.createElement("div");wrapper.innerHTML=resultHtml;resultEl.className=wrapper.firstElementChild.className;resultEl.innerHTML=wrapper.firstElementChild.innerHTML}else{resultEl.classList.add("hidden");resultEl.innerHTML=""}
-  $$$(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));$$$("#plenoTv [data-detail-match]").forEach(b=>b.addEventListener("click",()=>openMatchDetail(15)));updateCountdowns();
+  $(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));$("#plenoTv [data-detail-match]").forEach(b=>b.addEventListener("click",()=>openMatchDetail(15)));updateCountdowns();
 }
 
 async function toggleElige8(n){
@@ -2519,13 +2519,13 @@ async function deletePick(n){
 async function saveNormalPick(n,val){
   if(!journeyCanEdit(journey)){ toast(journeyEditBlockedMessage(journey)); return; }
   if(saving) return; saving=true; setSync("","Guardando");
-  $$$(".pick,.goal").forEach(b=>b.disabled=true);
+  $(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(n);
   const row={room_id:roomId,journey_id:journey.id,match_number:n,user_id:identityUserId,pick:val,home_goals:null,away_goals:null};
   optimisticUpsert(row);
   renderAll();
   const {error}=await sb.from("picks").upsert(row,{onConflict:"room_id,journey_id,match_number,user_id"});
-  saving=false; $$$(".pick,.goal").forEach(b=>b.disabled=false);
+  saving=false; $(".pick,.goal").forEach(b=>b.disabled=false);
   if(error){ console.error(error); if(previous) optimisticUpsert(previous); else {
     picks=picks.filter(p=>!(p.user_id===identityUserId&&p.match_number===n));
     allPicks=allPicks.filter(p=>!(p.user_id===identityUserId&&p.match_number===n&&p.journey_id===journey.id));
@@ -2536,7 +2536,7 @@ async function saveNormalPick(n,val){
 async function savePleno(team,val){
   if(!journeyCanEdit(journey)){ toast(journeyEditBlockedMessage(journey)); return; }
   if(saving) return; saving=true; setSync("","Guardando");
-  $$$(".pick,.goal").forEach(b=>b.disabled=true);
+  $(".pick,.goal").forEach(b=>b.disabled=true);
   const previous=myPickFor(15);
   const row={
     room_id:roomId,journey_id:journey.id,match_number:15,user_id:identityUserId,pick:null,
@@ -2545,7 +2545,7 @@ async function savePleno(team,val){
   };
   optimisticUpsert(row); renderAll();
   const {error}=await sb.from("picks").upsert(row,{onConflict:"room_id,journey_id,match_number,user_id"});
-  saving=false; $$$(".pick,.goal").forEach(b=>b.disabled=false);
+  saving=false; $(".pick,.goal").forEach(b=>b.disabled=false);
   if(error){console.error(error); if(previous) optimisticUpsert(previous); else {
     picks=picks.filter(p=>!(p.user_id===identityUserId&&p.match_number===15));
     allPicks=allPicks.filter(p=>!(p.user_id===identityUserId&&p.match_number===15&&p.journey_id===journey.id));
@@ -2776,7 +2776,7 @@ function renderHistory(){
 
     </button>`;
   }).join("");
-  $$$(".history-card").forEach(btn=>btn.addEventListener("click",()=>openHistory(Number(btn.dataset.historyId))));
+  $(".history-card").forEach(btn=>btn.addEventListener("click",()=>openHistory(Number(btn.dataset.historyId))));
 }
 
 function openHistory(jid){
@@ -2850,7 +2850,7 @@ function openHistory(jid){
     </article>`;
   }).join("");
 
-  $$$("#historyDialogBody .history-detail-match").forEach(card=>card.addEventListener("click",()=>openMatchDetail(Number(card.dataset.historyMatch),Number(card.dataset.historyJid))));
+  $("#historyDialogBody .history-detail-match").forEach(card=>card.addEventListener("click",()=>openMatchDetail(Number(card.dataset.historyMatch),Number(card.dataset.historyJid))));
   $("#historyDialog").showModal();
 }
 
@@ -3118,8 +3118,8 @@ async function shareRoom(){
 applyTheme(currentTheme(),false);
 $("#themeToggle")?.addEventListener("click",toggleTheme);
 
-$$$("#quinielaTabs .tab").forEach(tab=>tab.addEventListener("click",()=>activateView(tab.dataset.view)));
-$$$(".match-filter").forEach(btn=>btn.addEventListener("click",()=>setMatchFilter(btn.dataset.matchFilter)));
+$("#quinielaTabs .tab").forEach(tab=>tab.addEventListener("click",()=>activateView(tab.dataset.view)));
+$(".match-filter").forEach(btn=>btn.addEventListener("click",()=>setMatchFilter(btn.dataset.matchFilter)));
 $("#createRoomBtn")?.addEventListener("click",createRoom);
 $("#joinRoomBtn").addEventListener("click",joinRoom);
 $("#roomCodeInput")?.addEventListener("input",e=>e.target.value=UNIQUE_ROOM_CODE);
