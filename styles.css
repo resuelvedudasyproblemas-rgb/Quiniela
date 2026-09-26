@@ -9159,3 +9159,21 @@ html[data-theme="dark"] .history-card-e8.perfect{
   border-color:#b48b2d;
   color:#ffe08a;
 }
+
+/* Elige 8: seguimiento en Mi Quiniela */
+.play-joint-e8-progress{
+  margin:10px 0 12px;
+}
+.play-joint-e8-progress.hidden{display:none!important}
+
+/* Igualar el tamaño de las tarjetas pequeñas de jornada en ambos juegos */
+#journeySwitcher .journey-primary-row .journey-choice,
+#qgJourneySwitcher .journey-primary-row .journey-choice{
+  min-height:78px!important;
+}
+@media(max-width:430px){
+  #journeySwitcher .journey-primary-row .journey-choice,
+  #qgJourneySwitcher .journey-primary-row .journey-choice{
+    min-height:82px!important;
+  }
+}
