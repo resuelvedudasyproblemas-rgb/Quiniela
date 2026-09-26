@@ -3297,24 +3297,9 @@ function decorateLiveMatchCards(){
     }
     bar.className="match-result-bar live-result "+(m.live_status==="inprogress"?"is-live":"is-provisional");
     bar.innerHTML="";
-    var left=document.createElement("span");
-    if(m.live_status==="inprogress"){
-      var dot=document.createElement("i");
-      dot.className="live-dot";
-      left.appendChild(dot);
-    }
-    left.appendChild(document.createTextNode(liveMatchLabel(m)));
-    var right=document.createElement("span");
-    right.className="result-outcome";
-    var strong=document.createElement("strong");
-    strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
-    right.appendChild(strong);
-    right.appendChild(document.createTextNode(" · SofaScore"));
     var pickBadge=document.createElement("span");
     pickBadge.className="live-pick-badge "+pickState;
     pickBadge.textContent=livePickLabel(m);
-    bar.appendChild(left);
-    bar.appendChild(right);
     bar.appendChild(pickBadge);
     var scorerGroups=buildScorerGroupsNode(m);
     if(scorerGroups) bar.appendChild(scorerGroups);
