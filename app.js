@@ -2391,7 +2391,8 @@ function renderAll(){
 
 function renderMatches(){
   const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),opponent=members.find(m=>m.user_id!==identityUserId);
-  const confirmedJointE8=new Set(journeyBetConfirmed(journey)?jointElige8Selections(journey.id).map(e=>Number(e.match_number)):[]);
+  const showJointE8=journeyBetConfirmed(journey)||journeyDisplayState(journey)==="finished";
+  const confirmedJointE8=new Set(showJointE8?jointElige8Selections(journey.id).map(e=>Number(e.match_number)):[]);
   $("#matches").innerHTML=normal.map(m=>{
     const mp=myPickFor(m.number),jointE8=confirmedJointE8.has(Number(m.number)),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
