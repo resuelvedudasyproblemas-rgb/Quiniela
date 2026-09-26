@@ -47,7 +47,7 @@ function saveSelectedJourneyId(id){
   else localStorage.setItem(key,String(id));
 }
 const MATCH_FILTER_KEY="quiniela-match-filter";
-const MATCH_FILTER_MODES=new Set(["all","pending","live","correct","wrong","e8"]);
+const MATCH_FILTER_MODES=new Set(["all","pending","live","correct","wrong"]);
 let activeMatchFilter="all";
 function matchFilterStorageKey(){
   return identityUserId&&roomId?`${MATCH_FILTER_KEY}:${roomId}:${identityUserId}`:"";
@@ -607,10 +607,9 @@ function renderMatchFilterCounts(){
     pending:normal.filter(m=>!matchResolved(m)&&!matchInProgress(m)).length,
     live:normal.filter(matchInProgress).length,
     correct:normal.filter(m=>matchOutcomeForUser(m)==="correct").length,
-    wrong:normal.filter(m=>matchOutcomeForUser(m)==="wrong").length,
-    e8:normal.filter(m=>isElige8(identityUserId,m.number)).length
+    wrong:normal.filter(m=>matchOutcomeForUser(m)==="wrong").length
   };
-  const map={filterAll:"all",filterPending:"pending",filterLive:"live",filterCorrect:"correct",filterWrong:"wrong",filterE8:"e8"};
+  const map={filterAll:"all",filterPending:"pending",filterLive:"live",filterCorrect:"correct",filterWrong:"wrong"};
   Object.entries(map).forEach(([id,key])=>{const el=$("#"+id);if(el)el.textContent=counts[key]});
 }
 function applyMatchFilter(){
@@ -621,7 +620,6 @@ function applyMatchFilter(){
     if(activeMatchFilter==="live") visible=card.dataset.live==="true";
     if(activeMatchFilter==="correct") visible=card.dataset.outcome==="correct";
     if(activeMatchFilter==="wrong") visible=card.dataset.outcome==="wrong";
-    if(activeMatchFilter==="e8") visible=card.dataset.e8==="true";
     card.classList.toggle("filter-hidden",!visible);
   });
 
@@ -632,7 +630,6 @@ function applyMatchFilter(){
     if(activeMatchFilter==="live") visible=matchInProgress(m15);
     if(activeMatchFilter==="correct") visible=matchOutcomeForUser(m15)==="correct";
     if(activeMatchFilter==="wrong") visible=matchOutcomeForUser(m15)==="wrong";
-    if(activeMatchFilter==="e8") visible=false;
     pleno.classList.toggle("filter-hidden",!visible);
   }
 }
@@ -1459,24 +1456,15 @@ async function copyJointElige8From(uid,label){
 async function autoJointElige8(){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   const ranked=matches.filter(m=>m.number<=14).map(m=>{
-    const e1=p1?isElige8(p1.user_id,m.number):false;
-    const e2=p2?isElige8(p2.user_id,m.number):false;
     const a=p1?pickForJourney(p1.user_id,journey.id,m.number)?.pick:null;
     const b=p2?pickForJourney(p2.user_id,journey.id,m.number)?.pick:null;
     const same=Boolean(a&&b&&a===b);
-
-    let tier=0;
-    if(e1&&e2&&same) tier=4;
-    else if(same) tier=3;
-    else if(e1&&e2) tier=2;
-    else if(e1||e2) tier=1;
-
-    return {n:m.number,tier};
+    return {n:m.number,tier:same?1:0};
   }).sort((a,b)=>b.tier-a.tier||a.n-b.n);
 
   await saveJointElige8Set(
     ranked.slice(0,8).map(x=>x.n),
-    "Elige 8 conjunto priorizado por coincidencias reales"
+    "Elige 8 conjunto priorizado por coincidencias"
   );
 }
 
@@ -1514,15 +1502,11 @@ function decorateJointElige8UI(){
     </div>
     <p class="joint-e8-status">${statusText}</p>
     <div class="joint-e8-actions">
-      <button type="button" data-joint-e8-copy="1" ${locked||jointElige8Saving?"disabled":""}>Copiar ${escapeHtml(p1?.display_name||"J1")}</button>
-      <button type="button" data-joint-e8-copy="2" ${locked||jointElige8Saving?"disabled":""}>Copiar ${escapeHtml(p2?.display_name||"J2")}</button>
-      <button type="button" data-joint-e8-auto ${locked||jointElige8Saving?"disabled":""}>Priorizar coincidencias reales</button>
+      <button type="button" data-joint-e8-auto ${locked||jointElige8Saving?"disabled":""}>Priorizar coincidencias</button>
       <button type="button" class="subtle" data-joint-e8-clear ${locked||jointElige8Saving||!score.selected?"disabled":""}>Vaciar</button>
     </div>
     <small>Compartido por los dos. Puedes retocarlo partido a partido con la estrella ★.</small>`;
 
-  panel.querySelector('[data-joint-e8-copy="1"]')?.addEventListener("click",()=>copyJointElige8From(p1?.user_id,p1?.display_name||"J1"));
-  panel.querySelector('[data-joint-e8-copy="2"]')?.addEventListener("click",()=>copyJointElige8From(p2?.user_id,p2?.display_name||"J2"));
   panel.querySelector("[data-joint-e8-auto]")?.addEventListener("click",autoJointElige8);
   panel.querySelector("[data-joint-e8-clear]")?.addEventListener("click",()=>saveJointElige8Set([],"Elige 8 conjunto vaciado"));
 
@@ -1560,10 +1544,6 @@ function decorateJointElige8UI(){
       tools.appendChild(btn);
     }
 
-    const p1Label=card.querySelector(".joint-player-row.player-one .joint-player-name");
-    const p2Label=card.querySelector(".joint-player-row.player-two .joint-player-name");
-    if(p1&&p1Label&&isElige8(p1.user_id,n))p1Label.insertAdjacentHTML("beforeend",'<b class="joint-personal-e8">★ E8</b>');
-    if(p2&&p2Label&&isElige8(p2.user_id,n))p2Label.insertAdjacentHTML("beforeend",'<b class="joint-personal-e8">★ E8</b>');
   });
 }
 
@@ -1613,14 +1593,14 @@ function renderStats(){
       </div>
     </section>
     <section class="h2h-card"><span>CARA A CARA</span><div class="h2h-score"><div><strong>${wins1}</strong><small>${escapeHtml(p1.display_name)}</small></div><b>–</b><div><strong>${wins2}</strong><small>${escapeHtml(p2.display_name)}</small></div></div><p>${ties} empate${ties===1?"":"s"} · ${completed.length} jornadas finalizadas</p></section>
-    <div class="stats-player-grid">${[[p1,a],[p2,b]].map(([p,s])=>`<article class="stats-player-card"><h3>${escapeHtml(p.display_name)}</h3><div class="stats-kpis"><div><span>Aciertos</span><strong>${s.total}</strong></div><div><span>Media</span><strong>${s.avg.toFixed(1)}</strong></div><div><span>Mejor</span><strong>${s.best}/15</strong></div><div><span>10+</span><strong>${s.tenPlus}</strong></div><div><span>E8 personal 8/8</span><strong>${s.e8Perfect}</strong></div></div></article>`).join("")}</div>
+    <div class="stats-player-grid">${[[p1,a],[p2,b]].map(([p,s])=>`<article class="stats-player-card"><h3>${escapeHtml(p.display_name)}</h3><div class="stats-kpis"><div><span>Aciertos</span><strong>${s.total}</strong></div><div><span>Media</span><strong>${s.avg.toFixed(1)}</strong></div><div><span>Mejor</span><strong>${s.best}/15</strong></div><div><span>10+</span><strong>${s.tenPlus}</strong></div></div></article>`).join("")}</div>
     <section class="evolution-card"><div class="stats-section-head"><div><span>EVOLUCIÓN</span><h3>Jornada a jornada</h3></div></div><div class="evolution-list">${completed.map(j=>{const s1=scoreUserJourney(p1.user_id,j).correct,s2=scoreUserJourney(p2.user_id,j).correct,e8=scoreJointElige8(j),gold=s1>=10||s2>=10||(e8.selected===8&&e8.resolved===8&&e8.correct===8);return `<div class="evolution-row ${gold?"prize-row":""}"><span class="evolution-j">J${j.number}</span><div class="evolution-bars"><div><span>${escapeHtml(p1.display_name)}</span><i style="width:${s1/15*100}%"></i><b>${s1}</b></div><div><span>${escapeHtml(p2.display_name)}</span><i style="width:${s2/15*100}%"></i><b>${s2}</b></div></div>${gold?'<span class="evolution-prize">★</span>':""}</div>`}).join("")}</div></section>`;
 }
 function openMatchDetail(n,jid=journey?.id){
   const j=journeys.find(x=>x.id===jid),m=allMatches.find(x=>x.journey_id===jid&&x.number===n);if(!j||!m)return;
   const p1=memberBySlot(1),p2=memberBySlot(2),a=p1?displayPickForJourney(p1.user_id,jid,n):"—",b=p2?displayPickForJourney(p2.user_id,jid,n):"—",actual=actualResultForMatch(m),resolved=matchResolved(m);
   $("#matchDetailTitle").textContent=`J${j.number} · Partido ${n}`;
-  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>FINAL</small><strong>${m.home_score}–${m.away_score}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}${n<=14&&p1&&isElige8(p1.user_id,n,jid)?" · ★ E8":""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}${n<=14&&p2&&isElige8(p2.user_id,n,jid)?" · ★ E8":""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
+  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>FINAL</small><strong>${m.home_score}–${m.away_score}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
   $("#matchDetailDialog").showModal();
 }
 async function activateView(view){
@@ -2407,17 +2387,17 @@ function renderAll(){
     if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
     else $("#opponentStatus").textContent="Esperando al segundo jugador";
   }
-  renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
+  renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
 }
 
 function renderMatches(){
-  const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),myE8Count=elige8Count(identityUserId),opponent=members.find(m=>m.user_id!==identityUserId);
+  const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),opponent=members.find(m=>m.user_id!==identityUserId);
   $("#matches").innerHTML=normal.map(m=>{
-    const mp=myPickFor(m.number),e8=isElige8(identityUserId,m.number),e8Disabled=locked||elige8Saving||(myE8Count>=8&&!e8),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
+    const mp=myPickFor(m.number),resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
-    return `<article class="match-card ${e8?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${officialPlayersState(m)}" data-resolved="${matchResolved(m)}" data-live="${matchInProgress(m)}" data-outcome="${outcome}" data-e8="${e8}">
-      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${matchResolved(m)?`<button class="detail-btn" data-detail-match="${m.number}" type="button">Detalles</button>`:""}<button class="e8-toggle ${e8?"selected":""}" data-e8-match="${m.number}" ${e8Disabled?"disabled":""} type="button"><span>★</span> ${e8?"E8":"Elige 8"}</button></div></div>
+    return `<article class="match-card ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${officialPlayersState(m)}" data-resolved="${matchResolved(m)}" data-live="${matchInProgress(m)}" data-outcome="${outcome}">
+      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${matchResolved(m)?`<button class="detail-btn" data-detail-match="${m.number}" type="button">Detalles</button>`:""}</div></div>
       <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
       ${matchResolved(m)?"":tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>${mp?.pick?`<div class="pick-owner-track" aria-label="Pronósticos de los jugadores">${["1","X","2"].map(v=>`<div class="pick-owner-cell">${mp?.pick===v?`<span class="pick-owner-chip ${myOwnerClass}" title="${myLabel}" aria-label="${myLabel}">${myInitial}</span>`:""}${reveal&&oppPick?.pick===v?`<span class="pick-owner-chip ${opponentOwnerClass}" title="${opponentLabel}" aria-label="${opponentLabel}">${opponentInitial}</span>`:""}</div>`).join("")}</div>`:""}
@@ -2425,10 +2405,9 @@ function renderMatches(){
       ${resultHtml}
     </article>`;
   }).join("");
-  $$(".pick").forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));
-  $$(".clear-pick-btn").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.clearMatch))));
-  $$(".e8-toggle").forEach(b=>b.addEventListener("click",()=>toggleElige8(Number(b.dataset.e8Match))));
-  $$(".detail-btn").forEach(b=>b.addEventListener("click",()=>openMatchDetail(Number(b.dataset.detailMatch))));
+  $(".pick").forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));
+  $(".clear-pick-btn").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.clearMatch))));
+  $(".detail-btn").forEach(b=>b.addEventListener("click",()=>openMatchDetail(Number(b.dataset.detailMatch))));
   renderMatchFilterCounts();applyMatchFilter();updateCountdowns();
 }
 
@@ -2699,8 +2678,8 @@ function renderCompare(){
       <div class="compare-card-head"><div class="compare-number-competition"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div><div class="compare-fixture">${compareFixtureHtml(m)}</div><span class="compare-state">${label}</span></div>
       ${official?"":tvBroadcastHtml(m,true)}
       <div class="compare-picks">
-        <div class="compare-pick-box player-one"><span><i class="player-dot"></i>${escapeHtml(p1?.display_name||"Jugador 1")}${e1?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${aVisual}${aMark}</div></div>
-        <div class="compare-pick-box player-two"><span><i class="player-dot"></i>${escapeHtml(p2?.display_name||"Jugador 2")}${e2?'<b class="e8-chip">★ E8</b>':""}</span><div class="compare-pick-value">${bVisual}${bMark}</div></div>
+        <div class="compare-pick-box player-one"><span><i class="player-dot"></i>${escapeHtml(p1?.display_name||"Jugador 1")}</span><div class="compare-pick-value">${aVisual}${aMark}</div></div>
+        <div class="compare-pick-box player-two"><span><i class="player-dot"></i>${escapeHtml(p2?.display_name||"Jugador 2")}</span><div class="compare-pick-value">${bVisual}${bMark}</div></div>
         <div class="compare-pick-box result-box ${official?"official":liveResult?"live":"pending"}"><span><i class="result-dot"></i>Resultado <b class="compare-result-status">${resultStatus}</b></span><div class="compare-pick-value">${resultVisual}<small class="compare-score-text">${rawScore}</small></div></div>
       </div>
     </article>`;
@@ -2718,16 +2697,11 @@ function renderCompare(){
   const jointE8Prize=jointE8Score.selected===8&&jointE8Score.resolved===8&&jointE8Score.correct===8;
   if(!p2){
     $("#compareSubtitle").textContent="Comparte el código para añadir al segundo jugador";
-    if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid two"><div class="player-one ${p1e8Prize?"e8-prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${p1e8Score.resolved?`${p1e8Score.correct}/8`:`${p1e8}/8`}</strong></div><div class="joint ${jointE8Prize?"e8-prize-zone":""}"><span>Conjunto</span><strong>${jointE8Score.resolved?`${jointE8Score.correct}/8`:`${jointE8}/8`}</strong></div></div>`;
+    if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8 CONJUNTO</span><strong>${jointE8Score.resolved?`${jointE8Score.correct}/8`:`${jointE8}/8`}</strong></div>`;
     return;
   }
   $("#compareSubtitle").textContent=`${p1?.display_name||"Jugador 1"} ${completedCountForUser(p1?.user_id)}/15 · ${p2?.display_name||"Jugador 2"} ${completedCountForUser(p2?.user_id)}/15`;
-  if(e8)e8.innerHTML=`<div class="e8-compare-head"><span>ELIGE 8</span><strong>Comparación</strong></div><div class="e8-compare-grid">
-    <div class="player-one ${p1e8Prize?"e8-prize-zone":""}"><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${p1e8Score.resolved?`${p1e8Score.correct}/8`:`${p1e8}/8`}</strong></div>
-    <div><span>Coincidís</span><strong>${e8Both}</strong><small>${e8Only1+e8Only2?`${e8Only1+e8Only2} distintos`:"mismos partidos"}</small></div>
-    <div class="player-two ${p2e8Prize?"e8-prize-zone":""}"><span>${escapeHtml(p2?.display_name||"J2")}</span><strong>${p2e8Score.resolved?`${p2e8Score.correct}/8`:`${p2e8}/8`}</strong></div>
-    <div class="joint ${jointE8Prize?"e8-prize-zone":""}"><span>Conjunto</span><strong>${jointE8Score.resolved?`${jointE8Score.correct}/8`:`${jointE8}/8`}</strong></div>
-  </div>`;
+  if(e8)e8.innerHTML=`<div class="e8-compare-head ${jointE8Prize?"e8-prize-zone":""}"><span>ELIGE 8 CONJUNTO</span><strong>${jointE8Score.resolved?`${jointE8Score.correct}/8`:`${jointE8}/8`}</strong></div>`;
 }
 
 function pickForJourney(uid,journeyId,n){
@@ -2799,10 +2773,7 @@ function renderHistory(){
         <b>–</b>
         <div class="player-two ${winnerSide==="two"?"is-winner":""}"><strong>${s2.correct}</strong><span>${escapeHtml(p2?.display_name||"J2")}</span></div>
       </div>
-      <div class="history-card-stats">
-        <div class="history-stat player-one ${e1.selected===8&&e1.resolved===8&&e1.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p1?.display_name||"J1")}</span><strong>${e1.selected?`${e1.correct}/${e1.resolved}`:"—"}</strong></div>
-        <div class="history-stat player-two ${e2.selected===8&&e2.resolved===8&&e2.correct===8?"e8-prize-zone":""}"><span>Elige 8 · ${escapeHtml(p2?.display_name||"J2")}</span><strong>${e2.selected?`${e2.correct}/${e2.resolved}`:"—"}</strong></div>
-      </div>
+
     </button>`;
   }).join("");
   $$(".history-card").forEach(btn=>btn.addEventListener("click",()=>openHistory(Number(btn.dataset.historyId))));
@@ -2831,12 +2802,12 @@ function openHistory(jid){
     <div class="history-summary-player player-one ${historyWinnerSide==="one"?"history-summary-winner":""}">
       <span>${escapeHtml(p1?.display_name||"Jugador 1")}</span>
       <strong>${s1.correct}/15</strong>
-      <small class="${e1Prize?"e8-prize-inline":""}">★ Elige 8 · ${e1.selected?`${e1.correct}/${e1.selected}`:"—"}</small>
+
     </div>
     <div class="history-summary-player player-two ${historyWinnerSide==="two"?"history-summary-winner":""}">
       <span>${escapeHtml(p2?.display_name||"Jugador 2")}</span>
       <strong>${s2.correct}/15</strong>
-      <small class="${e2Prize?"e8-prize-inline":""}">★ Elige 8 · ${e2.selected?`${e2.correct}/${e2.selected}`:"—"}</small>
+
     </div>
     <div class="history-summary-joint ${jointE8Prize?"e8-prize-zone":""}">
       <span>Elige 8 conjunto</span>
@@ -2867,11 +2838,11 @@ function openHistory(jid){
       </div>
       <div class="history-detail-picks">
         <div class="history-player-pick player-one ${ca}">
-          <div><i></i><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span>${e8a?'<b>★ E8</b>':""}</div>
+          <div><i></i><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span></div>
           <strong>${a}</strong>
         </div>
         <div class="history-player-pick player-two ${cb}">
-          <div><i></i><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span>${e8b?'<b>★ E8</b>':""}</div>
+          <div><i></i><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span></div>
           <strong>${b}</strong>
         </div>
       </div>
