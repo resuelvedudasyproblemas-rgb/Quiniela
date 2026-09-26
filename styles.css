@@ -4039,7 +4039,7 @@ html[data-theme="dark"] .device-link-box{
 .prize-stat.player-two{border-top:3px solid #e98525}
 .prize-stat.joint{border-top:3px solid #2f9b65}
 .stats-kpis{
-  grid-template-columns:repeat(auto-fit,minmax(82px,1fr))!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
 }
 .evolution-row{
   position:relative;
@@ -9110,4 +9110,23 @@ html[data-theme="dark"] .live-standing-tag{
 .standings-row.journey-team{
   outline:none!important;
   outline-offset:0!important;
+}
+
+/* Historial: remarcar los partidos del Elige 8 conjunto */
+.history-detail-match.history-joint-e8-active{
+  outline:2px solid #d9b54b;
+  outline-offset:-2px;
+}
+.history-detail-match.history-joint-e8-active .history-joint-e8{
+  background:#fff2bf;
+  border:1px solid #d9b54b;
+  color:#7b5a08;
+}
+html[data-theme="dark"] .history-detail-match.history-joint-e8-active{
+  outline-color:#8b6c20;
+}
+html[data-theme="dark"] .history-detail-match.history-joint-e8-active .history-joint-e8{
+  background:#3a2d0d;
+  border-color:#8b6c20;
+  color:#f0cd68;
 }
