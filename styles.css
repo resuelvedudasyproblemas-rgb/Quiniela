@@ -9178,3 +9178,36 @@ html[data-theme="dark"] .history-card-e8.perfect{
   overflow:hidden;
   text-overflow:ellipsis;
 }
+
+/* Pleno al 15 en directo: mismo formato visual que el bloque de resultado de J8 */
+.pleno-live-score.pleno-final-score{
+  max-width:210px;
+  width:100%;
+  margin:-4px auto 14px;
+  padding:10px 16px;
+  border-radius:17px;
+  text-align:center;
+}
+.pleno-live-score.pleno-final-score>small:first-child{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-bottom:4px;
+  font-size:.48rem;
+  letter-spacing:.14em;
+  font-weight:950;
+}
+.pleno-live-score.pleno-final-score>strong{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-size:1.8rem;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.pleno-live-score.pleno-final-score>em{
+  display:block;
+  margin-top:5px;
+  font-size:.5rem;
+}
