@@ -1106,6 +1106,24 @@ html[data-theme="dark"] .e8-score-bad{
 }
 .joint-e8-toggle.selected{background:var(--brand);border-color:var(--brand);color:#fff}
 .joint-e8-toggle:disabled{opacity:.5}
+.confirmed-joint-e8-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  border:1px solid color-mix(in srgb,var(--brand) 35%,var(--border));
+  background:color-mix(in srgb,var(--brand) 10%,var(--surface));
+  color:var(--brand);
+  border-radius:999px;
+  padding:5px 7px;
+  font-size:.5rem;
+  font-weight:950;
+  white-space:nowrap;
+}
+html[data-theme="dark"] .confirmed-joint-e8-badge{
+  background:#173126;
+  border-color:#315443;
+  color:#7fe0b1;
+}
 .joint-personal-e8{
   display:inline-flex;
   margin-left:5px;
