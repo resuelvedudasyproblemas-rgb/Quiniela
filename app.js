@@ -2760,7 +2760,9 @@ function renderHistory(){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   $("#historyList").innerHTML=historic.map(j=>{
     const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0},s2=p2?scoreUserJourney(p2.user_id,j):{correct:0};
-    const e1=p1?scoreElige8(p1.user_id,j):{selected:0,correct:0,resolved:0},e2=p2?scoreElige8(p2.user_id,j):{selected:0,correct:0,resolved:0};
+    const jointE8=scoreJointElige8(j);
+    const jointE8Ready=jointE8.selected===8;
+    const jointE8Perfect=jointE8Ready&&jointE8.resolved===8&&jointE8.correct===8;
     const winnerSide=!p1||!p2?"tie":s1.correct>s2.correct?"one":s2.correct>s1.correct?"two":"tie";
     const winnerText=winnerSide==="one"?`Gana ${escapeHtml(p1.display_name)}`:winnerSide==="two"?`Gana ${escapeHtml(p2.display_name)}`:"Empate";
     return `<button class="history-card history-winner-${winnerSide}" data-history-id="${j.id}">
@@ -2772,6 +2774,10 @@ function renderHistory(){
         <div class="player-one ${winnerSide==="one"?"is-winner":""}"><span>${escapeHtml(p1?.display_name||"J1")}</span><strong>${s1.correct}</strong></div>
         <b>–</b>
         <div class="player-two ${winnerSide==="two"?"is-winner":""}"><strong>${s2.correct}</strong><span>${escapeHtml(p2?.display_name||"J2")}</span></div>
+      </div>
+      <div class="history-card-e8 ${jointE8Perfect?"perfect":""}">
+        <span>★ Elige 8 conjunto</span>
+        <strong>${jointE8Ready?`${jointE8.correct}/8`:"—"}</strong>
       </div>
     </button>`;
   }).join("");
