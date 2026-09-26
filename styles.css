@@ -9130,3 +9130,39 @@ html[data-theme="dark"] .history-detail-match.history-joint-e8-active .history-j
   border-color:#8b6c20;
   color:#f0cd68;
 }
+
+/* Resumen Elige 8 conjunto en las tarjetas del historial */
+.history-card-e8{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:max-content;
+  max-width:100%;
+  margin:10px auto 0;
+  padding:6px 10px;
+  border:1px solid #d9b54b;
+  border-radius:999px;
+  background:#fff7d8;
+  color:#7b5a08;
+  font-size:.56rem;
+  font-weight:850;
+}
+.history-card-e8 strong{
+  font-size:.7rem;
+}
+.history-card-e8.perfect{
+  background:#f4dc87;
+  border-color:#c99f2f;
+  color:#694a00;
+}
+html[data-theme="dark"] .history-card-e8{
+  background:#3a2d0d;
+  border-color:#8b6c20;
+  color:#f0cd68;
+}
+html[data-theme="dark"] .history-card-e8.perfect{
+  background:#4b390d;
+  border-color:#b48b2d;
+  color:#ffe08a;
+}
