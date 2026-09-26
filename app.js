@@ -3376,7 +3376,7 @@ function decorateLivePleno(){
     card.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral");
     card.classList.add("result-state-"+pickState);
   }
-  box.className="pleno-live-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
+  box.className="pleno-final-score pleno-live-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
   var small=document.createElement("small");
   if(m.live_status==="inprogress"&&!liveMatchPaused(m)){
     var dot=document.createElement("i");
