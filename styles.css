@@ -7722,7 +7722,7 @@ html[data-theme="dark"] .match-detail-picks>div{
   background:var(--surface-2)!important;
   border-color:var(--border)!important;
 }
-html[data-theme="dark"] .goal,
+html[data-theme="dark"] .goal:not(.selected),
 html[data-theme="dark"] .pick:not(.selected),
 html[data-theme="dark"] .joint-sign:not(.selected){
   background:#102018!important;
