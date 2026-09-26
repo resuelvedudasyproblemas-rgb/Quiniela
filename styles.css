@@ -9165,3 +9165,16 @@ html[data-theme="dark"] .history-card-e8.perfect{
   margin:10px 0 12px;
 }
 .play-joint-e8-progress.hidden{display:none!important}
+
+/* Quinigol: mismas dimensiones físicas que las tarjetas pequeñas de La Quiniela */
+#qgJourneySwitcher .journey-primary-row .journey-choice{
+  height:55px!important;
+  min-height:55px!important;
+  box-sizing:border-box!important;
+  padding:7px 6px!important;
+}
+#qgJourneySwitcher .journey-primary-row .journey-choice>small{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
