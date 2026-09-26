@@ -347,6 +347,8 @@ function renderNextJourneyCountdown(){
     el.innerHTML=`<strong>Cierra en <b>${escapeHtml(journeyStartCountdownText(deadline))}</b></strong>`;
   }else if(state==="confirmed"){
     el.textContent="Pronósticos bloqueados";
+  }else if(state==="playing"){
+    el.textContent="Resultados en directo";
   }else if(state==="finished"){
     el.textContent="Resultados oficiales completos";
   }else{
