@@ -9112,20 +9112,13 @@ html[data-theme="dark"] .live-standing-tag{
   outline-offset:0!important;
 }
 
-/* Historial: remarcar los partidos del Elige 8 conjunto */
-.history-detail-match.history-joint-e8-active{
-  outline:2px solid #d9b54b;
-  outline-offset:-2px;
-}
-.history-detail-match.history-joint-e8-active .history-joint-e8{
+/* Historial: destacar solo el recuadro del Elige 8 conjunto */
+.history-detail-match .history-joint-e8{
   background:#fff2bf;
   border:1px solid #d9b54b;
   color:#7b5a08;
 }
-html[data-theme="dark"] .history-detail-match.history-joint-e8-active{
-  outline-color:#8b6c20;
-}
-html[data-theme="dark"] .history-detail-match.history-joint-e8-active .history-joint-e8{
+html[data-theme="dark"] .history-detail-match .history-joint-e8{
   background:#3a2d0d;
   border-color:#8b6c20;
   color:#f0cd68;
