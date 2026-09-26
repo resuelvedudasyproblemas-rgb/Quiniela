@@ -2404,9 +2404,9 @@ function renderMatches(){
       ${resultHtml}
     </article>`;
   }).join("");
-  $(".pick").forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));
-  $(".clear-pick-btn").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.clearMatch))));
-  $(".detail-btn").forEach(b=>b.addEventListener("click",()=>openMatchDetail(Number(b.dataset.detailMatch))));
+  [...document.querySelectorAll(".pick")].forEach(b=>b.addEventListener("click",()=>saveNormalPick(Number(b.dataset.match),b.dataset.pick)));
+  [...document.querySelectorAll(".clear-pick-btn")].forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.clearMatch))));
+  [...document.querySelectorAll(".detail-btn")].forEach(b=>b.addEventListener("click",()=>openMatchDetail(Number(b.dataset.detailMatch))));
   renderMatchFilterCounts();applyMatchFilter();updateCountdowns();
 }
 
