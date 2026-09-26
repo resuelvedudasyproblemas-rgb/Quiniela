@@ -1469,13 +1469,51 @@ async function autoJointElige8(){
   );
 }
 
+function renderJointElige8ProgressInPlay(){
+  const anchor=$("#journeyDashboard");
+  if(!anchor||!journey)return;
+  let panel=$("#playJointElige8Progress");
+  if(!panel){
+    panel=document.createElement("section");
+    panel.id="playJointElige8Progress";
+    panel.className="joint-e8-panel play-joint-e8-progress";
+    anchor.insertAdjacentElement("afterend",panel);
+  }
+
+  const score=projectedScoreJointElige8(journey);
+  const officialScore=scoreJointElige8(journey);
+  const state=journeyDisplayState(journey);
+  const visible=score.selected>0&&(journeyBetConfirmed(journey)||state==="playing"||state==="finished");
+  panel.classList.toggle("hidden",!visible);
+  if(!visible)return;
+
+  const prize=officialScore.selected===8&&officialScore.resolved===8&&officialScore.correct===8;
+  const scoreHtml=score.considered
+    ? `<div class="joint-e8-live-score"><span class="ok">✓ ${score.correct}</span><span class="bad">✕ ${score.wrong}</span></div>`
+    : `<strong class="joint-e8-count">${score.selected}/8</strong>`;
+  const statusParts=[];
+  if(score.considered)statusParts.push(`${score.considered}/${score.selected||8} valorados`);
+  if(score.live)statusParts.push(`${score.live} en directo`);
+  if(score.pending)statusParts.push(`${score.pending} pendientes`);
+  const statusText=statusParts.length
+    ? statusParts.join(" · ")+(score.live?" · provisional":"")
+    : score.selected===8
+      ? "8/8 seleccionados · esperando resultados"
+      : `${score.selected}/8 seleccionados`;
+
+  panel.classList.toggle("e8-prize-zone",prize);
+  panel.innerHTML=`
+    <div class="joint-e8-head">${prize?'<span class="e8-prize-badge">★ 8/8</span>':""}
+      <div><span>ELIGE 8 CONJUNTO</span><h3>Cómo va vuestra apuesta</h3></div>
+      ${scoreHtml}
+    </div>
+    <p class="joint-e8-status">${statusText}</p>`;
+}
+
 function decorateJointElige8UI(){
   const summary=$("#jointSummary"),list=$("#jointList");
   if(!summary||!list||!journey)return;
-  const p1=memberBySlot(1),p2=memberBySlot(2);
   const score=projectedScoreJointElige8(journey);
-  const officialScore=scoreJointElige8(journey);
-  const prize=officialScore.selected===8&&officialScore.resolved===8&&officialScore.correct===8;
   const locked=!journeyCanEdit(journey);
 
   let panel=$("#jointElige8Panel");
@@ -1486,27 +1524,17 @@ function decorateJointElige8UI(){
     summary.insertAdjacentElement("afterend",panel);
   }
 
-  const scoreHtml=score.considered
-    ? `<div class="joint-e8-live-score"><span class="ok">✓ ${score.correct}</span><span class="bad">✕ ${score.wrong}</span></div>`
-    : `<strong class="joint-e8-count">${score.selected}/8</strong>`;
-  const statusParts=[];
-  if(score.considered)statusParts.push(`${score.considered}/${score.selected||8} valorados`);
-  if(score.live)statusParts.push(`${score.live} en directo`);
-  if(score.pending)statusParts.push(`${score.pending} pendientes`);
-  const statusText=statusParts.length?statusParts.join(" · ")+(score.live?" · provisional":""):(score.selected===8?"Listo para la conjunta":"Selecciona 8 partidos del 1 al 14");
-
-  panel.classList.toggle("e8-prize-zone",prize);
+  panel.classList.remove("e8-prize-zone");
   panel.innerHTML=`
-    <div class="joint-e8-head">${prize?'<span class="e8-prize-badge">★ 8/8</span>':""}
-      <div><span>ELIGE 8 CONJUNTO</span><h3>El Elige 8 de vuestra apuesta</h3></div>
-      ${scoreHtml}
+    <div class="joint-e8-head">
+      <div><span>ELIGE 8 CONJUNTO</span><h3>Configurar los 8 partidos</h3></div>
+      <strong class="joint-e8-count">${score.selected}/8</strong>
     </div>
-    <p class="joint-e8-status">${statusText}</p>
     <div class="joint-e8-actions">
       <button type="button" data-joint-e8-auto ${locked||jointElige8Saving?"disabled":""}>Priorizar coincidencias</button>
       <button type="button" class="subtle" data-joint-e8-clear ${locked||jointElige8Saving||!score.selected?"disabled":""}>Vaciar</button>
     </div>
-    <small>Compartido por los dos. Puedes retocarlo partido a partido con la estrella ★.</small>`;
+    <small>${locked?"Apuesta bloqueada. El seguimiento está en Mi Quiniela.":"Selecciona los partidos con la estrella ★. El seguimiento aparecerá en Mi Quiniela al confirmar."}</small>`;
 
   panel.querySelector("[data-joint-e8-auto]")?.addEventListener("click",autoJointElige8);
   panel.querySelector("[data-joint-e8-clear]")?.addEventListener("click",()=>saveJointElige8Set([],"Elige 8 conjunto vaciado"));
@@ -2388,7 +2416,7 @@ function renderAll(){
     if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
     else $("#opponentStatus").textContent="Esperando al segundo jugador";
   }
-  renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
+  renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderJointElige8ProgressInPlay();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
 }
 
 function renderMatches(){
