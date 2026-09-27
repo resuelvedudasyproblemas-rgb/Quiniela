@@ -9516,3 +9516,14 @@ html[data-theme="dark"] .match-filter[data-match-filter="e8"] span{
 .play-joint-e8-progress .joint-e8-status{
   display:none!important;
 }
+
+
+/* Frescura de marcadores en Quinigol */
+.qg-result.live{
+  flex-wrap:wrap;
+}
+.qg-result.live .qg-live-freshness{
+  flex:0 0 auto;
+  width:max-content;
+  margin:3px auto 0;
+}
