@@ -9451,3 +9451,24 @@ html[data-theme="dark"] .qg-live-header-score{
     font-size:.47rem!important;
   }
 }
+
+
+/* Filtro Elige 8 en Mi Quiniela v185 */
+.match-filter[data-match-filter="e8"]{
+  border-color:color-mix(in srgb,#d3a326 46%,var(--border));
+  background:color-mix(in srgb,#d3a326 7%,var(--surface));
+  color:#8a6410;
+}
+.match-filter[data-match-filter="e8"] span{
+  background:color-mix(in srgb,#d3a326 10%,var(--surface-3));
+  color:#8a6410;
+}
+html[data-theme="dark"] .match-filter[data-match-filter="e8"]{
+  border-color:#69551f;
+  background:color-mix(in srgb,#d3a326 7%,var(--surface));
+  color:#d9b95f;
+}
+html[data-theme="dark"] .match-filter[data-match-filter="e8"] span{
+  background:#3a3014;
+  color:#e7c96f;
+}
