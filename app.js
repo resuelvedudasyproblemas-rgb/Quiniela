@@ -1494,23 +1494,12 @@ function renderJointElige8ProgressInPlay(){
   const scoreHtml=score.considered
     ? `<div class="joint-e8-live-score"><span class="ok">✓ ${score.correct}</span><span class="bad">✕ ${score.wrong}</span></div>`
     : `<strong class="joint-e8-count">${score.selected}/8</strong>`;
-  const statusParts=[];
-  if(score.considered)statusParts.push(`${score.considered}/${score.selected||8} valorados`);
-  if(score.live)statusParts.push(`${score.live} en directo`);
-  if(score.pending)statusParts.push(`${score.pending} pendientes`);
-  const statusText=statusParts.length
-    ? statusParts.join(" · ")+(score.live?" · provisional":"")
-    : score.selected===8
-      ? "8/8 seleccionados · esperando resultados"
-      : `${score.selected}/8 seleccionados`;
-
   panel.classList.toggle("e8-prize-zone",prize);
   panel.innerHTML=`
     <div class="joint-e8-head">${prize?'<span class="e8-prize-badge">★ 8/8</span>':""}
       <div><span>ELIGE 8 CONJUNTO</span><h3>Cómo va vuestra apuesta</h3></div>
       ${scoreHtml}
-    </div>
-    <p class="joint-e8-status">${statusText}</p>`;
+    </div>`;
 }
 
 function decorateJointElige8UI(){
