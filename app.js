@@ -242,12 +242,9 @@ function matchesForJourney(journeyId){
   return allMatches.filter(m=>m.journey_id===journeyId).sort((a,b)=>a.number-b.number);
 }
 function matchResolved(m){
-  if(!m) return false;
-  // Partidos 1-14 solo son oficiales cuando SELAE ha publicado el signo.
-  // Los marcadores de SofaScore (incluido "finished") siguen siendo provisionales.
-  if(Number(m.number)<=14) return Boolean(String(m.result_sign||"").trim());
-  // Pleno al 15: SELAE guarda el marcador oficial en home_score/away_score.
-  return m.home_score!=null && m.away_score!=null;
+  // home_score/away_score son los campos oficiales de SELAE.
+  // Los marcadores de SofaScore viven solo en live_home_score/live_away_score.
+  return m?.home_score!=null && m?.away_score!=null;
 }
 function resultSignForMatch(m){
   if(!m || m.number===15 || !matchResolved(m)) return null;
@@ -1505,6 +1502,8 @@ function renderJointElige8ProgressInPlay(){
       <div><span>ELIGE 8 CONJUNTO</span><h3>Cómo va vuestra apuesta</h3></div>
       ${scoreHtml}
     </div>`;
+  // No mostrar el texto secundario "valorados / en directo / pendientes / provisional".
+  panel.querySelectorAll(".joint-e8-status").forEach(el=>el.remove());
 }
 
 function decorateJointElige8UI(){
@@ -2743,7 +2742,7 @@ function actualResultForMatch(m){
     const norm=x=>x>=3?"M":String(x);
     return `${norm(m.home_score)}-${norm(m.away_score)}`;
   }
-  return m.result_sign||"—";
+  return resultSignForMatch(m)||"—";
 }
 
 function journeyMatches(jid){
@@ -2768,10 +2767,12 @@ function scoreElige8(uid,j){
   let correct=0, resolved=0;
   for(const e of selected){
     const m=allMatches.find(x=>x.journey_id===j.id&&x.number===e.match_number);
-    if(!m?.result_sign) continue;
+    if(!matchResolved(m)) continue;
+    const actual=resultSignForMatch(m);
+    if(!actual) continue;
     resolved++;
     const mine=pickForJourney(uid,j.id,e.match_number)?.pick;
-    if(mine===m.result_sign) correct++;
+    if(mine===actual) correct++;
   }
   return {selected:selected.length,correct,resolved};
 }
