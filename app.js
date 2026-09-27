@@ -1498,12 +1498,11 @@ function renderJointElige8ProgressInPlay(){
     : `<strong class="joint-e8-count">${score.selected}/8</strong>`;
   panel.classList.toggle("e8-prize-zone",prize);
   panel.innerHTML=`
-    <div class="joint-e8-head">${prize?'<span class="e8-prize-badge">★ 8/8</span>':""}
-      <div><span>ELIGE 8 CONJUNTO</span><h3>Cómo va vuestra apuesta</h3></div>
+    <div class="joint-e8-head play-joint-e8-head">
+      ${prize?'<span class="e8-prize-badge">★ 8/8</span>':""}
+      <span class="play-joint-e8-title">ELIGE 8 CONJUNTO</span>
       ${scoreHtml}
     </div>`;
-  // No mostrar el texto secundario "valorados / en directo / pendientes / provisional".
-  panel.querySelectorAll(".joint-e8-status").forEach(el=>el.remove());
 }
 
 function decorateJointElige8UI(){
