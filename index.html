@@ -1149,7 +1149,7 @@ function renderHero(){
     qgDate.classList.toggle("hidden",st==="playing");
     qgDate.textContent=st==="playing"?"":qgCloseLabel(journey.close_at);
   }
-  $("#qgJourneyCountdown").textContent=st==="open"?`Cierra en ${timeLeft(journey.close_at)}`:st==="confirmed"?"Pronósticos bloqueados":st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
+  $("#qgJourneyCountdown").textContent=st==="open"?`Cierra en ${timeLeft(journey.close_at)}`:st==="confirmed"?"Pronósticos bloqueados":st==="playing"?"Resultados en directo":st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
   renderJourneyCompetitions();
   const card=$("#qgJourneyCard");
   card.dataset.status=st;
