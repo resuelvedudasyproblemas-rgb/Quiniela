@@ -242,7 +242,12 @@ function matchesForJourney(journeyId){
   return allMatches.filter(m=>m.journey_id===journeyId).sort((a,b)=>a.number-b.number);
 }
 function matchResolved(m){
-  return m?.home_score!=null && m?.away_score!=null;
+  if(!m) return false;
+  // Partidos 1-14 solo son oficiales cuando SELAE ha publicado el signo.
+  // Los marcadores de SofaScore (incluido "finished") siguen siendo provisionales.
+  if(Number(m.number)<=14) return Boolean(String(m.result_sign||"").trim());
+  // Pleno al 15: SELAE guarda el marcador oficial en home_score/away_score.
+  return m.home_score!=null && m.away_score!=null;
 }
 function resultSignForMatch(m){
   if(!m || m.number===15 || !matchResolved(m)) return null;
@@ -2626,6 +2631,12 @@ function renderElige8Progress(){
   const count=elige8Count(identityUserId);
   const el=$("#elige8Progress"),status=$("#elige8Status");
   if(!el||!journey) return;
+  // El resumen numérico ya se muestra en los filtros; ocultamos la línea
+  // secundaria "valorados · en directo · pendientes · provisional".
+  if(status){
+    status.textContent="";
+    status.classList.add("hidden");
+  }
   const projected=projectedScoreElige8(identityUserId,journey);
   const official=scoreElige8(identityUserId,journey);
   const prize=official.selected===8&&official.resolved===8&&official.correct===8;
@@ -2641,18 +2652,7 @@ function renderElige8Progress(){
 
   el.innerHTML=`<span class="e8-score-ok">${projected.correct} aciertos</span><span class="e8-score-bad">${projected.wrong} fallos</span>`;
 
-  if(status){
-    if(projected.considered>0){
-      const parts=[`${projected.considered}/${projected.selected||8} valorados`];
-      if(projected.live)parts.push(`${projected.live} en directo`);
-      if(projected.pending)parts.push(`${projected.pending} pendientes`);
-      status.textContent=parts.join(" · ")+(projected.live?" · provisional":"");
-    }else if(count===8){
-      status.textContent="8/8 seleccionados · esperando resultados";
-    }else{
-      status.textContent=`${count}/8 seleccionados · Marca E8 en ocho partidos del 1 al 14.`;
-    }
-  }
+
 }
 
 function displayPick(p,n){
