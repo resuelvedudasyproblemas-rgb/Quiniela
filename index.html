@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=187" />
+  <link rel="stylesheet" href="styles.css?v=188" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -1229,6 +1229,24 @@ function renderDashboard(){
   el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,ps1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,ps2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${jointCorrect} aciertos</strong><small>${jointDetail}</small></div>`;
 }
 function qgIsLive(m){return Boolean(m&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null)}
+function qgLiveFreshnessMeta(value){
+  const at=value?new Date(value).getTime():NaN;
+  if(!Number.isFinite(at))return {label:"Sin hora de actualización",delayed:true};
+  const seconds=Math.max(0,Math.floor((Date.now()-at)/1000));
+  if(seconds>180){
+    const mins=Math.max(3,Math.floor(seconds/60));
+    const age=mins<60?`hace ${mins} min`:`hace ${Math.floor(mins/60)} h`;
+    return {label:`Datos retrasados · ${age}`,delayed:true};
+  }
+  if(seconds<10)return {label:"Actualizado ahora",delayed:false};
+  if(seconds<60)return {label:`Actualizado hace ${seconds} s`,delayed:false};
+  return {label:`Actualizado hace ${Math.floor(seconds/60)} min`,delayed:false};
+}
+function qgLiveFreshnessHtml(m){
+  if(!qgIsLive(m))return "";
+  const info=qgLiveFreshnessMeta(m?.live_updated_at);
+  return `<small class="live-freshness qg-live-freshness ${info.delayed?"delayed":"fresh"}" data-live-updated="${esc(m?.live_updated_at||"")}">${esc(info.label)}</small>`;
+}
 function qgScorerLabel(g){
   const name=String(g?.name||"").trim();
   if(!name)return "";
@@ -1299,7 +1317,7 @@ function renderPlay(){
     const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
-    else if(proj!=="—")result=`<div class="qg-result live"><span>${qgIsHalftime(m)?"Descanso · provisional":"En directo · provisional"}</span><strong>${esc(proj)}</strong></div>`;
+    else if(proj!=="—")result=`<div class="qg-result live"><span>${qgIsHalftime(m)?"Descanso · provisional":"En directo · provisional"}</span><strong>${esc(proj)}</strong>${qgLiveFreshnessHtml(m)}</div>`;
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
     const liveHeader=hs.cls==="live"
