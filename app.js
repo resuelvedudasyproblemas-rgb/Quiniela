@@ -2412,7 +2412,7 @@ function renderAll(){
     if(opponent){const completed=completedCountForUser(opponent.user_id);$("#opponentStatus").textContent=completed===15?`✓ ${opponent.display_name} ha completado la jornada`:`${opponent.display_name}: ${completed}/15 completados`}
     else $("#opponentStatus").textContent="Esperando al segundo jugador";
   }
-  renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
+  renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderJointElige8ProgressInPlay();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
 }
 
 function renderMatches(){
