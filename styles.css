@@ -9162,9 +9162,46 @@ html[data-theme="dark"] .history-card-e8.perfect{
 
 /* Elige 8: seguimiento en Mi Quiniela */
 .play-joint-e8-progress{
-  margin:10px 0 12px;
+  margin:10px auto 12px;
+  padding:15px 16px;
 }
 .play-joint-e8-progress.hidden{display:none!important}
+.play-joint-e8-progress .play-joint-e8-head{
+  min-height:54px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  text-align:center;
+}
+.play-joint-e8-progress .play-joint-e8-title{
+  display:block;
+  width:100%;
+  color:var(--brand);
+  font-size:.62rem;
+  font-weight:950;
+  letter-spacing:.13em;
+  line-height:1.2;
+  text-align:center;
+}
+.play-joint-e8-progress .joint-e8-live-score{
+  justify-content:center;
+  gap:8px;
+}
+.play-joint-e8-progress .joint-e8-live-score span{
+  min-width:38px;
+  padding:6px 10px;
+  font-size:.66rem;
+  text-align:center;
+}
+.play-joint-e8-progress .joint-e8-count{
+  font-size:1.08rem;
+  line-height:1;
+}
+.play-joint-e8-progress .e8-prize-badge{
+  margin:0 auto;
+}
 
 /* Quinigol: mismas dimensiones físicas que las tarjetas pequeñas de La Quiniela */
 #qgJourneySwitcher .journey-primary-row .journey-choice{
