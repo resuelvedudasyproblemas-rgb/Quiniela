@@ -9211,3 +9211,65 @@ html[data-theme="dark"] .history-card-e8.perfect{
   margin-top:5px;
   font-size:.5rem;
 }
+
+
+/* Quinigol: marcador superior en directo unificado v182 */
+.qg-card-fixture.has-live-header-score{
+  padding-right:52px;
+}
+.qg-live-header-score{
+  position:absolute;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  min-width:44px;
+  min-height:34px;
+  padding:4px 6px;
+  box-sizing:border-box;
+  border:1px solid color-mix(in srgb,#bd343d 28%,var(--border));
+  border-radius:10px;
+  background:#fff0f0;
+  color:#bd343d;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  box-shadow:0 3px 9px rgba(189,52,61,.08);
+}
+.qg-live-header-score>strong{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  font-size:.76rem;
+  font-weight:950;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.qg-live-header-score>strong>b{
+  font-size:.64rem;
+  font-weight:900;
+  opacity:.72;
+}
+.qg-live-header-score>small{
+  font-size:.34rem;
+  font-weight:950;
+  line-height:1;
+  letter-spacing:.03em;
+  white-space:nowrap;
+  text-transform:uppercase;
+}
+html[data-theme="dark"] .qg-live-header-score{
+  background:#432424;
+  border-color:#6d3439;
+  color:#f0a0a0;
+  box-shadow:none;
+}
+@media(max-width:430px){
+  .qg-card-fixture.has-live-header-score{padding-right:48px}
+  .qg-live-header-score{min-width:41px;padding:4px 5px}
+  .qg-live-header-score>strong{font-size:.72rem}
+  .qg-live-header-score>small{font-size:.32rem}
+}
