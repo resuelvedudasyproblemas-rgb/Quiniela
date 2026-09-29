@@ -590,6 +590,44 @@ function matchOutcomeForUser(m,uid=identityUserId){
   if(mine==="—") return "none";
   return mine===actualResultForMatch(m)?"correct":"wrong";
 }
+function plenoGoalStillPossible(token,current){
+  const t=String(token||"");
+  if(t==="M")return true;
+  const target=Number(t),now=Number(current);
+  return Number.isFinite(target)&&Number.isFinite(now)&&now<=target;
+}
+function plenoPickImpossibleForUser(m,uid,jid=m?.journey_id){
+  if(!m||Number(m.number)!==15||!uid)return false;
+  const p=pickForJourney(uid,jid,15);
+  if(!p?.home_goals||!p?.away_goals)return false;
+
+  if(matchResolved(m)){
+    return displayPickForJourney(uid,jid,15)!==actualResultForMatch(m);
+  }
+
+  if(m.live_home_score==null||m.live_away_score==null)return false;
+  const liveResult=`${normalizedGoalScore(m.live_home_score)}-${normalizedGoalScore(m.live_away_score)}`;
+
+  // Si SofaScore ya lo da por final, el Pleno ya no puede cambiar.
+  if(m.live_status==="finished"){
+    return `${p.home_goals}-${p.away_goals}`!==liveResult;
+  }
+  if(m.live_status!=="inprogress")return false;
+
+  // Durante el partido, un 0/1/2 queda perdido en cuanto se supera.
+  // M significa 3 o más, por lo que nunca queda imposible por exceso.
+  return !plenoGoalStillPossible(p.home_goals,m.live_home_score)
+      || !plenoGoalStillPossible(p.away_goals,m.live_away_score);
+}
+function plenoCardImpossible(m,jid=m?.journey_id){
+  const users=[memberBySlot(1)?.user_id,memberBySlot(2)?.user_id].filter(Boolean);
+  const withPick=users.filter(uid=>{
+    const p=pickForJourney(uid,jid,15);
+    return Boolean(p?.home_goals&&p?.away_goals);
+  });
+  return withPick.length>0&&withPick.every(uid=>plenoPickImpossibleForUser(m,uid,jid));
+}
+
 function playerVerdictState(v1,v2){
   if(v1==="correct"&&v2==="correct")return "both";
   if(v1==="correct")return "player-one";
@@ -2440,8 +2478,9 @@ function renderPleno(){
   const m=matches.find(x=>x.number===15);if(!m){$("#plenoCard").classList.add("hidden");return}
   const plenoCard=$("#plenoCard");
   plenoCard.classList.remove("hidden");
-  plenoCard.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral");
+  plenoCard.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral","pleno-impossible-strong");
   plenoCard.classList.add("result-state-"+officialPlayersState(m));
+  if(plenoCardImpossible(m))plenoCard.classList.add("pleno-impossible-strong");
   $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
   $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
@@ -2851,7 +2890,8 @@ function openHistory(jid){
     const ca=r==="—"?"":a===r?"ok":"bad";
     const cb=r==="—"?"":b===r?"ok":"bad";
     const historyState=r==="—"?"neutral":playerVerdictState(a===r?"correct":"wrong",b===r?"correct":"wrong");
-    return `<article class="history-detail-match result-state-${historyState}" data-history-jid="${j.id}" data-history-match="${m.number}">
+    const plenoImpossible=m.number===15&&plenoCardImpossible(m,j.id);
+    return `<article class="history-detail-match result-state-${historyState}${plenoImpossible?" pleno-impossible-strong":""}" data-history-jid="${j.id}" data-history-match="${m.number}">
       <div class="history-detail-head">
         <div class="history-match-meta"><span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div>
         <div class="history-detail-fixture">${historyFixtureHtml(m)}</div>
