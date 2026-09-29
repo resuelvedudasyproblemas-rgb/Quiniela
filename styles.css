@@ -9638,3 +9638,47 @@ html[data-theme="dark"] .qg-history-match.qg-joint-impossible{
     0 0 0 1px rgba(199,79,89,.18),
     0 10px 30px rgba(0,0,0,.28)!important;
 }
+
+
+/* Conjunta Quinigol: solo verde, neutro o rojo */
+.qg-joint-pick.pending{
+  border-color:var(--border)!important;
+  background:var(--surface-3)!important;
+  color:var(--muted)!important;
+}
+.qg-joint-pick.pending strong{
+  color:var(--text)!important;
+}
+.qg-joint-pick.impossible{
+  border:1px solid color-mix(in srgb,#cf3f49 62%,var(--border))!important;
+  background:color-mix(in srgb,#cf3f49 16%,var(--surface))!important;
+  color:#b92f3a!important;
+  box-shadow:inset 3px 0 0 #cf3f49!important;
+}
+.qg-joint-pick.impossible strong{
+  color:#b92f3a!important;
+}
+html[data-theme="dark"] .qg-joint-pick.pending{
+  border-color:#30443a!important;
+  background:#13241c!important;
+  color:#9fb0a7!important;
+}
+html[data-theme="dark"] .qg-joint-pick.pending strong{
+  color:#e6f2eb!important;
+}
+html[data-theme="dark"] .qg-joint-pick.impossible{
+  border-color:#8a4048!important;
+  background:#3a2024!important;
+  color:#ffadb3!important;
+  box-shadow:inset 3px 0 0 #c74f59!important;
+}
+html[data-theme="dark"] .qg-joint-pick.impossible strong{
+  color:#ffadb3!important;
+}
+
+/* El historial mantiene la misma semántica: verde si acertó, rojo si falló. */
+.qg-history-picks .pj.history-joint-pending{
+  color:var(--joint-color)!important;
+  border-color:color-mix(in srgb,var(--joint-color) 28%,var(--border))!important;
+  background:var(--joint-soft)!important;
+}
