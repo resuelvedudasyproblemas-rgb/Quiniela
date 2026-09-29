@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=191" />
+  <link rel="stylesheet" href="styles.css?v=192" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -1269,14 +1269,25 @@ function qgScorersHtml(m){
   const rows=row(true)+row(false);
   return rows?`<div class="qg-live-scorers" aria-label="Goleadores">${rows}</div>`:"";
 }
-function qgJointImpossible(m){
+function qgJointImpossible(m,jid=m?.journey_id){
   if(!m||m.live_status!=="inprogress"||m.live_home_score==null||m.live_away_score==null)return false;
-  const value=jointText(m.number,m.journey_id);
+  const value=jointText(m.number,jid);
   const parts=String(value||"").match(/^(0|1|2|M)-(0|1|2|M)$/);
   if(!parts)return false;
 
   const exceeded=(token,current)=>token!=="M"&&Number(current)>Number(token);
   return exceeded(parts[1],m.live_home_score)||exceeded(parts[2],m.live_away_score);
+}
+function qgJointLost(m,jid=m?.journey_id){
+  if(!m)return false;
+  const joint=jointText(m.number,jid);
+  if(joint==="—")return false;
+  const official=actual(m);
+  if(official!=="—")return joint!==official;
+  if(m.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null){
+    return joint!==projected(m);
+  }
+  return qgJointImpossible(m,jid);
 }
 
 function qgPlayersState(m){
@@ -1330,7 +1341,7 @@ function renderPlay(){
   el.innerHTML=matches.map(m=>{
     const cur=currentDraft(m.number),saved=pick(identityUserId,m.number),r=actual(m),proj=projected(m),ok=saved&&r!=="—"&&pickText(saved)===r;
     const playerState=qgPlayersState(m);
-    const jointImpossible=qgJointImpossible(m);
+    const jointImpossible=qgJointLost(m);
     const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
@@ -1498,7 +1509,8 @@ function renderHistory(){
     const rows=msFor(j.id).map(m=>{
       const matchState=qgHistoryMatchState(m,j.id);
       const jointState=qgHistoryJointState(m,j.id);
-      return `<div class="qg-history-match result-state-${matchState}">
+      const jointLost=qgJointLost(m,j.id);
+      return `<div class="qg-history-match result-state-${matchState}${jointLost?" qg-joint-impossible":""}">
         <div class="qg-history-match-meta"><span>P${m.number}</span>${qgMatchCompetitionBadgeHtml(m)}</div>
         ${qgHistoryFixtureHtml(m)}
         <div class="qg-history-picks">
