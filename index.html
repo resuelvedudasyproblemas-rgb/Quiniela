@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=195" />
+  <link rel="stylesheet" href="styles.css?v=196" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -1341,13 +1341,12 @@ function renderPlay(){
     else if(proj!=="—")result=`<div class="qg-result live"><span>${qgIsHalftime(m)?"Descanso · provisional":"En directo · provisional"}</span><strong>${esc(proj)}</strong>${qgLiveFreshnessHtml(m)}</div>`;
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
-    const liveHeader=hs.cls==="live"
-      ? `<div class="qg-live-header-score"><strong><span>${esc(hs.home)}</span><b>–</b><span>${esc(hs.away)}</span></strong>${hs.label?`<small>${esc(hs.label)}</small>`:""}</div>`
+    const scoreHeader=hs.cls==="live"||hs.cls==="official"
+      ? `<div class="qg-live-header-score ${hs.cls==="official"?"official":""}"><strong><span>${esc(hs.home)}</span><b>–</b><span>${esc(hs.away)}</span></strong>${hs.label?`<small>${esc(hs.label)}</small>`:""}</div>`
       : "";
-    const homeHeader=hs.cls==="live"?"":`<strong class="qg-head-score ${hs.cls}">${esc(hs.home)}</strong>`;
-    const awayHeader=hs.cls==="live"?"":`<strong class="qg-head-score ${hs.cls}">${esc(hs.away)}</strong>`;
-    const headerLabel=hs.cls==="live"?"":(hs.label?`<span class="qg-head-score-label ${hs.cls}">${esc(hs.label)}</span>`:"");
-    return `<article class="qg-match-card ${show?"":"hidden"} result-state-${playerState}${jointImpossible?" qg-joint-impossible":""}"><div class="qg-card-head ${hs.cls==="live"?"has-live-score":""}"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}${homeHeader}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}${awayHeader}</div>${headerLabel}</div>${liveHeader}${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${jointLine}${result}${scorers}</article>`;
+    const homeHeader=hs.cls==="pending"?`<strong class="qg-head-score pending">${esc(hs.home)}</strong>`:"";
+    const awayHeader=hs.cls==="pending"?`<strong class="qg-head-score pending">${esc(hs.away)}</strong>`:"";
+    return `<article class="qg-match-card ${show?"":"hidden"} result-state-${playerState}${jointImpossible?" qg-joint-impossible":""}"><div class="qg-card-head ${hs.cls==="live"||hs.cls==="official"?"has-live-score":""}"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}${homeHeader}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}${awayHeader}</div></div>${scoreHeader}${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${jointLine}${result}${scorers}</article>`;
   }).join("");
   $$(".qg-goal").forEach(b=>b.addEventListener("click",()=>saveGoal(Number(b.dataset.qgMatch),b.dataset.qgSide,b.dataset.qgGoal)));
   $$("[data-qg-clear]").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.qgClear))));
