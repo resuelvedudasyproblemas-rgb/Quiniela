@@ -9527,3 +9527,27 @@ html[data-theme="dark"] .match-filter[data-match-filter="e8"] span{
   width:max-content;
   margin:3px auto 0;
 }
+
+
+/* Quinigol: color de tarjeta priorizado por la conjunta */
+.qg-match-card.result-state-joint{
+  border-color:color-mix(in srgb,var(--joint-color) 62%,var(--border))!important;
+  background:
+    linear-gradient(0deg,color-mix(in srgb,var(--joint-color) 8%,transparent),color-mix(in srgb,var(--joint-color) 8%,transparent)),
+    var(--surface)!important;
+  box-shadow:
+    inset 4px 0 0 var(--joint-color),
+    0 8px 22px color-mix(in srgb,var(--joint-color) 12%,transparent)!important;
+}
+.qg-match-card.result-state-both-players{
+  border-color:color-mix(in srgb,var(--player-one) 28%,var(--player-two) 28%,var(--border))!important;
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb,var(--player-one) 7%,transparent) 0 50%,
+      color-mix(in srgb,var(--player-two) 7%,transparent) 50% 100%),
+    var(--surface)!important;
+  box-shadow:
+    inset 4px 0 0 var(--player-one),
+    inset -4px 0 0 var(--player-two),
+    0 8px 22px rgba(0,0,0,.06)!important;
+}
