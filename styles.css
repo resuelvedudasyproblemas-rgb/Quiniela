@@ -9606,3 +9606,35 @@ html[data-theme="dark"] .qg-match-card.qg-joint-impossible .qg-result.live{
   color:#ffadb3!important;
   border-color:#743840!important;
 }
+
+
+/* Rojo fuerte: Pleno imposible y Quinigol perdido */
+#plenoCard.pleno-impossible-strong,
+.history-detail-match.pleno-impossible-strong,
+.qg-history-match.qg-joint-impossible{
+  border:2px solid #cf3f49!important;
+  background:
+    linear-gradient(0deg,rgba(207,63,73,.15),rgba(207,63,73,.15)),
+    var(--surface)!important;
+  box-shadow:
+    inset 6px 0 0 #cf3f49,
+    0 0 0 1px rgba(207,63,73,.16),
+    0 10px 28px rgba(185,43,54,.20)!important;
+}
+#plenoCard.pleno-impossible-strong .pleno-live-score,
+#plenoCard.pleno-impossible-strong .pleno-final-score{
+  border-color:color-mix(in srgb,#cf3f49 45%,var(--border))!important;
+  background:color-mix(in srgb,#cf3f49 13%,var(--surface-2))!important;
+}
+html[data-theme="dark"] #plenoCard.pleno-impossible-strong,
+html[data-theme="dark"] .history-detail-match.pleno-impossible-strong,
+html[data-theme="dark"] .qg-history-match.qg-joint-impossible{
+  border-color:#b84b54!important;
+  background:
+    linear-gradient(0deg,rgba(173,54,64,.22),rgba(173,54,64,.22)),
+    var(--surface)!important;
+  box-shadow:
+    inset 6px 0 0 #c74f59,
+    0 0 0 1px rgba(199,79,89,.18),
+    0 10px 30px rgba(0,0,0,.28)!important;
+}
