@@ -9682,3 +9682,26 @@ html[data-theme="dark"] .qg-joint-pick.impossible strong{
   border-color:color-mix(in srgb,var(--joint-color) 28%,var(--border))!important;
   background:var(--joint-soft)!important;
 }
+
+
+/* Goleadores: color informativo fijo, independiente del acierto */
+.live-scorers-groups{
+  color:#247a54!important;
+}
+html[data-theme="dark"] .live-scorers-groups{
+  color:#83dfb2!important;
+}
+.qg-live-scorers,
+.qg-match-card.is-wrong .qg-live-scorers,
+.qg-match-card.qg-joint-impossible .qg-live-scorers{
+  border-color:color-mix(in srgb,#2b9b6f 22%,var(--border))!important;
+  background:color-mix(in srgb,#2b9b6f 6%,var(--surface-2))!important;
+  color:#247a54!important;
+}
+html[data-theme="dark"] .qg-live-scorers,
+html[data-theme="dark"] .qg-match-card.is-wrong .qg-live-scorers,
+html[data-theme="dark"] .qg-match-card.qg-joint-impossible .qg-live-scorers{
+  border-color:#285a47!important;
+  background:#10271e!important;
+  color:#6fd9a5!important;
+}
