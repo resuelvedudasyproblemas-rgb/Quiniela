@@ -9551,3 +9551,21 @@ html[data-theme="dark"] .match-filter[data-match-filter="e8"] span{
     inset -4px 0 0 var(--player-two),
     0 8px 22px rgba(0,0,0,.06)!important;
 }
+
+
+/* Historial Quinigol: misma prioridad visual que los partidos */
+.qg-history-match.result-state-joint{
+  border-color:color-mix(in srgb,var(--joint-color) 62%,var(--border))!important;
+  background:color-mix(in srgb,var(--joint-color) 8%,var(--surface))!important;
+  box-shadow:inset 4px 0 0 var(--joint-color)!important;
+}
+.qg-history-match.result-state-both-players{
+  border-color:color-mix(in srgb,var(--player-one) 28%,var(--player-two) 28%,var(--border))!important;
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb,var(--player-one) 8%,var(--surface)) 0 50%,
+      color-mix(in srgb,var(--player-two) 8%,var(--surface)) 50% 100%)!important;
+  box-shadow:
+    inset 4px 0 0 var(--player-one),
+    inset -4px 0 0 var(--player-two)!important;
+}
