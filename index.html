@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=189" />
+  <link rel="stylesheet" href="styles.css?v=190" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -1455,10 +1455,15 @@ function qgHistoryFixtureHtml(m){
 function qgHistoryMatchState(m,jid){
   const current=actual(m);
   if(current==="—")return "neutral";
+
+  // Igual que en la vista en juego: la conjunta tiene prioridad visual.
+  const joint=jointText(m.number,jid);
+  if(joint!=="—"&&joint===current)return "joint";
+
   const p1=member(1),p2=member(2);
   const a=p1?pickText(pick(p1.user_id,m.number,jid)):"—";
   const b=p2?pickText(pick(p2.user_id,m.number,jid)):"—";
-  if(a===current&&b===current)return "both";
+  if(a===current&&b===current)return "both-players";
   if(a===current)return "player-one";
   if(b===current)return "player-two";
   if(a!=="—"&&b!=="—")return "none";
