@@ -9705,3 +9705,59 @@ html[data-theme="dark"] .qg-match-card.qg-joint-impossible .qg-live-scorers{
   background:#10271e!important;
   color:#6fd9a5!important;
 }
+
+
+/* Quinigol: conjunta perdida + quién sigue acertando
+   El fondo permanece rojo; el borde/acento conserva al jugador que acierta. */
+.qg-match-card.qg-joint-impossible.result-state-player-one,
+.qg-history-match.qg-joint-impossible.result-state-player-one{
+  border-color:var(--player-one)!important;
+  box-shadow:
+    inset 6px 0 0 var(--player-one),
+    0 0 0 1px color-mix(in srgb,var(--player-one) 32%,transparent),
+    0 10px 28px rgba(185,43,54,.20)!important;
+}
+.qg-match-card.qg-joint-impossible.result-state-player-two,
+.qg-history-match.qg-joint-impossible.result-state-player-two{
+  border-color:var(--player-two)!important;
+  box-shadow:
+    inset 6px 0 0 var(--player-two),
+    0 0 0 1px color-mix(in srgb,var(--player-two) 32%,transparent),
+    0 10px 28px rgba(185,43,54,.20)!important;
+}
+.qg-match-card.qg-joint-impossible.result-state-both-players,
+.qg-history-match.qg-joint-impossible.result-state-both-players{
+  border-color:#cf3f49!important;
+  box-shadow:
+    inset 6px 0 0 var(--player-one),
+    inset -6px 0 0 var(--player-two),
+    0 0 0 1px rgba(207,63,73,.18),
+    0 10px 28px rgba(185,43,54,.20)!important;
+}
+
+/* En modo oscuro se mantiene exactamente la misma semántica visual. */
+html[data-theme="dark"] .qg-match-card.qg-joint-impossible.result-state-player-one,
+html[data-theme="dark"] .qg-history-match.qg-joint-impossible.result-state-player-one{
+  border-color:var(--player-one)!important;
+  box-shadow:
+    inset 6px 0 0 var(--player-one),
+    0 0 0 1px color-mix(in srgb,var(--player-one) 36%,transparent),
+    0 10px 30px rgba(0,0,0,.28)!important;
+}
+html[data-theme="dark"] .qg-match-card.qg-joint-impossible.result-state-player-two,
+html[data-theme="dark"] .qg-history-match.qg-joint-impossible.result-state-player-two{
+  border-color:var(--player-two)!important;
+  box-shadow:
+    inset 6px 0 0 var(--player-two),
+    0 0 0 1px color-mix(in srgb,var(--player-two) 36%,transparent),
+    0 10px 30px rgba(0,0,0,.28)!important;
+}
+html[data-theme="dark"] .qg-match-card.qg-joint-impossible.result-state-both-players,
+html[data-theme="dark"] .qg-history-match.qg-joint-impossible.result-state-both-players{
+  border-color:#b84b54!important;
+  box-shadow:
+    inset 6px 0 0 var(--player-one),
+    inset -6px 0 0 var(--player-two),
+    0 0 0 1px rgba(199,79,89,.18),
+    0 10px 30px rgba(0,0,0,.28)!important;
+}
