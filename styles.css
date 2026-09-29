@@ -9761,3 +9761,24 @@ html[data-theme="dark"] .qg-history-match.qg-joint-impossible.result-state-both-
     0 0 0 1px rgba(199,79,89,.18),
     0 10px 30px rgba(0,0,0,.28)!important;
 }
+
+
+/* Quinigol: marcador oficial compacto igual al directo */
+.qg-live-header-score.official{
+  background:color-mix(in srgb,var(--brand) 10%,var(--surface))!important;
+  border-color:color-mix(in srgb,var(--brand) 30%,var(--border))!important;
+  color:var(--brand)!important;
+  box-shadow:none!important;
+}
+.qg-live-header-score.official>strong{
+  font-size:.78rem;
+}
+.qg-live-header-score.official>small{
+  color:currentColor;
+  opacity:.78;
+}
+html[data-theme="dark"] .qg-live-header-score.official{
+  background:#143126!important;
+  border-color:#2e6249!important;
+  color:#7de1ae!important;
+}
