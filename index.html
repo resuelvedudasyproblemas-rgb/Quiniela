@@ -375,7 +375,7 @@
     const memory=new Map();
     const inFlight=new Map();
     const retryAfter=new Map();
-    const PREFIX="nq-sofa-exact-v1:";
+    const PREFIX="nq-sofa-exact-v2:";
 
     const totalGoals=m=>{
       const h=m?.live_home_score!=null?Number(m.live_home_score):Number(m?.home_score);
@@ -438,13 +438,19 @@
       return true;
     };
     const fetchRows=async id=>{
-      const xrw=await token();
-      const hosts=[
-        "https://www.sofascore.com/api/v1/event/",
-        "https://api.sofascore.com/api/v1/event/"
+      // Desde el navegador del usuario salimos por su conexión normal, no por
+      // las IP de centro de datos que SofaScore está bloqueando. Su API permite
+      // CORS y X-Requested-With; probamos primero el valor XHR estándar que
+      // SofaScore acepta actualmente y dejamos el token web como segundo intento.
+      const webToken=await token();
+      const attempts=[
+        ["https://www.sofascore.com/api/v1/event/","XMLHttpRequest"],
+        ["https://api.sofascore.com/api/v1/event/","XMLHttpRequest"],
+        ["https://www.sofascore.com/api/v1/event/",webToken],
+        ["https://api.sofascore.com/api/v1/event/",webToken]
       ];
       let lastError=null;
-      for(const base of hosts){
+      for(const [base,xrw] of attempts){
         try{
           const res=await fetch(base+id+"/incidents",{
             mode:"cors",
@@ -459,6 +465,7 @@
           const json=await res.json();
           const rows=parseGoals(json);
           if(rows.length)return rows;
+          lastError=new Error("SofaScore sin goles exactos");
         }catch(e){lastError=e}
       }
       throw lastError||new Error("SofaScore sin incidentes");
