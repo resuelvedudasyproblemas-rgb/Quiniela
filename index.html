@@ -375,7 +375,7 @@
     const memory=new Map();
     const inFlight=new Map();
     const retryAfter=new Map();
-    const PREFIX="nq-sofa-exact-v2:";
+    const PREFIX="nq-sofa-exact-v3:";
 
     const totalGoals=m=>{
       const h=m?.live_home_score!=null?Number(m.live_home_score):Number(m?.home_score);
@@ -447,19 +447,21 @@
         ["https://www.sofascore.com/api/v1/event/","XMLHttpRequest"],
         ["https://api.sofascore.com/api/v1/event/","XMLHttpRequest"],
         ["https://www.sofascore.com/api/v1/event/",webToken],
-        ["https://api.sofascore.com/api/v1/event/",webToken]
+        ["https://api.sofascore.com/api/v1/event/",webToken],
+        ["https://www.sofascore.com/api/v1/event/",null],
+        ["https://api.sofascore.com/api/v1/event/",null]
       ];
       let lastError=null;
       for(const [base,xrw] of attempts){
         try{
-          const res=await fetch(base+id+"/incidents",{
+          const headers={"Accept":"application/json,text/plain,*/*"};
+          if(xrw)headers["X-Requested-With"]=xrw;
+          const url=base+id+"/incidents?_nq="+Date.now();
+          const res=await fetch(url,{
             mode:"cors",
             credentials:"omit",
             cache:"no-store",
-            headers:{
-              "Accept":"application/json,text/plain,*/*",
-              "X-Requested-With":xrw
-            }
+            headers
           });
           if(!res.ok){lastError=new Error("SofaScore "+res.status);continue}
           const json=await res.json();
