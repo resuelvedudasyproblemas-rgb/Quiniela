@@ -1,6 +1,3 @@
-const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium");
-
 module.exports = async function handler(req, res) {
   const raw = Array.isArray(req.query.event) ? req.query.event[0] : req.query.event;
   const eventId = String(raw || "");
@@ -11,6 +8,8 @@ module.exports = async function handler(req, res) {
 
   let browser;
   try {
+    const puppeteer = require("puppeteer-core");
+    const chromium = require("@sparticuz/chromium");
     chromium.setGraphicsMode = false;
     browser = await puppeteer.launch({
       args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
@@ -65,7 +64,11 @@ module.exports = async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     res.status(200).json({ event: Number(eventId), incidents, source: "sofascore-widget-browser" });
   } catch (error) {
-    res.status(500).json({ error: "browser_failed", message: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({
+      error: "browser_failed",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? String(error.stack||"").slice(0,1800) : ""
+    });
   } finally {
     if (browser) {
       try { await browser.close(); } catch {}
