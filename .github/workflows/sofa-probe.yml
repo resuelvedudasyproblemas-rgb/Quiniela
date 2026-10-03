@@ -1,0 +1,21 @@
+name: SofaScore probe
+on:
+  push:
+    paths:
+      - '.github/workflows/sofa-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe incidents
+        shell: bash
+        run: |
+          set -x
+          URL="https://www.sofascore.com/api/v1/event/16418359/incidents"
+          curl -sS -D /tmp/headers.txt -o /tmp/body.txt             -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36"             -H "Accept: application/json,text/plain,*/*"             -H "X-Requested-With: XMLHttpRequest"             "$URL" || true
+          echo "=== HEADERS ==="
+          cat /tmp/headers.txt || true
+          echo "=== BODY ==="
+          head -c 1200 /tmp/body.txt || true
