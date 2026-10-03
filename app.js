@@ -2450,6 +2450,16 @@ function renderAll(){
     else $("#opponentStatus").textContent="Esperando al segundo jugador";
   }
   renderGlobalWallet();renderJourneySwitcher();renderJourneyDashboard();renderJointElige8ProgressInPlay();renderMatches();renderPleno();renderProgress();renderElige8Progress();renderJoint();renderCompare();renderStats();renderHistory();renderNotificationBadge();maybeCelebrateBothComplete();updateCountdowns();
+  scheduleExactSofaScorers();
+}
+
+let exactSofaScorersRunning=false;
+function scheduleExactSofaScorers(){
+  if(exactSofaScorersRunning||!window.NQ_SOFA_EXACT||!journey)return;
+  exactSofaScorersRunning=true;
+  Promise.resolve(window.NQ_SOFA_EXACT.enrichMatches(matches))
+    .then(changed=>{if(changed)renderAll()})
+    .finally(()=>{exactSofaScorersRunning=false});
 }
 
 function renderMatches(){
