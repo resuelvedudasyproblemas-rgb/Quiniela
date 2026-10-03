@@ -8,8 +8,8 @@ module.exports = async function handler(req, res) {
 
   let browser;
   try {
-    const puppeteer = require("puppeteer-core");
-    const chromium = require("@sparticuz/chromium");
+    const { default: puppeteer } = await import("puppeteer-core");
+    const { default: chromium } = await import("@sparticuz/chromium");
     chromium.setGraphicsMode = false;
     browser = await puppeteer.launch({
       args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
