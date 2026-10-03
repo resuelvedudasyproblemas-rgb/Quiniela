@@ -370,136 +370,8 @@
 
   <div id="toast" class="toast" role="status"></div>
 
-  <script>
-  window.NQ_SOFA_EXACT=(()=>{
-    const memory=new Map();
-    const inFlight=new Map();
-    const retryAfter=new Map();
-    const PREFIX="nq-sofa-exact-v3:";
-
-    const totalGoals=m=>{
-      const h=m?.live_home_score!=null?Number(m.live_home_score):Number(m?.home_score);
-      const a=m?.live_away_score!=null?Number(m.live_away_score):Number(m?.away_score);
-      return Number.isFinite(h)&&Number.isFinite(a)?Math.max(0,h)+Math.max(0,a):0;
-    };
-    const exactRows=rows=>Array.isArray(rows)&&rows.length>0&&rows.every(g=>g?.name&&Number.isFinite(Number(g?.time)));
-    const needs=m=>{
-      const id=Number(m?.sofascore_event_id);
-      if(!Number.isFinite(id)||id<=0||totalGoals(m)<=0)return false;
-      const rows=Array.isArray(m?.live_scorers)?m.live_scorers:[];
-      return rows.length<totalGoals(m)||rows.some(g=>g?.name&&!Number.isFinite(Number(g?.time)));
-    };
-    const cacheKey=id=>PREFIX+id;
-    const readCache=id=>{
-      if(memory.has(id))return memory.get(id);
-      try{
-        const raw=localStorage.getItem(cacheKey(id));
-        if(!raw)return null;
-        const parsed=JSON.parse(raw);
-        if(!Array.isArray(parsed))return null;
-        memory.set(id,parsed);
-        return parsed;
-      }catch{return null}
-    };
-    const writeCache=(id,rows)=>{
-      memory.set(id,rows);
-      try{localStorage.setItem(cacheKey(id),JSON.stringify(rows))}catch{}
-    };
-    const token=async()=>{
-      const slot=Math.floor(Date.now()/1000/1800);
-      const data=new TextEncoder().encode(String(slot));
-      const hash=await crypto.subtle.digest("SHA-256",data);
-      return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,"0")).join("").slice(0,6);
-    };
-    const parseGoals=json=>(Array.isArray(json?.incidents)?json.incidents:[])
-      .filter(x=>x?.incidentType==="goal"&&x?.player?.name&&x?.incidentClass!=="missed")
-      .map(x=>{
-        const row={
-          name:String(x.player.name),
-          home:Boolean(x.isHome??x.home),
-          kind:String(x.incidentClass||"regular")
-        };
-        if(x.time!=null&&Number.isFinite(Number(x.time)))row.time=Number(x.time);
-        if(x.addedTime!=null&&Number.isFinite(Number(x.addedTime)))row.added_time=Number(x.addedTime);
-        return row;
-      })
-      .filter(g=>Number.isFinite(Number(g.time)))
-      .sort((a,b)=>Number(a.time)-Number(b.time)||(Number(a.added_time||0)-Number(b.added_time||0)));
-    const apply=(m,rows)=>{
-      if(!exactRows(rows))return false;
-      const total=totalGoals(m);
-      const current=Array.isArray(m?.live_scorers)?m.live_scorers:[];
-      if(total>0&&rows.length<total)return false;
-      if(rows.length<current.length)return false;
-      const before=JSON.stringify(current);
-      const after=JSON.stringify(rows);
-      if(before===after)return false;
-      m.live_scorers=rows;
-      return true;
-    };
-    const fetchRows=async id=>{
-      // Desde el navegador del usuario salimos por su conexión normal, no por
-      // las IP de centro de datos que SofaScore está bloqueando. Su API permite
-      // CORS y X-Requested-With; probamos primero el valor XHR estándar que
-      // SofaScore acepta actualmente y dejamos el token web como segundo intento.
-      const webToken=await token();
-      const attempts=[
-        ["https://www.sofascore.com/api/v1/event/","XMLHttpRequest"],
-        ["https://api.sofascore.com/api/v1/event/","XMLHttpRequest"],
-        ["https://www.sofascore.com/api/v1/event/",webToken],
-        ["https://api.sofascore.com/api/v1/event/",webToken],
-        ["https://www.sofascore.com/api/v1/event/",null],
-        ["https://api.sofascore.com/api/v1/event/",null]
-      ];
-      let lastError=null;
-      for(const [base,xrw] of attempts){
-        try{
-          const headers={"Accept":"application/json,text/plain,*/*"};
-          if(xrw)headers["X-Requested-With"]=xrw;
-          const url=base+id+"/incidents?_nq="+Date.now();
-          const res=await fetch(url,{
-            mode:"cors",
-            credentials:"omit",
-            cache:"no-store",
-            headers
-          });
-          if(!res.ok){lastError=new Error("SofaScore "+res.status);continue}
-          const json=await res.json();
-          const rows=parseGoals(json);
-          if(rows.length)return rows;
-          lastError=new Error("SofaScore sin goles exactos");
-        }catch(e){lastError=e}
-      }
-      throw lastError||new Error("SofaScore sin incidentes");
-    };
-    const enrichOne=async m=>{
-      if(!needs(m))return false;
-      const id=Number(m.sofascore_event_id);
-      const cached=readCache(id);
-      if(cached&&apply(m,cached))return true;
-      const waitUntil=retryAfter.get(id)||0;
-      if(Date.now()<waitUntil)return false;
-      let p=inFlight.get(id);
-      if(!p){
-        p=fetchRows(id)
-          .then(rows=>{writeCache(id,rows);retryAfter.delete(id);return rows})
-          .catch(e=>{retryAfter.set(id,Date.now()+60000);throw e})
-          .finally(()=>inFlight.delete(id));
-        inFlight.set(id,p);
-      }
-      try{return apply(m,await p)}catch{return false}
-    };
-    const enrichMatches=async list=>{
-      const candidates=(Array.isArray(list)?list:[]).filter(needs).slice(0,8);
-      if(!candidates.length)return false;
-      const results=await Promise.all(candidates.map(enrichOne));
-      return results.some(Boolean);
-    };
-    return {needs,enrichOne,enrichMatches};
-  })();
-  </script>
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=204"></script>
+  <script type="module" src="app.js?v=205"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -1703,18 +1575,9 @@ function setGame(g,persist=true){
     }
   }
 }
-let qgSofaExactRunning=false;
-function qgScheduleExactScorers(){
-  if(qgSofaExactRunning||!window.NQ_SOFA_EXACT||!journey)return;
-  qgSofaExactRunning=true;
-  Promise.resolve(window.NQ_SOFA_EXACT.enrichMatches(matches))
-    .then(changed=>{if(changed)renderAll()})
-    .finally(()=>{qgSofaExactRunning=false});
-}
 function renderAll(){
   if(!journey)return;
   renderHero();renderSwitcher();renderDashboard();qgRenderStandings();renderPlay();renderJoint();renderCompare();renderStats();renderHistory();setView(activeView,false);
-  qgScheduleExactScorers();
 }
 async function openQGView(v){
   if((v==="stats"||v==="history")&&!qgHistoryFullyLoaded){
