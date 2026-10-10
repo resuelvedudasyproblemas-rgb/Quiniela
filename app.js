@@ -143,7 +143,7 @@ function teamInlineHtml(name,logoUrl="",position=null){
   return `<span class="team-inline">${teamCrestHtml(name,"sm",logoUrl)}${teamPositionHtml(position,true)}<span>${escapeHtml(name)}</span></span>`;
 }
 function fixtureMiniHtml(m){
-  return `<span class="fixture-mini"><span class="fixture-mini-team">${teamCrestHtml(m.home,"xs",m.home_logo_url)}${teamPositionHtml(m.home_position,true)}<span>${escapeHtml(m.home)}</span></span><span class="fixture-mini-sep">–</span><span class="fixture-mini-team">${teamCrestHtml(m.away,"xs",m.away_logo_url)}${teamPositionHtml(m.away_position,true)}<span>${escapeHtml(m.away)}</span></span></span>`;
+  return `<span class="fixture-mini"><span class="fixture-mini-team">${teamCrestHtml(m.home,"xs",m.home_logo_url)}${teamPositionHtml(m.home_position,true)}<span>${escapeHtml(m.home)}</span></span><span class="fixture-mini-sep">–</span><span class="fixture-mini-team">${teamCrestHtml(m.away,"xs",m.away_logo_url)}${teamPositionHtml(m.away_position,true)}<span>${escapeHtml(m.away)}</span></span></span>${matchExceptionBadgeHtml(m)}`;
 }
 function compareFixtureHtml(m){
   return `<div class="compare-fixture-row">
@@ -608,7 +608,7 @@ function renderJourneyDashboard(){
     </div>`;
 }
 function matchInProgress(m){
-  return Boolean(m&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null);
+  return Boolean(m&&!matchExceptionStatus(m)&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null);
 }
 function matchOutcomeForUser(m,uid=identityUserId){
   if(!matchResolved(m)) return "pending";
