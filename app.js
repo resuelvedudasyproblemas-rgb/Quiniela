@@ -242,8 +242,9 @@ function matchesForJourney(journeyId){
   return allMatches.filter(m=>m.journey_id===journeyId).sort((a,b)=>a.number-b.number);
 }
 function matchResolved(m){
-  // home_score/away_score son los campos oficiales de SELAE.
-  // Los marcadores de SofaScore viven solo en live_home_score/live_away_score.
+  // SELAE confirma el Pleno al 15 por su signo 0/1/2/M, aun cuando
+  // el feed numérico no facilite los goles exactos del partido.
+  if(Number(m?.number)===15 && /^[012M]-[012M]$/.test(String(m?.official_pleno_token||"")))return true;
   return m?.home_score!=null && m?.away_score!=null;
 }
 function resultSignForMatch(m){
@@ -381,12 +382,12 @@ function journeyStateLabel(j){
 function resultBarHtml(m,p){
   if(matchResolved(m)){
     if(m.number===15){
-      const actualHome=normalizedGoalScore(m.home_score), actualAway=normalizedGoalScore(m.away_score);
+      const officialToken=actualResultForMatch(m);
       const hasPick=Boolean(p?.home_goals&&p?.away_goals);
-      const ok=hasPick && p.home_goals===actualHome && p.away_goals===actualAway;
+      const ok=hasPick && `${p.home_goals}-${p.away_goals}`===officialToken;
       const outcome=!hasPick?"Sin pronóstico":ok?"Acierto":"Fallo";
       const cls=!hasPick?"neutral":ok?"correct":"wrong";
-      return `<div class="match-result-bar ${cls}"><span>Pleno oficial <strong>${actualHome}-${actualAway}</strong></span><span class="result-outcome">${outcome}</span></div>`;
+      return `<div class="match-result-bar ${cls}"><span>Pleno oficial <strong>${officialToken}</strong></span><span class="result-outcome">${outcome}</span></div>`;
     }
     const actual=resultSignForMatch(m);
     const hasPick=Boolean(p?.pick);
@@ -1662,7 +1663,7 @@ function openMatchDetail(n,jid=journey?.id){
   const j=journeys.find(x=>x.id===jid),m=allMatches.find(x=>x.journey_id===jid&&x.number===n);if(!j||!m)return;
   const p1=memberBySlot(1),p2=memberBySlot(2),a=p1?displayPickForJourney(p1.user_id,jid,n):"—",b=p2?displayPickForJourney(p2.user_id,jid,n):"—",actual=actualResultForMatch(m),resolved=matchResolved(m);
   $("#matchDetailTitle").textContent=`J${j.number} · Partido ${n}`;
-  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>FINAL</small><strong>${m.home_score}–${m.away_score}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
+  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>${n===15?"OFICIAL SELAE":"FINAL"}</small><strong>${m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:escapeHtml(actualResultForMatch(m).replace("-","–"))}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
   $("#matchDetailDialog").showModal();
 }
 async function activateView(view){
@@ -2484,7 +2485,7 @@ function renderPleno(){
   $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
   $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
-  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>RESULTADO FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></div>`:tvBroadcastHtml(m);
+  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>${m.home_score!=null&&m.away_score!=null?"RESULTADO FINAL":"PLENO OFICIAL SELAE"}</small><strong>${m.home_score!=null&&m.away_score!=null?m.home_score:escapeHtml(actualResultForMatch(m).split("-")[0])}<b>–</b>${m.home_score!=null&&m.away_score!=null?m.away_score:escapeHtml(actualResultForMatch(m).split("-")[1])}</strong></div>`:tvBroadcastHtml(m);
   const mp=myPickFor(15),locked=!journeyCanEdit(journey);
   $$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
   let plenoClear=$("#plenoClearAction");
@@ -2775,10 +2776,11 @@ function displayPickForJourney(uid,journeyId,n){
 }
 
 function actualResultForMatch(m){
-  if(m.number===15){
-    if(m.home_score==null || m.away_score==null) return "—";
-    const norm=x=>x>=3?"M":String(x);
-    return `${norm(m.home_score)}-${norm(m.away_score)}`;
+  if(Number(m?.number)===15){
+    const official=String(m?.official_pleno_token||"").trim().toUpperCase();
+    if(/^[012M]-[012M]$/.test(official))return official;
+    if(m.home_score==null||m.away_score==null)return "—";
+    return `${normalizedGoalScore(m.home_score)}-${normalizedGoalScore(m.away_score)}`;
   }
   return resultSignForMatch(m)||"—";
 }
@@ -2882,7 +2884,7 @@ function openHistory(jid){
     const a=p1?displayPickForJourney(p1.user_id,j.id,m.number):"—";
     const b=p2?displayPickForJourney(p2.user_id,j.id,m.number):"—";
     const r=actualResultForMatch(m);
-    const exactScore=m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:"—";
+    const exactScore=m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:m.number===15?actualResultForMatch(m).replace("-","–"):"—";
     const resultSign=m.number<=14?r:"";
     const e8a=Boolean(p1&&m.number<=14&&allElige8.some(e=>e.user_id===p1.user_id&&e.journey_id===j.id&&e.match_number===m.number));
     const e8b=Boolean(p2&&m.number<=14&&allElige8.some(e=>e.user_id===p2.user_id&&e.journey_id===j.id&&e.match_number===m.number));
