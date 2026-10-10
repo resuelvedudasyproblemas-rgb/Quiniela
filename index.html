@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=196" />
+  <link rel="stylesheet" href="styles.css?v=197" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -371,7 +371,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=206"></script>
+  <script type="module" src="app.js?v=207"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
@@ -488,6 +488,26 @@ function timeLeft(v){
   return [d?`${d} d`:"",h||d?`${h} h`:"",`${m} min`].filter(Boolean).join(" ");
 }
 function msFor(jid){return allMatches.filter(m=>m.journey_id===jid).sort((a,b)=>a.number-b.number)}
+function qgExceptionStatus(m){
+  if(!m)return "";
+  const v=String(m.exception_status||m.live_status||"").trim().toLowerCase();
+  const t=String(m.live_status_text||"").trim().toLowerCase();
+  if(["suspended","abandoned","interrupted","susp"].includes(v)||/suspendid|suspended|abandonad|abandoned/.test(t))return "suspended";
+  if(["postponed","delayed"].includes(v)||/aplazad|postponed/.test(t))return "postponed";
+  if(["cancelled","canceled"].includes(v)||/cancelad|anulad|cancelled|canceled/.test(t))return "cancelled";
+  return "";
+}
+function qgExceptionLabel(m){return ({suspended:"Suspendido",postponed:"Aplazado",cancelled:"Cancelado"})[qgExceptionStatus(m)]||""}
+function qgExceptionBadgeHtml(m){
+  const label=qgExceptionLabel(m);
+  return label?`<span class="match-exception-badge">⚠ ${esc(label)}</span>`:"";
+}
+function qgExceptionResultHtml(m){
+  const label=qgExceptionLabel(m);
+  if(!label)return "";
+  const note=resolved(m)?"Ya existe resultado oficial válido para las apuestas.":String(m.exception_note||"").trim()||"Pendiente de confirmación oficial de SELAE.";
+  return `<div class="qg-result exception-result" role="status"><span><strong>⚠ ${esc(label)}</strong> · ${esc(note)}</span></div>`;
+}
 function resolved(m){return m?.home_score!=null&&m?.away_score!=null}
 function state(j){
   if(!j)return "closed";
@@ -521,6 +541,7 @@ function actual(m){return resolved(m)?`${m.home_score>=3?"M":m.home_score}-${m.a
 function qgIsHalftime(m){return String(m?.live_status_text||"").trim().toLowerCase()==="descanso"}
 function qgHeaderScore(m){
   if(resolved(m))return {home:String(m.home_score),away:String(m.away_score),cls:"official",label:"FINAL"};
+  if(qgExceptionStatus(m))return {home:m.live_home_score!=null?String(m.live_home_score):"–",away:m.live_away_score!=null?String(m.live_away_score):"–",cls:"exception",label:qgExceptionLabel(m).toUpperCase()};
   if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
     const label=m.live_status==="inprogress"?(qgIsHalftime(m)?"DESCANSO":(m.live_minute?m.live_minute+"′":"EN DIRECTO")):"FINAL";
     return {home:String(m.live_home_score),away:String(m.live_away_score),cls:"live",label};
@@ -529,6 +550,7 @@ function qgHeaderScore(m){
 }
 function projected(m){
   if(resolved(m))return actual(m);
+  if(qgExceptionStatus(m))return "—";
   if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
     return `${m.live_home_score>=3?"M":m.live_home_score}-${m.live_away_score>=3?"M":m.live_away_score}`;
   }
@@ -1228,7 +1250,7 @@ function renderDashboard(){
   const jointDetail=finished?(jp||"Sin premio"):`${jointDone}/6 marcadores${pjs.considered?` · ${pjs.considered} valorados`:""}`;
   el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,ps1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,ps2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${jointCorrect} aciertos</strong><small>${jointDetail}</small></div>`;
 }
-function qgIsLive(m){return Boolean(m&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null)}
+function qgIsLive(m){return Boolean(m&&!qgExceptionStatus(m)&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null)}
 function qgLiveFreshnessMeta(value){
   const at=value?new Date(value).getTime():NaN;
   if(!Number.isFinite(at))return {label:"Sin hora de actualización",delayed:true};
@@ -1270,6 +1292,7 @@ function qgScorersHtml(m){
   return rows?`<div class="qg-live-scorers" aria-label="Goleadores">${rows}</div>`:"";
 }
 function qgJointImpossible(m,jid=m?.journey_id){
+  if(qgExceptionStatus(m))return false;
   if(!m||m.live_status!=="inprogress"||m.live_home_score==null||m.live_away_score==null)return false;
   const value=jointText(m.number,jid);
   const parts=String(value||"").match(/^(0|1|2|M)-(0|1|2|M)$/);
@@ -1279,7 +1302,7 @@ function qgJointImpossible(m,jid=m?.journey_id){
   return exceeded(parts[1],m.live_home_score)||exceeded(parts[2],m.live_away_score);
 }
 function qgJointLost(m,jid=m?.journey_id){
-  if(!m)return false;
+  if(!m||(!resolved(m)&&qgExceptionStatus(m)))return false;
   const joint=jointText(m.number,jid);
   if(joint==="—")return false;
   const official=actual(m);
@@ -1338,15 +1361,16 @@ function renderPlay(){
     const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
     let result="";
     if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
+    else if(qgExceptionStatus(m))result=qgExceptionResultHtml(m);
     else if(proj!=="—")result=`<div class="qg-result live"><span>${qgIsHalftime(m)?"Descanso · provisional":"En directo · provisional"}</span><strong>${esc(proj)}</strong>${qgLiveFreshnessHtml(m)}</div>`;
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
-    const scoreHeader=hs.cls==="live"||hs.cls==="official"
-      ? `<div class="qg-live-header-score ${hs.cls==="official"?"official":""}"><strong><span>${esc(hs.home)}</span><b>–</b><span>${esc(hs.away)}</span></strong>${hs.label?`<small>${esc(hs.label)}</small>`:""}</div>`
+    const scoreHeader=hs.cls==="live"||hs.cls==="official"||hs.cls==="exception"
+      ? `<div class="qg-live-header-score ${hs.cls==="official"?"official":hs.cls==="exception"?"exception":""}"><strong><span>${esc(hs.home)}</span><b>–</b><span>${esc(hs.away)}</span></strong>${hs.label?`<small>${esc(hs.label)}</small>`:""}</div>`
       : "";
     const homeHeader=hs.cls==="pending"?`<strong class="qg-head-score pending">${esc(hs.home)}</strong>`:"";
     const awayHeader=hs.cls==="pending"?`<strong class="qg-head-score pending">${esc(hs.away)}</strong>`:"";
-    return `<article class="qg-match-card ${show?"":"hidden"} result-state-${playerState}${jointImpossible?" qg-joint-impossible":""}"><div class="qg-card-head ${hs.cls==="live"||hs.cls==="official"?"has-live-score":""}"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}${homeHeader}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}${awayHeader}</div></div>${scoreHeader}${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${jointLine}${result}${scorers}</article>`;
+    return `<article class="qg-match-card ${show?"":"hidden"} result-state-${playerState}${jointImpossible?" qg-joint-impossible":""}"><div class="qg-card-head ${hs.cls==="live"||hs.cls==="official"||hs.cls==="exception"?"has-live-score":""}"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}${homeHeader}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}${awayHeader}</div></div>${scoreHeader}${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-goal-rows"><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-goals">${goalButtons(m.number,"home",cur.home_goals,locked)}</div></div><div class="qg-goal-row"><div class="qg-goal-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div><div class="qg-goals">${goalButtons(m.number,"away",cur.away_goals,locked)}</div></div></div><div class="qg-card-foot"><span class="qg-card-hint">M = 3 o más goles</span>${saved&&canEdit()?`<button type="button" class="qg-clear" data-qg-clear="${m.number}">Borrar</button>`:""}</div>${saved&&opp?`<div class="qg-opponent-pick"><span>${esc(opp.display_name)}</span><strong>${esc(pickText(pick(opp.user_id,m.number)))}</strong></div>`:""}${jointLine}${result}${scorers}</article>`;
   }).join("");
   $$(".qg-goal").forEach(b=>b.addEventListener("click",()=>saveGoal(Number(b.dataset.qgMatch),b.dataset.qgSide,b.dataset.qgGoal)));
   $$("[data-qg-clear]").forEach(b=>b.addEventListener("click",()=>deletePick(Number(b.dataset.qgClear))));
@@ -1435,7 +1459,7 @@ function renderJoint(){
   const p1=member(1),p2=member(2),locked=!canEdit();
   el.innerHTML=matches.map(m=>{
     const a=p1?pick(p1.user_id,m.number):null,b=p2?pick(p2.user_id,m.number):null,man=jointOverride(m.number),auto=autoJoint(m.number),autoKind=auto?.kind||"Pendiente",sel=currentJointDraft(m.number);
-    return `<article class="qg-joint-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-mode ${man?"manual":""}">${man?"Manual":"Automática"}</span></div><div class="qg-joint-rows"><div class="qg-joint-row player-one"><div class="qg-joint-name"><i></i><span>${esc(p1?.display_name||"Salva")}</span></div><strong class="qg-score-pill">${esc(pickText(a))}</strong></div><div class="qg-joint-row player-two"><div class="qg-joint-name"><i></i><span>${esc(p2?.display_name||"Ferran")}</span></div><strong class="qg-score-pill">${esc(pickText(b))}</strong></div><div class="qg-joint-row joint"><div class="qg-joint-name"><i></i><span>Conjunta</span></div><div class="qg-joint-edit">${jointEditor(m.number,sel,locked)}<small>${man?"Marcador conjunto fijado manualmente":autoKind==="Recomendado"?"Recomendado a partir de vuestros dos marcadores":autoKind==="Provisional"?"Falta el pronóstico del otro":autoKind}</small>${man&&canEdit()?`<button type="button" class="qg-joint-reset" data-qg-reset="${m.number}">↺ Automática</button>`:""}</div></div></div></article>`;
+    return `<article class="qg-joint-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div><span class="qg-mode ${man?"manual":""}">${man?"Manual":"Automática"}</span></div><div class="qg-joint-rows"><div class="qg-joint-row player-one"><div class="qg-joint-name"><i></i><span>${esc(p1?.display_name||"Salva")}</span></div><strong class="qg-score-pill">${esc(pickText(a))}</strong></div><div class="qg-joint-row player-two"><div class="qg-joint-name"><i></i><span>${esc(p2?.display_name||"Ferran")}</span></div><strong class="qg-score-pill">${esc(pickText(b))}</strong></div><div class="qg-joint-row joint"><div class="qg-joint-name"><i></i><span>Conjunta</span></div><div class="qg-joint-edit">${jointEditor(m.number,sel,locked)}<small>${man?"Marcador conjunto fijado manualmente":autoKind==="Recomendado"?"Recomendado a partir de vuestros dos marcadores":autoKind==="Provisional"?"Falta el pronóstico del otro":autoKind}</small>${man&&canEdit()?`<button type="button" class="qg-joint-reset" data-qg-reset="${m.number}">↺ Automática</button>`:""}</div></div></div></article>`;
   }).join("");
   $$("[data-qg-joint-goal]").forEach(b=>b.addEventListener("click",()=>saveJointGoal(Number(b.dataset.qgJointMatch),b.dataset.qgJointSide,b.dataset.qgJointGoal)));
   $$("[data-qg-reset]").forEach(b=>b.addEventListener("click",()=>resetJoint(Number(b.dataset.qgReset))));
@@ -1445,7 +1469,7 @@ function renderCompare(){
   const p1=member(1),p2=member(2);
   el.innerHTML=matches.map(m=>{
     const r=projected(m);
-    return `<article class="qg-compare-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div></div><div class="qg-compare-result"><span>${resolved(m)?"Resultado oficial":r!=="—"?"Resultado provisional":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
+    return `<article class="qg-compare-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div></div><div class="qg-compare-result"><span>${resolved(m)?"Resultado oficial":qgExceptionStatus(m)?qgExceptionLabel(m)+" · pendiente SELAE":r!=="—"?"Resultado provisional":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
   }).join("");
 }
 function stat(uid){
@@ -1501,7 +1525,7 @@ function renderHistory(){
       const jointState=qgHistoryJointState(m,j.id);
       const jointLost=qgJointLost(m,j.id);
       return `<div class="qg-history-match result-state-${matchState}${jointLost?" qg-joint-impossible":""}">
-        <div class="qg-history-match-meta"><span>P${m.number}</span>${qgMatchCompetitionBadgeHtml(m)}</div>
+        <div class="qg-history-match-meta"><span>P${m.number}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div>
         ${qgHistoryFixtureHtml(m)}
         <div class="qg-history-picks">
           <span class="p1" title="${esc(p1?.display_name||"J1")}">${esc(p1?pickText(pick(p1.user_id,m.number,j.id)):"—")}</span>

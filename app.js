@@ -241,6 +241,29 @@ function formatJointKickoff(v){
 function matchesForJourney(journeyId){
   return allMatches.filter(m=>m.journey_id===journeyId).sort((a,b)=>a.number-b.number);
 }
+function matchExceptionStatus(m){
+  if(!m)return "";
+  const v=String(m.exception_status||m.live_status||"").trim().toLowerCase();
+  const t=String(m.live_status_text||"").trim().toLowerCase();
+  if(["suspended","abandoned","interrupted","susp"].includes(v)||/suspendid|suspended|abandonad|abandoned/.test(t))return "suspended";
+  if(["postponed","delayed"].includes(v)||/aplazad|postponed/.test(t))return "postponed";
+  if(["cancelled","canceled"].includes(v)||/cancelad|anulad|cancelled|canceled/.test(t))return "cancelled";
+  return "";
+}
+function matchExceptionLabel(m){
+  return ({suspended:"Suspendido",postponed:"Aplazado",cancelled:"Cancelado"})[matchExceptionStatus(m)]||"";
+}
+function matchExceptionBadgeHtml(m){
+  const label=matchExceptionLabel(m);
+  return label?`<span class="match-exception-badge" title="${escapeHtml(label)}">⚠ ${escapeHtml(label)}</span>`:"";
+}
+function matchExceptionNoticeHtml(m){
+  const label=matchExceptionLabel(m);
+  if(!label)return "";
+  const validated=matchResolved(m);
+  const note=validated?"Ya existe resultado oficial válido para las apuestas.":String(m.exception_note||"").trim()||"Pendiente de resultado oficial de SELAE.";
+  return `<div class="match-result-bar exception-result" role="status"><span><strong>⚠ ${escapeHtml(label)}</strong> · ${escapeHtml(note)}</span>${validated?'<span class="result-outcome">Validado</span>':""}</div>`;
+}
 function matchResolved(m){
   // SELAE confirma el Pleno al 15 por su signo 0/1/2/M, aun cuando
   // el feed numérico no facilite los goles exactos del partido.
@@ -380,6 +403,7 @@ function journeyStateLabel(j){
   return state==="open"?"Abierta":state==="confirmed"?"Confirmada":state==="playing"?"En juego":state==="finished"?"Finalizada":"Cerrada";
 }
 function resultBarHtml(m,p){
+  if(!matchResolved(m)&&matchExceptionStatus(m))return matchExceptionNoticeHtml(m);
   if(matchResolved(m)){
     if(m.number===15){
       const officialToken=actualResultForMatch(m);
@@ -528,6 +552,7 @@ function commonCorrectCount(j=journey){
 function projectedResultForMatch(m){
   if(!m) return "—";
   if(matchResolved(m)) return actualResultForMatch(m);
+  if(matchExceptionStatus(m)) return "—";
   const hasLive=m.live_home_score!=null && m.live_away_score!=null
     && (m.live_status==="inprogress" || m.live_status==="finished");
   if(!hasLive) return "—";
@@ -606,11 +631,12 @@ function plenoPickImpossibleForUser(m,uid,jid=m?.journey_id){
     return displayPickForJourney(uid,jid,15)!==actualResultForMatch(m);
   }
 
+  if(matchExceptionStatus(m))return false;
   if(m.live_home_score==null||m.live_away_score==null)return false;
   const liveResult=`${normalizedGoalScore(m.live_home_score)}-${normalizedGoalScore(m.live_away_score)}`;
 
   // Si SofaScore ya lo da por final, el Pleno ya no puede cambiar.
-  if(m.live_status==="finished"){
+  if(m.live_status==="finished"&&!matchExceptionStatus(m)){
     return `${p.home_goals}-${p.away_goals}`!==liveResult;
   }
   if(m.live_status!=="inprogress")return false;
@@ -1663,7 +1689,7 @@ function openMatchDetail(n,jid=journey?.id){
   const j=journeys.find(x=>x.id===jid),m=allMatches.find(x=>x.journey_id===jid&&x.number===n);if(!j||!m)return;
   const p1=memberBySlot(1),p2=memberBySlot(2),a=p1?displayPickForJourney(p1.user_id,jid,n):"—",b=p2?displayPickForJourney(p2.user_id,jid,n):"—",actual=actualResultForMatch(m),resolved=matchResolved(m);
   $("#matchDetailTitle").textContent=`J${j.number} · Partido ${n}`;
-  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>${n===15?"OFICIAL SELAE":"FINAL"}</small><strong>${m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:escapeHtml(actualResultForMatch(m).replace("-","–"))}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}</small></div></div>${resolved?"":tvBroadcastHtml(m)}`;
+  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>${n===15?"OFICIAL SELAE":"FINAL"}</small><strong>${m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:escapeHtml(actualResultForMatch(m).replace("-","–"))}</strong>`:matchExceptionStatus(m)?`<small>${escapeHtml(matchExceptionLabel(m).toUpperCase())}</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}–${m.live_away_score}`:"–"}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}</small></div></div>${matchExceptionStatus(m)?matchExceptionNoticeHtml(m):resolved?"":tvBroadcastHtml(m)}`;
   $("#matchDetailDialog").showModal();
 }
 async function activateView(view){
@@ -2462,9 +2488,9 @@ function renderMatches(){
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
     return `<article class="match-card ${highlightJointE8Card?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${officialPlayersState(m)}" data-resolved="${matchResolved(m)}" data-live="${matchInProgress(m)}" data-e8="${isJointElige8(m.number,journey.id)}" data-outcome="${outcome}">
-      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${jointE8?'<span class="confirmed-joint-e8-badge">★ E8 conjunto</span>':""}</div></div>
-      <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
-      ${matchResolved(m)?"":tvBroadcastHtml(m)}
+      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&!matchExceptionStatus(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${jointE8?'<span class="confirmed-joint-e8-badge">★ E8 conjunto</span>':""}</div></div>
+      <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:matchExceptionStatus(m)?`<span class="fixture-score exception-score"><small>${escapeHtml(matchExceptionLabel(m).toUpperCase())}</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}<b>–</b>${m.live_away_score}`:"–"}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
+      ${matchResolved(m)||matchExceptionStatus(m)?"":tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>${mp?.pick?`<div class="pick-owner-track" aria-label="Pronósticos de los jugadores">${["1","X","2"].map(v=>`<div class="pick-owner-cell">${mp?.pick===v?`<span class="pick-owner-chip ${myOwnerClass}" title="${myLabel}" aria-label="${myLabel}">${myInitial}</span>`:""}${reveal&&oppPick?.pick===v?`<span class="pick-owner-chip ${opponentOwnerClass}" title="${opponentLabel}" aria-label="${opponentLabel}">${opponentInitial}</span>`:""}</div>`).join("")}</div>`:""}
       ${mp?.pick&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn" data-clear-match="${m.number}" type="button">Borrar selección</button></div>`:""}
       ${resultHtml}
@@ -2484,8 +2510,8 @@ function renderPleno(){
   if(plenoCardImpossible(m))plenoCard.classList.add("pleno-impossible-strong");
   $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
-  $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
-  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>${m.home_score!=null&&m.away_score!=null?"RESULTADO FINAL":"PLENO OFICIAL SELAE"}</small><strong>${m.home_score!=null&&m.away_score!=null?m.home_score:escapeHtml(actualResultForMatch(m).split("-")[0])}<b>–</b>${m.home_score!=null&&m.away_score!=null?m.away_score:escapeHtml(actualResultForMatch(m).split("-")[1])}</strong></div>`:tvBroadcastHtml(m);
+  $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&!matchExceptionStatus(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
+  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>${m.home_score!=null&&m.away_score!=null?"RESULTADO FINAL":"PLENO OFICIAL SELAE"}</small><strong>${m.home_score!=null&&m.away_score!=null?m.home_score:escapeHtml(actualResultForMatch(m).split("-")[0])}<b>–</b>${m.home_score!=null&&m.away_score!=null?m.away_score:escapeHtml(actualResultForMatch(m).split("-")[1])}</strong></div>`:matchExceptionStatus(m)?`<div class="pleno-final-score exception-score"><small>${escapeHtml(matchExceptionLabel(m).toUpperCase())} · MARCADOR AL INTERRUMPIR</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}<b>–</b>${m.live_away_score}`:"–"}</strong></div>`:tvBroadcastHtml(m);
   const mp=myPickFor(15),locked=!journeyCanEdit(journey);
   $$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
   let plenoClear=$("#plenoClearAction");
@@ -2715,7 +2741,7 @@ function renderCompare(){
     const official=matchResolved(m);
     const projectedResult=projectedResultForMatch(m);
     const liveResult=!official&&projectedResult!=="—";
-    const resultStatus=official?"Oficial":liveResult?"En directo":"Pendiente";
+    const resultStatus=official?"Oficial":matchExceptionStatus(m)?matchExceptionLabel(m):liveResult?"En directo":"Pendiente";
     const rawScore=official
       ? `${m.home_score}-${m.away_score}`
       : liveResult&&m.live_home_score!=null&&m.live_away_score!=null
@@ -2735,7 +2761,7 @@ function renderCompare(){
       ? jointReadonlySignsHtml(projectedResult,"result-signs compare-readonly")
       : `<strong class="compare-real-score">${rawScore}</strong>`;
     return `<article class="compare-card ${state} ${ej?"compare-joint-e8":""}">
-      <div class="compare-card-head"><div class="compare-number-competition"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div><div class="compare-fixture">${compareFixtureHtml(m)}</div><span class="compare-state">${label}</span></div>
+      <div class="compare-card-head"><div class="compare-number-competition"><span class="compare-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}</div><div class="compare-fixture">${compareFixtureHtml(m)}</div><span class="compare-state">${label}</span></div>
       ${official?"":tvBroadcastHtml(m,true)}
       <div class="compare-picks">
         <div class="compare-pick-box player-one"><span><i class="player-dot"></i>${escapeHtml(p1?.display_name||"Jugador 1")}</span><div class="compare-pick-value">${aVisual}${aMark}</div></div>
@@ -2895,7 +2921,7 @@ function openHistory(jid){
     const plenoImpossible=m.number===15&&plenoCardImpossible(m,j.id);
     return `<article class="history-detail-match result-state-${historyState}${plenoImpossible?" pleno-impossible-strong":""}" data-history-jid="${j.id}" data-history-match="${m.number}">
       <div class="history-detail-head">
-        <div class="history-match-meta"><span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}</div>
+        <div class="history-match-meta"><span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}</div>
         <div class="history-detail-fixture">${historyFixtureHtml(m)}</div>
         <div class="history-real-result">
           <span>Resultado</span>
@@ -3234,6 +3260,7 @@ if ("serviceWorker" in navigator) {
 /* Live scores from SofaScore. Official scoring remains SELAE. */
 function hasLiveMatch(m){
   return !matchResolved(m)
+    && !matchExceptionStatus(m)
     && m && m.live_home_score!=null
     && m.live_away_score!=null
     && (m.live_status==="inprogress" || m.live_status==="finished");
