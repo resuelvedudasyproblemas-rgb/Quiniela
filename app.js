@@ -3337,12 +3337,12 @@ function livePickSummary(m){
   var p1=memberBySlot(1),p2=memberBySlot(2);
   var v1=p1?livePickVerdict(m,p1.user_id):"missing";
   var v2=p2?livePickVerdict(m,p2.user_id):"missing";
-  var state=playerVerdictState(v1,v2);
-  if(state==="both")return {state,label:"Los dos vais acertando"};
-  if(state==="player-one")return {state,label:(p1?.display_name||"Jugador 1")+" va acertando"};
-  if(state==="player-two")return {state,label:(p2?.display_name||"Jugador 2")+" va acertando"};
-  if(state==="none")return {state,label:"Ahora mismo fallan los dos"};
-  return {state:"neutral",label:"Sin resultado común"};
+  var state=playerVerdictState(v1,v2),final=m.live_status==="finished";
+  if(state==="both")return {state,label:final?"Los dos habéis acertado · provisional":"Los dos vais acertando"};
+  if(state==="player-one")return {state,label:(p1?.display_name||"Jugador 1")+(final?" ha acertado · provisional":" va acertando")};
+  if(state==="player-two")return {state,label:(p2?.display_name||"Jugador 2")+(final?" ha acertado · provisional":" va acertando")};
+  if(state==="none")return {state,label:final?"Los dos habéis fallado · provisional":"Ahora mismo fallan los dos"};
+  return {state:"neutral",label:final?"Resultado final · provisional":"Sin resultado común"};
 }
 function livePickState(m){return livePickSummary(m).state;}
 function livePickLabel(m){return livePickSummary(m).label;}
