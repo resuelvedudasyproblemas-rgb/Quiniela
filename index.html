@@ -371,7 +371,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=213"></script>
+  <script type="module" src="app.js?v=214"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=1";
@@ -1350,7 +1350,7 @@ function renderPlay(){
     const cur=currentDraft(m.number),saved=pick(identityUserId,m.number),r=qgCalculatedResult(m),proj=projected(m),official=resolved(m),ok=saved&&r!=="—"&&pickText(saved)===r;
     const playerState=qgPlayersState(m);
     const jointImpossible=qgJointLost(m);
-    const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
+    const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&Boolean(saved)&&r!=="—"&&!ok);
     let result="";
     if(r!=="—")result=`<div class="qg-result ${saved?(ok?"correct":"wrong"):"pending"} ${official?"":"provisional-result"}"><span>${official?"Resultado oficial":"Final deportivo · provisional"}</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}${official?"":" · pendiente SELAE"}</strong></div>`;
     else if(qgExceptionStatus(m))result=qgExceptionResultHtml(m);
