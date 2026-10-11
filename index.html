@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=197" />
+  <link rel="stylesheet" href="styles.css?v=198" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -371,9 +371,10 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=208"></script>
+  <script type="module" src="app.js?v=209"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
+import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=1";
 
 const cfg=window.QUINIELA_CONFIG||{};
 const $=s=>document.querySelector(s);
@@ -1182,37 +1183,16 @@ function renderHero(){
 }
 function renderSwitcher(){
   const el=$("#qgJourneySwitcher");if(!el)return;
-  const available=[...journeys].sort((a,b)=>a.number-b.number);
-  const upcoming=available.filter(j=>qgVisualState(j)!=="finished");
-  const primary=upcoming.slice(0,3);
-  const archivedFinished=available
-    .filter(j=>qgVisualState(j)==="finished")
-    .sort((a,b)=>b.number-a.number);
-  const archivedFuture=upcoming.slice(3).sort((a,b)=>b.number-a.number);
-  const archived=[...archivedFinished,...archivedFuture];
   const buttonHtml=j=>{
-    const st=qgVisualState(j);
-    const prizeState=st==="finished"?qgPrizeState(j):"";
+    const st=qgVisualState(j),prizeState=st==="finished"?qgPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
     const res=msFor(j.id).filter(resolved).length;
-    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-qg-journey="${j.id}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?`${res}/6 resultados`:"Pronósticos abiertos"}</small></button>`;
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey?.id?"true":"false"}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?"En juego":st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?`${res}/6 resultados`:"Pronósticos abiertos"}</small></button>`;
   };
-  el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
-    archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
-  }`;
-  $$("#qgJourneySwitcher [data-qg-journey]").forEach(b=>b.addEventListener("click",async()=>{
-    const id=Number(b.dataset.qgJourney);
-    try{
-      await ensureQGJourneyLoaded(id);
-      selectedJourneyId=id;
-      savePref("quinigol-journey",selectedJourneyId);
-      selectJourney();
-      renderAll();
-    }catch(e){
-      console.error(e);
-      toast("No se pudo cargar la jornada");
-    }
-  }));
+  renderJourneyArchive(el,journeys,journey?.id,qgVisualState,buttonHtml,async id=>{
+    try{await ensureQGJourneyLoaded(id);selectedJourneyId=id;savePref("quinigol-journey",id);selectJourney();renderAll();}
+    catch(e){console.error(e);toast("No se pudo cargar la jornada");}
+  });
 }
 function qgProjectedScore(uid,j=journey){
   let correct=0,considered=0;if(!j)return {correct,considered};
@@ -1516,7 +1496,7 @@ function renderHistory(){
   const el=$("#qgHistory");if(!el)return;
   const p1=member(1),p2=member(2),done=[...journeys].filter(j=>state(j)==="finished").sort((a,b)=>b.number-a.number);
   if(!done.length){el.innerHTML='<div class="empty-card"><div class="empty-icon">⚽</div><h2>Aún no hay historial</h2><p>La primera jornada finalizada aparecerá aquí con los seis marcadores.</p></div>';return}
-  el.innerHTML=done.map(j=>{
+  renderHistoryBrowser(el,done,j=>{
     const s1=p1?score(p1.user_id,j):{correct:0},s2=p2?score(p2.user_id,j):{correct:0},sj=jointScore(j);
     const winnerSide=!p1||!p2?"tie":s1.correct>s2.correct?"one":s2.correct>s1.correct?"two":"tie";
     const winnerText=winnerSide==="one"?`Gana ${esc(p1.display_name)}`:winnerSide==="two"?`Gana ${esc(p2.display_name)}`:"Empate";
@@ -1535,7 +1515,7 @@ function renderHistory(){
         </div>
       </div>`;
     }).join("");
-    return `<details class="qg-history-item qg-history-winner-${winnerSide}">
+    return `<details class="qg-history-item qg-history-winner-${winnerSide}" data-history-expand="${j.id}">
       <summary>
         <span class="qg-history-num">J${j.number}</span>
         <div class="qg-history-title">
@@ -1551,7 +1531,7 @@ function renderHistory(){
       </summary>
       <div class="qg-history-body">${rows}</div>
     </details>`;
-  }).join("");
+  },null);
 }
 
 function setView(v,persist=true){

@@ -1,4 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
+import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=1";
 
 const cfg = window.QUINIELA_CONFIG || {};
 const configured =
@@ -436,53 +437,22 @@ function finishedJourneyPrizeState(j){
 }
 
 function renderJourneySwitcher(){
-  const el=$("#journeySwitcher");
-  if(!el) return;
-  if(document.documentElement.dataset.game==="quinigol"){
-    el.classList.add("hidden");
-    return;
-  }
-  const available=[...journeys].sort((a,b)=>a.number-b.number);
-  if(!available.length){ el.classList.add("hidden"); el.innerHTML=""; return; }
+  const el=$("#journeySwitcher");if(!el)return;
+  if(document.documentElement.dataset.game==="quinigol"){el.classList.add("hidden");return;}
+  if(!journeys.length){el.classList.add("hidden");el.innerHTML="";return;}
   el.classList.remove("hidden");
-  const upcoming=available.filter(j=>journeyVisualState(j)!=="finished");
-  const primary=upcoming.slice(0,3);
-  const archivedFinished=available
-    .filter(j=>journeyVisualState(j)==="finished")
-    .sort((a,b)=>b.number-a.number);
-  const archivedFuture=upcoming.slice(3).sort((a,b)=>b.number-a.number);
-  const archived=[...archivedFinished,...archivedFuture];
-
   const buttonHtml=j=>{
-    const state=journeyVisualState(j);
-    const resolved=journeyResolvedCount(j);
+    const state=journeyVisualState(j),resolved=journeyResolvedCount(j);
     const prizeState=state==="finished"?finishedJourneyPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
     const detail=state==="playing"?`${resolved}/15 resultados`:state==="confirmed"?"Apuesta confirmada · esperando partidos":state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
-    return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-id="${j.id}">
-      <span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small>
-    </button>`;
+    return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey.id?"true":"false"}"><span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small></button>`;
   };
-
-  el.innerHTML=`<div class="journey-primary-row">${primary.map(buttonHtml).join("")}</div>${
-    archived.length?`<details class="journey-more"><summary>+ ${archived.length} jornada${archived.length===1?"":"s"}</summary><div class="journey-more-grid">${archived.map(buttonHtml).join("")}</div></details>`:""
-  }`;
-  $$("#journeySwitcher [data-journey-id]").forEach(btn=>btn.addEventListener("click",async()=>{
-    const id=Number(btn.dataset.journeyId);
-    try{
-      await ensureJourneyLoaded(id);
-      selectedJourneyId=id;
-      saveSelectedJourneyId(selectedJourneyId);
-      selectActiveJourney();
-      renderAll();
-    }catch(e){
-      console.error(e);
-      setSync("error","Error");
-      toast("No se pudo cargar la jornada");
-    }
-  }));
+  renderJourneyArchive(el,journeys,journey.id,journeyVisualState,buttonHtml,async id=>{
+    try{await ensureJourneyLoaded(id);selectedJourneyId=id;saveSelectedJourneyId(id);selectActiveJourney();renderAll();}
+    catch(e){console.error(e);setSync("error","Error");toast("No se pudo cargar la jornada");}
+  });
 }
-
 function countdownText(v){
   if(!v) return "Horario pendiente";
   const diff=new Date(v).getTime()-Date.now();
@@ -2847,7 +2817,7 @@ function renderHistory(){
   const historic=journeys.filter(j=>journeyResolvedCount(j)===15).sort((a,b)=>b.number-a.number);$("#historyCount").textContent=historic.length;
   if(!historic.length){$("#historyList").innerHTML=`<div class="history-empty">Todavía no hay jornadas con los 15 resultados oficiales. Las jornadas en juego se mantienen arriba hasta completarse.</div>`;return}
   const p1=memberBySlot(1),p2=memberBySlot(2);
-  $("#historyList").innerHTML=historic.map(j=>{
+  renderHistoryBrowser($("#historyList"),historic,j=>{
     const s1=p1?scoreUserJourney(p1.user_id,j):{correct:0},s2=p2?scoreUserJourney(p2.user_id,j):{correct:0};
     const jointE8=scoreJointElige8(j);
     const jointE8Ready=jointE8.selected===8;
@@ -2869,8 +2839,7 @@ function renderHistory(){
         <strong>${jointE8Ready?`${jointE8.correct}/8`:"—"}</strong>
       </div>
     </button>`;
-  }).join("");
-  $$(".history-card").forEach(btn=>btn.addEventListener("click",()=>openHistory(Number(btn.dataset.historyId))));
+  },jid=>openHistory(jid));
 }
 
 function openHistory(jid){
