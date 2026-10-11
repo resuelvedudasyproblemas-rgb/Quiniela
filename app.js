@@ -289,6 +289,14 @@ function calculatedResultForMatch(m){
 }
 function matchCalculated(m){return calculatedResultForMatch(m)!=="—"}
 function journeyCalculatedCount(j){return j?matchesForJourney(j.id).filter(matchCalculated).length:0}
+function officialResultConflict(m){
+  if(!m||!matchResolved(m)||m.live_status!=="finished"||
+     m.live_home_score==null||m.live_away_score==null)return false;
+  const sports=Number(m.number)===15
+    ? `${normalizedGoalScore(m.live_home_score)}-${normalizedGoalScore(m.live_away_score)}`
+    : m.live_home_score>m.live_away_score?"1":m.live_home_score<m.live_away_score?"2":"X";
+  return actualResultForMatch(m)!==sports;
+}
 function resultSignForMatch(m){
   if(!m || m.number===15 || !matchResolved(m)) return null;
   return m.result_sign || (m.home_score>m.away_score?"1":m.home_score<m.away_score?"2":"X");
@@ -430,14 +438,14 @@ function resultBarHtml(m,p){
       const ok=hasPick && `${p.home_goals}-${p.away_goals}`===officialToken;
       const outcome=!hasPick?"Sin pronóstico":ok?"Acierto":"Fallo";
       const cls=!hasPick?"neutral":ok?"correct":"wrong";
-      return `<div class="match-result-bar ${cls}"><span>Pleno al 15 <strong>${officialToken}</strong></span><span class="result-outcome">${outcome}</span></div>`;
+      return `<div class="match-result-bar ${cls}"><span>${officialResultConflict(m)?"Corregido por SELAE · ":""}Pleno al 15 <strong>${officialToken}</strong></span><span class="result-outcome">${outcome}</span></div>`;
     }
     const actual=resultSignForMatch(m);
     const hasPick=Boolean(p?.pick);
     const ok=hasPick && p.pick===actual;
     const outcome=!hasPick?"Sin pronóstico":ok?"Acierto":"Fallo";
     const cls=!hasPick?"neutral":ok?"correct":"wrong";
-    return `<div class="match-result-bar ${cls}"><span>Signo <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
+    return `<div class="match-result-bar ${cls}"><span>${officialResultConflict(m)?"Corregido por SELAE · ":""}Signo <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
   }
   if(finalSportsResult(m)){
     const h=Number(m.live_home_score),a=Number(m.live_away_score),sign=calculatedResultForMatch(m);
