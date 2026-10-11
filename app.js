@@ -275,6 +275,20 @@ function matchResolved(m){
   if(Number(m?.number)<15 && /^[1X2]$/.test(String(m?.result_sign||"").trim().toUpperCase()))return true;
   return m?.home_score!=null && m?.away_score!=null;
 }
+function finalSportsResult(m){
+ return Boolean(m&&!matchResolved(m)&&!matchExceptionStatus(m)
+   &&m.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null);
+}
+function calculatedResultForMatch(m){
+ if(!m)return "—";
+ const official=actualResultForMatch(m);
+ if(official!=="—")return official;
+ if(!finalSportsResult(m))return "—";
+ if(Number(m.number)===15)return `${normalizedGoalScore(m.live_home_score)}-${normalizedGoalScore(m.live_away_score)}`;
+ return m.live_home_score>m.live_away_score?"1":m.live_home_score<m.live_away_score?"2":"X";
+}
+function matchCalculated(m){return calculatedResultForMatch(m)!=="—"}
+function journeyCalculatedCount(j){return j?matchesForJourney(j.id).filter(matchCalculated).length:0}
 function resultSignForMatch(m){
   if(!m || m.number===15 || !matchResolved(m)) return null;
   return m.result_sign || (m.home_score>m.away_score?"1":m.home_score<m.away_score?"2":"X");
@@ -425,10 +439,12 @@ function resultBarHtml(m,p){
     const cls=!hasPick?"neutral":ok?"correct":"wrong";
     return `<div class="match-result-bar ${cls}"><span>Signo oficial <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
   }
-  if(m?.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null){
-    const h=Number(m.live_home_score),a=Number(m.live_away_score);
-    const sign=h>a?"1":h<a?"2":"X";
-    return `<div class="match-result-bar pending"><span>Final <strong>${h}–${a}</strong> · signo provisional <strong>${sign}</strong></span><span class="result-outcome">Pendiente SELAE</span></div>`;
+  if(finalSportsResult(m)){
+    const h=Number(m.live_home_score),a=Number(m.live_away_score),sign=calculatedResultForMatch(m);
+    const chosen=m.number===15?(p?.home_goals&&p?.away_goals?`${p.home_goals}-${p.away_goals}`:null):p?.pick;
+    const verdict=!chosen?"Sin pronóstico":chosen===sign?"Acierto provisional":"Fallo provisional";
+    const cls=!chosen?"pending":chosen===sign?"correct":"wrong";
+    return `<div class="match-result-bar ${cls} provisional-result"><span>Final <strong>${h}–${a}</strong> · ${m.number===15?"marcador":"signo"} provisional <strong>${sign}</strong></span><span class="result-outcome">${verdict} · SELAE pendiente</span></div>`;
   }
   if(m?.kickoff && Date.now()>=new Date(m.kickoff).getTime() && journeyDisplayState(journey)==="playing"){
     return `<div class="match-result-bar pending"><span>Partido pendiente de resultado oficial</span></div>`;
@@ -520,7 +536,7 @@ function commonCorrectCount(j=journey){
   if(!p1||!p2) return 0;
   let n=0;
   for(const m of matchesForJourney(j.id)){
-    const actual=actualResultForMatch(m);
+    const actual=calculatedResultForMatch(m);
     if(actual==="—") continue;
     const a=displayPickForJourney(p1.user_id,j.id,m.number);
     const b=displayPickForJourney(p2.user_id,j.id,m.number);
@@ -560,6 +576,7 @@ function renderJourneyDashboard(){
   const c1=p1?completedCountForUser(p1.user_id):0;
   const c2=p2?completedCountForUser(p2.user_id):0;
   const resolved=journeyResolvedCount(journey);
+  const calculated=journeyCalculatedCount(journey);
   const playing=journeyDisplayState(journey)==="playing";
   const prize1=s1.correct>=10&&s1.correct<=15;
   const prize2=s2.correct>=10&&s2.correct<=15;
@@ -567,12 +584,12 @@ function renderJourneyDashboard(){
   const commonPrize=commonCorrect>=10&&commonCorrect<=15;
   const projectedPrize1=projected1.correct>=10&&projected1.correct<=15;
   const projectedPrize2=projected2.correct>=10&&projected2.correct<=15;
-  const score1=`${s1.correct} aciertos`;
-  const score2=`${s2.correct} aciertos`;
+  const score1=`${projected1.correct} aciertos`;
+  const score2=`${projected2.correct} aciertos`;
   const considered=Math.max(projected1.considered,projected2.considered);
   const liveCount=Math.max(projected1.live,projected2.live);
   const projectedCopy=considered
-    ? `<strong class="projected-pair"><b class="${projectedPrize1?"prize-score":""}">${projected1.correct}</b><i>·</i><b class="${projectedPrize2?"prize-score":""}">${projected2.correct}</b></strong><small>${escapeHtml(p1?.display_name||"J1")} · ${escapeHtml(p2?.display_name||"J2")}<br>${considered} valorados${liveCount?` · ${liveCount} en directo`:""}</small>`
+    ? `<strong class="projected-pair"><b class="${projectedPrize1?"prize-score":""}">${projected1.correct}</b><i>·</i><b class="${projectedPrize2?"prize-score":""}">${projected2.correct}</b></strong><small>${escapeHtml(p1?.display_name||"J1")} · ${escapeHtml(p2?.display_name||"J2")}<br>${considered} valorados${liveCount?` · ${liveCount} provisionales`:""}</small>`
     : `<strong class="projected-pair"><b>0</b><i>·</i><b>0</b></strong><small>Aún sin resultados</small>`;
   el.innerHTML=`
     <div class="dashboard-title-row">
@@ -580,9 +597,9 @@ function renderJourneyDashboard(){
       <span class="dashboard-common ${commonPrize?"prize-zone":""}">${commonCorrect} coincidencias acertadas</span>
     </div>
     <div class="dashboard-grid">
-      <div class="dashboard-stat"><span>Resultados</span><strong>${resolved}/15</strong><small>${15-resolved} pendientes</small></div>
-      <div class="dashboard-stat player-one-stat ${resolved&&prize1?"prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados</small></div>
-      <div class="dashboard-stat player-two-stat ${resolved&&prize2?"prize-zone":""}"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados</small></div>
+      <div class="dashboard-stat"><span>Resultados calculados</span><strong>${calculated}/15</strong><small>${resolved} oficiales · ${15-calculated} pendientes</small></div>
+      <div class="dashboard-stat player-one-stat ${resolved&&prize1?"prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados · ${resolved<calculated?"Provisional":"Oficial"}</small></div>
+      <div class="dashboard-stat player-two-stat ${resolved&&prize2?"prize-zone":""}"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados · ${resolved<calculated?"Provisional":"Oficial"}</small></div>
       <div class="dashboard-stat projected-score-stat"><span>Aciertos posibles</span>${projectedCopy}</div>
     </div>`;
 }
@@ -590,10 +607,11 @@ function matchInProgress(m){
   return Boolean(m&&!matchExceptionStatus(m)&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null);
 }
 function matchOutcomeForUser(m,uid=identityUserId){
-  if(!matchResolved(m)) return "pending";
+  const actual=calculatedResultForMatch(m);
+  if(actual==="—")return "pending";
   const mine=displayPickForJourney(uid,m.journey_id,m.number);
-  if(mine==="—") return "none";
-  return mine===actualResultForMatch(m)?"correct":"wrong";
+  if(mine==="—")return "none";
+  return mine===actual?"correct":"wrong";
 }
 function plenoGoalStillPossible(token,current){
   const t=String(token||"");
@@ -606,8 +624,8 @@ function plenoPickImpossibleForUser(m,uid,jid=m?.journey_id){
   const p=pickForJourney(uid,jid,15);
   if(!p?.home_goals||!p?.away_goals)return false;
 
-  if(matchResolved(m)){
-    return displayPickForJourney(uid,jid,15)!==actualResultForMatch(m);
+  if(matchCalculated(m)){
+    return displayPickForJourney(uid,jid,15)!==calculatedResultForMatch(m);
   }
 
   if(matchExceptionStatus(m))return false;
@@ -642,7 +660,7 @@ function playerVerdictState(v1,v2){
   return "neutral";
 }
 function officialPlayersState(m){
-  if(!matchResolved(m))return "neutral";
+  if(!matchCalculated(m))return "neutral";
   const p1=memberBySlot(1),p2=memberBySlot(2);
   const v1=p1?matchOutcomeForUser(m,p1.user_id):"missing";
   const v2=p2?matchOutcomeForUser(m,p2.user_id):"missing";
@@ -652,7 +670,7 @@ function renderMatchFilterCounts(){
   const normal=matches.filter(m=>m.number<=14);
   const counts={
     all:normal.length,
-    pending:normal.filter(m=>!matchResolved(m)&&!matchInProgress(m)).length,
+    pending:normal.filter(m=>!matchCalculated(m)&&!matchInProgress(m)).length,
     live:normal.filter(matchInProgress).length,
     e8:normal.filter(m=>isJointElige8(m.number,journey?.id)).length,
     correct:normal.filter(m=>matchOutcomeForUser(m)==="correct").length,
@@ -1670,9 +1688,9 @@ function renderStats(){
 }
 function openMatchDetail(n,jid=journey?.id){
   const j=journeys.find(x=>x.id===jid),m=allMatches.find(x=>x.journey_id===jid&&x.number===n);if(!j||!m)return;
-  const p1=memberBySlot(1),p2=memberBySlot(2),a=p1?displayPickForJourney(p1.user_id,jid,n):"—",b=p2?displayPickForJourney(p2.user_id,jid,n):"—",actual=actualResultForMatch(m),resolved=matchResolved(m);
+  const p1=memberBySlot(1),p2=memberBySlot(2),a=p1?displayPickForJourney(p1.user_id,jid,n):"—",b=p2?displayPickForJourney(p2.user_id,jid,n):"—",actual=calculatedResultForMatch(m),resolved=matchCalculated(m),official=matchResolved(m);
   $("#matchDetailTitle").textContent=`J${j.number} · Partido ${n}`;
-  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>${n===15?"OFICIAL SELAE":"FINAL"}</small><strong>${m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:escapeHtml(actualResultForMatch(m).replace("-","–"))}</strong>`:matchExceptionStatus(m)?`<small>${escapeHtml(matchExceptionLabel(m).toUpperCase())}</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}–${m.live_away_score}`:"–"}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo oficial: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}</small></div></div>${matchExceptionStatus(m)?matchExceptionNoticeHtml(m):resolved?"":tvBroadcastHtml(m)}`;
+  $("#matchDetailContent").innerHTML=`<div class="match-detail-fixture"><div>${teamCrestHtml(m.home,"",m.home_logo_url)}<strong>${escapeHtml(m.home)}</strong>${teamPositionHtml(m.home_position)}</div><div class="match-detail-score">${resolved?`<small>${official?"OFICIAL SELAE":"FINAL PROVISIONAL"}</small><strong>${m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}–${m.live_away_score}`:escapeHtml(actual.replace("-","–"))}</strong>`:matchExceptionStatus(m)?`<small>${escapeHtml(matchExceptionLabel(m).toUpperCase())}</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}–${m.live_away_score}`:"–"}</strong>`:"<strong>VS</strong>"}</div><div>${teamCrestHtml(m.away,"",m.away_logo_url)}<strong>${escapeHtml(m.away)}</strong>${teamPositionHtml(m.away_position)}</div></div><div class="match-detail-meta"><span>◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${resolved&&n<=14?`<span>Signo ${official?"oficial":"provisional"}: <b>${escapeHtml(actual)}</b></span>`:""}</div><div class="match-detail-picks"><div><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${a}</strong><small>${resolved&&a!=="—"?(a===actual?"Acierto":"Fallo"):""}</small></div><div><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${b}</strong><small>${resolved&&b!=="—"?(b===actual?"Acierto":"Fallo"):""}</small></div></div>${matchExceptionStatus(m)?matchExceptionNoticeHtml(m):resolved?"":tvBroadcastHtml(m)}`;
   $("#matchDetailDialog").showModal();
 }
 async function activateView(view){
@@ -2428,7 +2446,7 @@ function renderAll(){
   if($("#roomCode"))$("#roomCode").textContent=roomCode;
   $("#myName").textContent=myMember?.display_name||"Tú";
   $("#journeyNumber").textContent=`Jornada ${journey.number}`;
-  const state=journeyVisualState(journey),resolved=journeyResolvedCount(journey);
+  const state=journeyVisualState(journey),resolved=journeyResolvedCount(journey),calculated=journeyCalculatedCount(journey);
   const deadline=journeyDeadline(journey);
   const deadlineEl=$("#journeyDate");
   if(deadlineEl){
@@ -2443,9 +2461,9 @@ function renderAll(){
       deadlineEl.innerHTML="";
     }
   }
-  const statusLabels={open:"Abierta para pronósticos",confirmed:"Apuesta confirmada · esperando partidos",playing:`En juego · ${resolved}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
+  const statusLabels={open:"Abierta para pronósticos",confirmed:"Apuesta confirmada · esperando partidos",playing:calculated===15?"15/15 finales · pendiente SELAE":`En juego · ${calculated}/15 resultados calculados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
   $(".status-text").textContent=statusLabels[state]||"Jornada";
-  const kicker=$("#journeyCard .journey-kicker");if(kicker)kicker.textContent=state==="playing"?"SEGUIMIENTO DE RESULTADOS":state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
+  const kicker=$("#journeyCard .journey-kicker");if(kicker)kicker.textContent=state==="playing"?(calculated===15?"RESULTADOS FINALES · PROVISIONALES":"SEGUIMIENTO DE RESULTADOS"):state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
   const journeyCard=$("#journeyCard");
   if(journeyCard){
     journeyCard.dataset.status=state;
@@ -2470,10 +2488,10 @@ function renderMatches(){
     const mp=myPickFor(m.number),jointE8=confirmedJointE8.has(Number(m.number)),highlightJointE8Card=jointE8&&Number(journey?.number)===8,resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
-    return `<article class="match-card ${highlightJointE8Card?"e8-active":""} ${matchResolved(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${officialPlayersState(m)}" data-resolved="${matchResolved(m)}" data-live="${matchInProgress(m)}" data-e8="${isJointElige8(m.number,journey.id)}" data-outcome="${outcome}">
-      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchResolved(m)&&!matchExceptionStatus(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${jointE8?'<span class="confirmed-joint-e8-badge">★ E8 conjunto</span>':""}</div></div>
-      <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchResolved(m)?`<span class="fixture-score" aria-label="Resultado final ${m.home_score} a ${m.away_score}"><small>FINAL</small><strong>${m.home_score}<b>–</b>${m.away_score}</strong></span>`:matchExceptionStatus(m)?`<span class="fixture-score exception-score"><small>${escapeHtml(matchExceptionLabel(m).toUpperCase())}</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}<b>–</b>${m.live_away_score}`:"–"}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
-      ${matchResolved(m)||matchExceptionStatus(m)?"":tvBroadcastHtml(m)}
+    return `<article class="match-card ${highlightJointE8Card?"e8-active":""} ${matchCalculated(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${officialPlayersState(m)}" data-resolved="${matchCalculated(m)}" data-live="${matchInProgress(m)}" data-e8="${isJointElige8(m.number,journey.id)}" data-outcome="${outcome}">
+      <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchCalculated(m)&&!matchExceptionStatus(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${jointE8?'<span class="confirmed-joint-e8-badge">★ E8 conjunto</span>':""}</div></div>
+      <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(m.home)}</strong></div></div>${matchCalculated(m)?`<span class="fixture-score" aria-label="Resultado final"><small>${matchResolved(m)?"FINAL":"FINAL PROV."}</small><strong>${m.home_score??m.live_home_score??"–"}<b>–</b>${m.away_score??m.live_away_score??"–"}</strong></span>`:matchExceptionStatus(m)?`<span class="fixture-score exception-score"><small>${escapeHtml(matchExceptionLabel(m).toUpperCase())}</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}<b>–</b>${m.live_away_score}`:"–"}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(m.away)}</strong></div></div></div>
+      ${matchCalculated(m)||matchExceptionStatus(m)?"":tvBroadcastHtml(m)}
       <div class="pick-row">${["1","X","2"].map(v=>`<button class="pick ${mp?.pick===v?"selected":""}" data-match="${m.number}" data-pick="${v}" ${locked?"disabled":""}><span>${v}</span><small>${v==="1"?"Local":v==="X"?"Empate":"Visitante"}</small></button>`).join("")}</div>${mp?.pick?`<div class="pick-owner-track" aria-label="Pronósticos de los jugadores">${["1","X","2"].map(v=>`<div class="pick-owner-cell">${mp?.pick===v?`<span class="pick-owner-chip ${myOwnerClass}" title="${myLabel}" aria-label="${myLabel}">${myInitial}</span>`:""}${reveal&&oppPick?.pick===v?`<span class="pick-owner-chip ${opponentOwnerClass}" title="${opponentLabel}" aria-label="${opponentLabel}">${opponentInitial}</span>`:""}</div>`).join("")}</div>`:""}
       ${mp?.pick&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn" data-clear-match="${m.number}" type="button">Borrar selección</button></div>`:""}
       ${resultHtml}
@@ -2493,8 +2511,8 @@ function renderPleno(){
   if(plenoCardImpossible(m))plenoCard.classList.add("pleno-impossible-strong");
   $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
-  $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchResolved(m)&&!matchExceptionStatus(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
-  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=matchResolved(m)?`<div class="pleno-final-score"><small>${m.home_score!=null&&m.away_score!=null?"RESULTADO FINAL":"PLENO OFICIAL SELAE"}</small><strong>${m.home_score!=null&&m.away_score!=null?m.home_score:escapeHtml(actualResultForMatch(m).split("-")[0])}<b>–</b>${m.home_score!=null&&m.away_score!=null?m.away_score:escapeHtml(actualResultForMatch(m).split("-")[1])}</strong></div>`:matchExceptionStatus(m)?`<div class="pleno-final-score exception-score"><small>${escapeHtml(matchExceptionLabel(m).toUpperCase())} · MARCADOR AL INTERRUMPIR</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}<b>–</b>${m.live_away_score}`:"–"}</strong></div>`:tvBroadcastHtml(m);
+  $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchCalculated(m)&&!matchExceptionStatus(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
+  const plenoTv=$("#plenoTv");if(plenoTv)plenoTv.innerHTML=finalSportsResult(m)?`<div class="pleno-final-score"><small>FINAL PROVISIONAL · SELAE PENDIENTE</small><strong>${m.live_home_score}<b>–</b>${m.live_away_score}</strong></div>`:matchResolved(m)?`<div class="pleno-final-score"><small>${m.home_score!=null&&m.away_score!=null?"RESULTADO FINAL":"PLENO OFICIAL SELAE"}</small><strong>${m.home_score!=null&&m.away_score!=null?m.home_score:escapeHtml(actualResultForMatch(m).split("-")[0])}<b>–</b>${m.home_score!=null&&m.away_score!=null?m.away_score:escapeHtml(actualResultForMatch(m).split("-")[1])}</strong></div>`:matchExceptionStatus(m)?`<div class="pleno-final-score exception-score"><small>${escapeHtml(matchExceptionLabel(m).toUpperCase())} · MARCADOR AL INTERRUMPIR</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}<b>–</b>${m.live_away_score}`:"–"}</strong></div>`:tvBroadcastHtml(m);
   const mp=myPickFor(15),locked=!journeyCanEdit(journey);
   $$(".goal-options").forEach(row=>{const team=row.dataset.team,selected=team==="home"?mp?.home_goals:mp?.away_goals;row.innerHTML=["0","1","2","M"].map(v=>`<button class="goal ${selected===v?"selected":""}" data-team="${team}" data-goal="${v}" ${locked?"disabled":""}>${v}</button>`).join("")});
   let plenoClear=$("#plenoClearAction");
@@ -2642,11 +2660,11 @@ function renderProgress(){
   $("#progressText").textContent=`${total} de 15 completados`;
   $("#progressBar").style.width=`${total/15*100}%`;
   const state=journeyDisplayState(journey);
-  const resolved=journeyResolvedCount(journey);
+  const resolved=journeyCalculatedCount(journey);
   $("#saveState").textContent=state==="open"
     ? (total===15?"✓ Completa":"En la nube")
     : state==="playing"
-      ? `${resolved}/15 resultados`
+      ? (resolved===15?"15/15 finales · SELAE pendiente":`${resolved}/15 resultados calculados`)
       : state==="finished"
         ? "✓ Finalizada"
         : "Jornada cerrada";
@@ -2724,7 +2742,7 @@ function renderCompare(){
     const official=matchResolved(m);
     const projectedResult=projectedResultForMatch(m);
     const liveResult=!official&&projectedResult!=="—";
-    const resultStatus=official?"Oficial":matchExceptionStatus(m)?matchExceptionLabel(m):liveResult?"En directo":"Pendiente";
+    const resultStatus=official?"Oficial":matchExceptionStatus(m)?matchExceptionLabel(m):finalSportsResult(m)?"Final provisional":liveResult?"En directo":"Pendiente";
     const rawScore=m.home_score!=null&&m.away_score!=null
       ? `${m.home_score}-${m.away_score}`
       : m.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null
