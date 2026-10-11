@@ -270,6 +270,9 @@ function matchResolved(m){
   // SELAE confirma el Pleno al 15 por su signo 0/1/2/M, aun cuando
   // el feed numérico no facilite los goles exactos del partido.
   if(Number(m?.number)===15 && /^[012M]-[012M]$/.test(String(m?.official_pleno_token||"")))return true;
+  // El signo publicado por SELAE (1/X/2) resuelve La Quiniela,
+  // aunque el marcador exacto tarde más en aparecer.
+  if(Number(m?.number)<15 && /^[1X2]$/.test(String(m?.result_sign||"").trim().toUpperCase()))return true;
   return m?.home_score!=null && m?.away_score!=null;
 }
 function resultSignForMatch(m){
@@ -906,7 +909,11 @@ function detectNewResults(oldMatches){
     const j=journeys.find(x=>x.id===m.journey_id);
     const mine=displayPickForJourney(identityUserId,m.journey_id,m.number),actual=actualResultForMatch(m);
     const verdict=mine==="—"?"Sin pronóstico":mine===actual?"Acertaste":"Fallaste";
-    notifyUser(`J${j?.number||""} · ${m.home} ${m.home_score}-${m.away_score} ${m.away}`,`${verdict}${m.number<=14?` · signo ${actual}`:""}`);
+    const score=m.home_score!=null&&m.away_score!=null
+      ?`${m.home_score}-${m.away_score}`
+      :m.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null
+        ?`${m.live_home_score}-${m.live_away_score}`:"";
+    notifyUser(`J${j?.number||""} · ${m.home} ${score} ${m.away}`,`${verdict}${m.number<=14?` · signo ${actual}`:""}`);
   }
 }
 const JOINT_SIGN_ORDER=["1","X","2"];
@@ -2718,11 +2725,11 @@ function renderCompare(){
     const projectedResult=projectedResultForMatch(m);
     const liveResult=!official&&projectedResult!=="—";
     const resultStatus=official?"Oficial":matchExceptionStatus(m)?matchExceptionLabel(m):liveResult?"En directo":"Pendiente";
-    const rawScore=official
+    const rawScore=m.home_score!=null&&m.away_score!=null
       ? `${m.home_score}-${m.away_score}`
-      : liveResult&&m.live_home_score!=null&&m.live_away_score!=null
+      : m.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null
         ? `${m.live_home_score}-${m.live_away_score}`
-        : "—";
+        : official?"Signo validado":"—";
 
     let aMark="",bMark="";
     if(official){
