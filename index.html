@@ -371,7 +371,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=209"></script>
+  <script type="module" src="app.js?v=210"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=1";
@@ -490,7 +490,8 @@ function timeLeft(v){
 }
 function msFor(jid){return allMatches.filter(m=>m.journey_id===jid).sort((a,b)=>a.number-b.number)}
 function qgExceptionStatus(m){
-  if(!m)return "";
+  // Una resolución oficial prevalece sobre una suspensión anterior.
+  if(!m||resolved(m))return "";
   const v=String(m.exception_status||m.live_status||"").trim().toLowerCase();
   const t=String(m.live_status_text||"").trim().toLowerCase();
   if(["suspended","abandoned","interrupted","susp"].includes(v)||/suspendid|suspended|abandonad|abandoned/.test(t))return "suspended";

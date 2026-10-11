@@ -243,7 +243,8 @@ function matchesForJourney(journeyId){
   return allMatches.filter(m=>m.journey_id===journeyId).sort((a,b)=>a.number-b.number);
 }
 function matchExceptionStatus(m){
-  if(!m)return "";
+  // Una resolución oficial siempre prevalece sobre la incidencia anterior.
+  if(!m||matchResolved(m))return "";
   const v=String(m.exception_status||m.live_status||"").trim().toLowerCase();
   const t=String(m.live_status_text||"").trim().toLowerCase();
   if(["suspended","abandoned","interrupted","susp"].includes(v)||/suspendid|suspended|abandonad|abandoned/.test(t))return "suspended";
@@ -420,6 +421,11 @@ function resultBarHtml(m,p){
     const outcome=!hasPick?"Sin pronóstico":ok?"Acierto":"Fallo";
     const cls=!hasPick?"neutral":ok?"correct":"wrong";
     return `<div class="match-result-bar ${cls}"><span>Signo oficial <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
+  }
+  if(m?.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null){
+    const h=Number(m.live_home_score),a=Number(m.live_away_score);
+    const sign=h>a?"1":h<a?"2":"X";
+    return `<div class="match-result-bar pending"><span>Final <strong>${h}–${a}</strong> · signo provisional <strong>${sign}</strong></span><span class="result-outcome">Pendiente SELAE</span></div>`;
   }
   if(m?.kickoff && Date.now()>=new Date(m.kickoff).getTime() && journeyDisplayState(journey)==="playing"){
     return `<div class="match-result-bar pending"><span>Partido pendiente de resultado oficial</span></div>`;
