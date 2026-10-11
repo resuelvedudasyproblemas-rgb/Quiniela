@@ -511,6 +511,17 @@ function qgExceptionResultHtml(m){
   return `<div class="qg-result exception-result" role="status"><span><strong>⚠ ${esc(label)}</strong> · ${esc(note)}</span></div>`;
 }
 function resolved(m){return m?.home_score!=null&&m?.away_score!=null}
+function qgSportsFinal(m){
+  return Boolean(m&&!resolved(m)&&!qgExceptionStatus(m)&&m.live_status==="finished"
+    &&m.live_home_score!=null&&m.live_away_score!=null);
+}
+function qgCalculated(m){return resolved(m)||qgSportsFinal(m)}
+function qgCalculatedResult(m){
+  if(resolved(m))return actual(m);
+  if(!qgSportsFinal(m))return "—";
+  return `${m.live_home_score>=3?"M":m.live_home_score}-${m.live_away_score>=3?"M":m.live_away_score}`;
+}
+function qgCalculatedCount(j){return j?msFor(j.id).filter(qgCalculated).length:0}
 function state(j){
   if(!j)return "closed";
   if(!qgLoadedJourneyIds.has(j.id)){
@@ -545,7 +556,7 @@ function qgHeaderScore(m){
   if(resolved(m))return {home:String(m.home_score),away:String(m.away_score),cls:"official",label:"FINAL"};
   if(qgExceptionStatus(m))return {home:m.live_home_score!=null?String(m.live_home_score):"–",away:m.live_away_score!=null?String(m.live_away_score):"–",cls:"exception",label:qgExceptionLabel(m).toUpperCase()};
   if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
-    const label=m.live_status==="inprogress"?(qgIsHalftime(m)?"DESCANSO":(m.live_minute?m.live_minute+"′":"EN DIRECTO")):"FINAL";
+    const label=m.live_status==="inprogress"?(qgIsHalftime(m)?"DESCANSO":(m.live_minute?m.live_minute+"′":"EN DIRECTO")):"FINAL PROV.";
     return {home:String(m.live_home_score),away:String(m.live_away_score),cls:"live",label};
   }
   return {home:"–",away:"–",cls:"pending",label:""};
@@ -1165,16 +1176,16 @@ function qgRenderStandings(){
 
 function renderHero(){
   if(!journey)return;
-  const st=qgVisualState(journey),res=msFor(journey.id).filter(resolved).length;
+  const st=qgVisualState(journey),res=msFor(journey.id).filter(resolved).length,calc=qgCalculatedCount(journey);
   $("#qgJourneyNumber").textContent=`Jornada ${journey.number}`;
-  $("#qgJourneyKicker").textContent=st==="open"?"PRÓXIMO QUINIGOL":st==="confirmed"?"APUESTA CONFIRMADA":st==="playing"?"SEGUIMIENTO DE RESULTADOS":st==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
-  $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?`En juego · ${res}/6 resultados`:st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
+  $("#qgJourneyKicker").textContent=st==="open"?"PRÓXIMO QUINIGOL":st==="confirmed"?"APUESTA CONFIRMADA":st==="playing"?(calc===6?"RESULTADOS FINALES · PROVISIONALES":"SEGUIMIENTO DE RESULTADOS"):st==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
+  $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?(calc===6?`6/6 finales · ${res} oficiales, pendiente SELAE`:`En juego · ${calc}/6 resultados calculados`):st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
   const qgDate=$("#qgJourneyDate");
   if(qgDate){
     qgDate.classList.toggle("hidden",st==="playing");
     qgDate.textContent=st==="playing"?"":qgCloseLabel(journey.close_at);
   }
-  $("#qgJourneyCountdown").textContent=st==="open"?`Cierra en ${timeLeft(journey.close_at)}`:st==="confirmed"?"Pronósticos bloqueados":st==="playing"?"Resultados en directo":st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
+  $("#qgJourneyCountdown").textContent=st==="open"?`Cierra en ${timeLeft(journey.close_at)}`:st==="confirmed"?"Pronósticos bloqueados":st==="playing"?(calc===6?"Aciertos calculados · validación SELAE pendiente":"Resultados en directo"):st==="finished"?"Resultados oficiales completos":"Pronósticos cerrados";
   renderJourneyCompetitions();
   const card=$("#qgJourneyCard");
   card.dataset.status=st;
@@ -1215,9 +1226,9 @@ function qgProjectedJointScore(j=journey){
 }
 function dashCard(name,done,s,projectedScore,cls){
   const finished=state(journey)==="finished";
-  const currentCorrect=finished?s.correct:projectedScore.correct;
+  const currentCorrect=projectedScore.correct;
   const prize=prizeLabel(s.correct,s.resolved),gold=finished&&s.correct>=2;
-  const detail=finished?(prize||"Sin premio"):`${done}/6 pronosticados${projectedScore.considered?` · ${projectedScore.considered} valorados`:""}`;
+  const detail=finished?(prize||"Sin premio"):`${done}/6 pronosticados${projectedScore.considered?` · ${projectedScore.considered} valorados · provisional`:""}`;
   return `<div class="qg-dashboard-card ${cls} ${gold?"prize":""}"><span>${esc(name)}</span><strong>${currentCorrect} aciertos</strong><small>${detail}</small></div>`;
 }
 function renderDashboard(){
@@ -1227,8 +1238,8 @@ function renderDashboard(){
   const ps1=p1?qgProjectedScore(p1.user_id):{correct:0,considered:0},ps2=p2?qgProjectedScore(p2.user_id):{correct:0,considered:0},pjs=qgProjectedJointScore();
   const finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved),jointGold=finished&&js.correct>=2;
   const jointDone=matches.filter(m=>effectiveJoint(m.number)).length;
-  const jointCorrect=finished?js.correct:pjs.correct;
-  const jointDetail=finished?(jp||"Sin premio"):`${jointDone}/6 marcadores${pjs.considered?` · ${pjs.considered} valorados`:""}`;
+  const jointCorrect=pjs.correct;
+  const jointDetail=finished?(jp||"Sin premio"):`${jointDone}/6 marcadores${pjs.considered?` · ${pjs.considered} valorados · provisional`:""}`;
   el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,ps1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,ps2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${jointCorrect} aciertos</strong><small>${jointDetail}</small></div>`;
 }
 function qgIsLive(m){return Boolean(m&&!qgExceptionStatus(m)&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null)}
@@ -1328,7 +1339,7 @@ function qgJointLineHtml(m){
 }
 function renderFilters(){
   const c={all:matches.length,pending:0,live:0,correct:0,wrong:0};
-  matches.forEach(m=>{const r=actual(m),p=pick(identityUserId,m.number);if(qgIsLive(m))c.live++;else if(r==="—")c.pending++;else if(p&&pickText(p)===r)c.correct++;else c.wrong++});
+  matches.forEach(m=>{const r=qgCalculatedResult(m),p=pick(identityUserId,m.number);if(qgIsLive(m))c.live++;else if(r==="—")c.pending++;else if(p&&pickText(p)===r)c.correct++;else if(p)c.wrong++;});
   $("#qgFilterAll").textContent=c.all;$("#qgFilterPending").textContent=c.pending;$("#qgFilterLive").textContent=c.live;$("#qgFilterCorrect").textContent=c.correct;$("#qgFilterWrong").textContent=c.wrong;
   $$(".qg-filter").forEach(b=>b.classList.toggle("active",b.dataset.qgFilter===activeFilter));
 }
@@ -1336,12 +1347,12 @@ function renderPlay(){
   const el=$("#qgMatches");if(!el||!journey)return;
   const locked=!canEdit(),opp=members.find(m=>m.user_id!==identityUserId);
   el.innerHTML=matches.map(m=>{
-    const cur=currentDraft(m.number),saved=pick(identityUserId,m.number),r=actual(m),proj=projected(m),ok=saved&&r!=="—"&&pickText(saved)===r;
+    const cur=currentDraft(m.number),saved=pick(identityUserId,m.number),r=qgCalculatedResult(m),proj=projected(m),official=resolved(m),ok=saved&&r!=="—"&&pickText(saved)===r;
     const playerState=qgPlayersState(m);
     const jointImpossible=qgJointLost(m);
     const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&r!=="—"&&!ok);
     let result="";
-    if(r!=="—")result=`<div class="qg-result ${ok?"correct":"wrong"}"><span>Resultado oficial</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
+    if(r!=="—")result=`<div class="qg-result ${saved?(ok?"correct":"wrong"):"pending"} ${official?"":"provisional-result"}"><span>${official?"Resultado oficial":"Final deportivo · provisional"}</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}${official?"":" · pendiente SELAE"}</strong></div>`;
     else if(qgExceptionStatus(m))result=qgExceptionResultHtml(m);
     else if(proj!=="—")result=`<div class="qg-result live"><span>${qgIsHalftime(m)?"Descanso · provisional":"En directo · provisional"}</span><strong>${esc(proj)}</strong>${qgLiveFreshnessHtml(m)}</div>`;
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
@@ -1450,7 +1461,7 @@ function renderCompare(){
   const p1=member(1),p2=member(2);
   el.innerHTML=matches.map(m=>{
     const r=projected(m);
-    return `<article class="qg-compare-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div></div><div class="qg-compare-result"><span>${resolved(m)?"Resultado oficial":qgExceptionStatus(m)?qgExceptionLabel(m)+" · pendiente SELAE":r!=="—"?"Resultado provisional":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
+    return `<article class="qg-compare-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div></div><div class="qg-compare-result"><span>${resolved(m)?"Resultado oficial":qgExceptionStatus(m)?qgExceptionLabel(m)+" · pendiente SELAE":qgSportsFinal(m)?"Final deportivo · provisional":r!=="—"?"En directo · provisional":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
   }).join("");
 }
 function stat(uid){
