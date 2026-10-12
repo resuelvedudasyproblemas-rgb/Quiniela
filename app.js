@@ -608,7 +608,7 @@ function renderJourneyDashboard(){
   const title=!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
   const badge=!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
   const foot=!m.started?"<span>Pronósticos preparados para la jornada</span>"
-    :l?`<span>Si los partidos en directo acabaran así</span><strong>${escapeHtml(p1?.display_name||"J1")} <b>${a.total}</b> <i>·</i> ${escapeHtml(p2?.display_name||"J2")} <b>${b.total}</b></strong>`
+    :l?`<span>Si los partidos en directo acabaran así</span><strong>${escapeHtml(p1?.display_name||"J1")} <b class="${a.total>=10?"overview-gold-value":""}">${a.total}</b> <i>·</i> ${escapeHtml(p2?.display_name||"J2")} <b class="${b.total>=10?"overview-gold-value":""}">${b.total}</b></strong>`
     :`<span>${commonCorrectCount(journey)} coincidencias acertadas${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
   el.className="journey-dashboard results-overview results-overview-q state-"+status;
   el.innerHTML=`

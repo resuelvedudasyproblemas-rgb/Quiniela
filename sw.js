@@ -1,5 +1,5 @@
-const CACHE="quiniela-v238";
-const CORE=["./","index.html","styles.css?v=202","app.js?v=221","journey-archive.js?v=1","config.js","sofa-client.js?v=1","manifest.webmanifest","icon-192.svg","icon-512.svg"];
+const CACHE="quiniela-v239";
+const CORE=["./","index.html","styles.css?v=203","app.js?v=222","journey-archive.js?v=1","config.js","sofa-client.js?v=1","manifest.webmanifest","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install",event=>{
   event.waitUntil(
