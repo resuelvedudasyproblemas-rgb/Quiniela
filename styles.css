@@ -9886,9 +9886,7 @@ html[data-theme="dark"] .qg-live-header-score.official{
 .results-overview{--overview-gold:#a27319}
 html[data-theme="dark"] .results-overview{--overview-gold:#f2c968}
 .results-overview .overview-player-score .overview-gold-value,
-.results-overview .overview-progress-title .overview-gold-value,
 .results-overview .overview-foot .overview-gold-value{color:var(--overview-gold);font-variant-numeric:tabular-nums;font-weight:950}
-.results-overview .overview-progress-title .overview-percent-value{color:var(--overview-gold);font-weight:900;font-variant-numeric:tabular-nums}
 .results-overview .overview-player-score small{color:var(--muted);font-weight:750}
 .journey-dashboard.results-overview{margin:9px auto 9px;padding:11px 12px;border-radius:18px}
 .results-overview .overview-head{margin-bottom:8px;gap:7px}
