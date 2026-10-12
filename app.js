@@ -606,17 +606,13 @@ function renderJourneyDashboard(){
   const done=m.finals.length,l=m.live.length,issues=m.incidents.length;
   const status=!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
   const title=!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
-  const desc=!m.started?"Consulta vuestros pronósticos antes de que comiencen los partidos."
-    :m.validated?"Todos los resultados de la jornada están registrados."
-    :m.complete?"Partidos terminados. La revisión oficial se realiza aparte."
-    :"Cada final deportivo actualiza los aciertos sin esperar a SELAE.";
   const badge=!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
   const foot=!m.started?"<span>Pronósticos preparados para la jornada</span>"
     :l?`<span>Si los partidos en directo acabaran así</span><strong>${escapeHtml(p1?.display_name||"J1")} ${a.total} <i>·</i> ${escapeHtml(p2?.display_name||"J2")} ${b.total}</strong>`
     :`<span>${commonCorrectCount(journey)} coincidencias acertadas${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
   el.className="journey-dashboard results-overview results-overview-q state-"+status;
   el.innerHTML=`
-    <div class="overview-head"><div class="overview-head-copy"><span class="overview-eyebrow">LA QUINIELA · JORNADA ${journey.number}</span><h3>${title}</h3><p>${desc}</p></div><span class="overview-status overview-status-${status}">${badge}</span></div>
+    <div class="overview-head"><div class="overview-head-copy"><span class="overview-eyebrow">LA QUINIELA · JORNADA ${journey.number}</span><h3>${title}</h3></div><span class="overview-status overview-status-${status}">${badge}</span></div>
     <div class="overview-progress-section"><div class="overview-progress-title"><strong>${done} de 15 partidos finalizados</strong><span>${Math.round(done/15*100)}%</span></div>
       <div class="overview-track" role="progressbar" aria-label="Partidos finalizados" aria-valuemin="0" aria-valuemax="15" aria-valuenow="${done}">
         <span class="overview-track-done" style="width:${done/15*100}%"></span><span class="overview-track-live" style="width:${l/15*100}%"></span>
