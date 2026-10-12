@@ -573,43 +573,56 @@ function projectedScoreUserJourney(uid,j){
   }
   return {correct,considered,live};
 }
+function qSummaryMetrics(j=journey){
+  const ms=j?matchesForJourney(j.id):[];
+  const finals=ms.filter(matchCalculated),live=ms.filter(matchInProgress);
+  const incidents=ms.filter(m=>!matchCalculated(m)&&Boolean(matchExceptionStatus(m)));
+  const pending=Math.max(0,15-finals.length-live.length-incidents.length);
+  const official=ms.filter(matchResolved).length,st=journeyVisualState(j);
+  const started=finals.length>0||live.length>0||incidents.length>0||st==="playing"||st==="finished";
+  return {ms,finals,live,incidents,pending,official,started,complete:finals.length===15,validated:finals.length===15&&official===15};
+}
+function qSummaryPlayer(uid,m){
+  let correct=0,live=0;
+  if(uid){
+    for(const x of m.finals)if(displayPickForJourney(uid,x.journey_id,x.number)===calculatedResultForMatch(x))correct++;
+    for(const x of m.live)if(displayPickForJourney(uid,x.journey_id,x.number)===projectedResultForMatch(x))live++;
+  }
+  return {picks:uid?completedCountForUser(uid):0,correct,live,total:correct+live};
+}
+function qSummaryPlayerCard(player,s,slot,m){
+  const name=escapeHtml(player?.display_name||(slot===1?"Jugador 1":"Jugador 2"));
+  return `<div class="overview-player overview-player-${slot}">
+    <span class="overview-player-name">${name}</span>
+    <strong class="overview-player-score">${m.started?s.correct:s.picks}<small>${m.started?" aciertos":"/15"}</small></strong>
+    <small class="overview-player-sub">${!m.started?"pronósticos preparados":m.complete?"aciertos de la jornada":"aciertos en partidos finalizados"}</small>
+    ${m.live.length?`<span class="overview-live-hint">${s.live?`+${s.live} acertando en directo`:"0 acertando en directo"}</span>`:""}
+  </div>`;
+}
 function renderJourneyDashboard(){
-  const el=$("#journeyDashboard");
-  if(!el||!journey) return;
-  const p1=memberBySlot(1),p2=memberBySlot(2);
-  const s1=p1?scoreUserJourney(p1.user_id,journey):{correct:0,resolved:0};
-  const s2=p2?scoreUserJourney(p2.user_id,journey):{correct:0,resolved:0};
-  const projected1=p1?projectedScoreUserJourney(p1.user_id,journey):{correct:0,considered:0,live:0};
-  const projected2=p2?projectedScoreUserJourney(p2.user_id,journey):{correct:0,considered:0,live:0};
-  const c1=p1?completedCountForUser(p1.user_id):0;
-  const c2=p2?completedCountForUser(p2.user_id):0;
-  const resolved=journeyResolvedCount(journey);
-  const calculated=journeyCalculatedCount(journey);
-  const playing=journeyDisplayState(journey)==="playing";
-  const prize1=s1.correct>=10&&s1.correct<=15;
-  const prize2=s2.correct>=10&&s2.correct<=15;
-  const commonCorrect=commonCorrectCount(journey);
-  const commonPrize=journeyResolvedCount(journey)===15&&commonCorrect>=10&&commonCorrect<=15;
-  const projectedPrize1=projected1.correct>=10&&projected1.correct<=15;
-  const projectedPrize2=projected2.correct>=10&&projected2.correct<=15;
-  const score1=`${projected1.correct} aciertos`;
-  const score2=`${projected2.correct} aciertos`;
-  const considered=Math.max(projected1.considered,projected2.considered);
-  const liveCount=Math.max(projected1.live,projected2.live);
-  const projectedCopy=considered
-    ? `<strong class="projected-pair"><b class="${projectedPrize1?"prize-score":""}">${projected1.correct}</b><i>·</i><b class="${projectedPrize2?"prize-score":""}">${projected2.correct}</b></strong><small>${escapeHtml(p1?.display_name||"J1")} · ${escapeHtml(p2?.display_name||"J2")}<br>${considered} valorados${liveCount?` · ${liveCount} en juego o por revisar`:""}</small>`
-    : `<strong class="projected-pair"><b>0</b><i>·</i><b>0</b></strong><small>Aún sin resultados</small>`;
+  const el=$("#journeyDashboard");if(!el||!journey)return;
+  const m=qSummaryMetrics(journey),p1=memberBySlot(1),p2=memberBySlot(2);
+  const a=qSummaryPlayer(p1?.user_id,m),b=qSummaryPlayer(p2?.user_id,m);
+  const done=m.finals.length,l=m.live.length,issues=m.incidents.length;
+  const status=!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
+  const title=!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
+  const desc=!m.started?"Consulta vuestros pronósticos antes de que comiencen los partidos."
+    :m.validated?"Todos los resultados de la jornada están registrados."
+    :m.complete?"Partidos terminados. La revisión oficial se realiza aparte."
+    :"Cada final deportivo actualiza los aciertos sin esperar a SELAE.";
+  const badge=!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
+  const foot=!m.started?"<span>Pronósticos preparados para la jornada</span>"
+    :l?`<span>Si los partidos en directo acabaran así</span><strong>${escapeHtml(p1?.display_name||"J1")} ${a.total} <i>·</i> ${escapeHtml(p2?.display_name||"J2")} ${b.total}</strong>`
+    :`<span>${commonCorrectCount(journey)} coincidencias acertadas${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
+  el.className="journey-dashboard results-overview results-overview-q state-"+status;
   el.innerHTML=`
-    <div class="dashboard-title-row">
-      <div><span class="dashboard-live-dot ${playing?"live":""}"></span><strong>${playing?"Seguimiento de resultados":"Resumen de jornada"}</strong></div>
-      <span class="dashboard-common ${commonPrize?"prize-zone":""}">${commonCorrect} coincidencias acertadas</span>
+    <div class="overview-head"><div class="overview-head-copy"><span class="overview-eyebrow">LA QUINIELA · JORNADA ${journey.number}</span><h3>${title}</h3><p>${desc}</p></div><span class="overview-status overview-status-${status}">${badge}</span></div>
+    <div class="overview-progress-section"><div class="overview-progress-title"><strong>${done} de 15 partidos finalizados</strong><span>${Math.round(done/15*100)}%</span></div>
+      <div class="overview-track" role="progressbar" aria-label="Partidos finalizados" aria-valuemin="0" aria-valuemax="15" aria-valuenow="${done}">
+        <span class="overview-track-done" style="width:${done/15*100}%"></span><span class="overview-track-live" style="width:${l/15*100}%"></span>
+      </div><div class="overview-breakdown"><span class="overview-meta-done">✓ ${done} finalizados</span>${l?`<span class="overview-meta-live">● ${l} en directo</span>`:""}${issues?`<span class="overview-meta-issue">⚠ ${issues} incidencias</span>`:""}${m.pending?`<span>${m.pending} por jugar o pendientes</span>`:""}</div>
     </div>
-    <div class="dashboard-grid">
-      <div class="dashboard-stat"><span>Resultados</span><strong>${calculated}/15</strong><small>${15-calculated} pendientes</small></div>
-      <div class="dashboard-stat player-one-stat ${resolved&&prize1?"prize-zone":""}"><span>${escapeHtml(p1?.display_name||"Jugador 1")}</span><strong>${score1}</strong><small>${c1}/15 pronosticados</small></div>
-      <div class="dashboard-stat player-two-stat ${resolved&&prize2?"prize-zone":""}"><span>${escapeHtml(p2?.display_name||"Jugador 2")}</span><strong>${score2}</strong><small>${c2}/15 pronosticados</small></div>
-      <div class="dashboard-stat projected-score-stat"><span>Aciertos posibles</span>${projectedCopy}</div>
-    </div>`;
+    <div class="overview-players">${qSummaryPlayerCard(p1,a,1,m)}${qSummaryPlayerCard(p2,b,2,m)}</div><div class="overview-foot">${foot}</div>`;
 }
 function matchInProgress(m){
   return Boolean(m&&!matchExceptionStatus(m)&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null);

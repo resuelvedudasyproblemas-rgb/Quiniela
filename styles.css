@@ -9832,3 +9832,53 @@ html[data-theme="dark"] .qg-live-header-score.official{
  .history-browser-toolbar .archive-search-wrap{max-width:100%}
  .history-browser-count{padding-left:3px}
 }
+
+/* Resumen deportivo por fases - ambos juegos */
+.journey-dashboard.results-overview{max-width:700px;margin:15px auto 14px;padding:17px;border-radius:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow-md);display:block;overflow:hidden}
+.results-overview .overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin:0 0 14px}
+.results-overview .overview-head-copy{min-width:0;flex:1}
+.results-overview .overview-eyebrow{display:block;color:var(--brand);font-size:.56rem;font-weight:900;letter-spacing:.1em;margin:0 0 3px}
+.results-overview .overview-head h3{margin:0;font-size:1.05rem;line-height:1.27;color:var(--text)}
+.results-overview .overview-head p{margin:5px 0 0;max-width:420px;color:var(--muted);font-size:.65rem;line-height:1.5}
+.results-overview .overview-status{display:inline-flex;justify-content:center;align-items:center;flex:0 0 auto;padding:6px 9px;min-height:25px;max-width:140px;border-radius:999px;border:1px solid var(--border);background:var(--surface-3);color:var(--muted);font-weight:900;font-size:.54rem;letter-spacing:.025em;text-align:center}
+.results-overview .overview-status-live,.results-overview .overview-status-exception{color:var(--player-two);background:var(--player-two-soft);border-color:var(--player-two-border)}
+.results-overview .overview-status-complete{color:var(--joint-color);background:var(--joint-soft);border-color:color-mix(in srgb,var(--joint-color) 36%,var(--border))}
+.results-overview .overview-progress-section{border:1px solid var(--border);background:var(--surface-2);border-radius:15px;padding:12px 13px 10px;margin-bottom:10px}
+.results-overview .overview-progress-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.results-overview .overview-progress-title strong{color:var(--text);font-size:.75rem;font-weight:850}
+.results-overview .overview-progress-title>span{color:var(--muted);font-weight:800;font-size:.68rem;font-variant-numeric:tabular-nums}
+.results-overview .overview-track{display:flex;width:100%;height:8px;overflow:hidden;border-radius:999px;background:var(--surface-3)}
+.results-overview .overview-track-done{display:block;flex:0 0 auto;height:100%;background:var(--joint-color);transition:width .25s}
+.results-overview .overview-track-live{display:block;flex:0 0 auto;height:100%;background:#dc9444;transition:width .25s}
+.results-overview .overview-breakdown{display:flex;align-items:center;flex-wrap:wrap;gap:7px 14px;margin-top:9px;color:var(--muted);font-size:.62rem;font-weight:750}
+.results-overview .overview-meta-done{color:var(--joint-color)}
+.results-overview .overview-meta-live,.results-overview .overview-meta-issue{color:var(--player-two)}
+.results-overview .overview-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.results-overview .overview-player{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:0;min-height:104px;border:1px solid var(--border);border-radius:15px;padding:12px 13px;text-align:left;background:var(--surface-2)}
+.results-overview .overview-player-one,.results-overview .overview-player-1{background:var(--player-one-soft);border-color:var(--player-one-border)}
+.results-overview .overview-player-two,.results-overview .overview-player-2{background:var(--player-two-soft);border-color:var(--player-two-border)}
+.results-overview .overview-player-joint{background:var(--joint-soft);border-color:color-mix(in srgb,var(--joint-color) 36%,var(--border))}
+.results-overview .overview-player-name{color:var(--muted);font-size:.67rem;font-weight:850;text-transform:uppercase;letter-spacing:.04em}
+.results-overview .overview-player-one .overview-player-name,.results-overview .overview-player-one .overview-player-score,.results-overview .overview-player-1 .overview-player-name,.results-overview .overview-player-1 .overview-player-score{color:var(--player-one)}
+.results-overview .overview-player-two .overview-player-name,.results-overview .overview-player-two .overview-player-score,.results-overview .overview-player-2 .overview-player-name,.results-overview .overview-player-2 .overview-player-score{color:var(--player-two)}
+.results-overview .overview-player-joint .overview-player-name,.results-overview .overview-player-joint .overview-player-score{color:var(--joint-color)}
+.results-overview .overview-player-score{display:block;font-size:1.75rem;font-weight:900;line-height:1.04;font-variant-numeric:tabular-nums;margin:7px 0 5px;letter-spacing:-.02em}
+.results-overview .overview-player-score small{display:inline;font-size:.7rem;font-weight:800;letter-spacing:0}
+.results-overview .overview-player-sub{color:var(--muted);font-size:.6rem;font-weight:700;line-height:1.3}
+.results-overview .overview-live-hint{display:inline-block;margin-top:7px;padding:4px 7px;border:1px solid var(--player-two-border);border-radius:999px;background:var(--surface);color:var(--player-two);font-size:.57rem;font-weight:850}
+.results-overview .overview-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 18px;margin-top:12px;padding:10px 2px 0;border-top:1px solid var(--border);color:var(--muted);font-size:.64rem;line-height:1.4}
+.results-overview .overview-foot strong{color:var(--text);font-size:.76rem}
+.results-overview .overview-foot strong i{color:var(--muted);font-style:normal;padding:0 4px}
+.results-overview-qg .overview-players{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:540px){
+ .journey-dashboard.results-overview{padding:13px;border-radius:19px}
+ .results-overview .overview-head{flex-wrap:wrap;gap:8px}
+ .results-overview .overview-head h3{font-size:.98rem}
+ .results-overview .overview-status{font-size:.51rem}
+ .results-overview .overview-players{gap:8px}
+ .results-overview .overview-player{min-height:100px;padding:11px 10px}
+ .results-overview .overview-player-score{font-size:1.58rem}
+ .results-overview .overview-player-score small{font-size:.63rem}
+ .results-overview-qg .overview-players{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .results-overview-qg .overview-player-joint{grid-column:1/-1;min-height:75px}
+}

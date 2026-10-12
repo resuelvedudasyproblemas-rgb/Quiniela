@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=198" />
+  <link rel="stylesheet" href="styles.css?v=199" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -371,7 +371,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=217"></script>
+  <script type="module" src="app.js?v=218"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=1";
@@ -1229,23 +1229,54 @@ function qgProjectedJointScore(j=journey){
   }
   return {correct,considered};
 }
-function dashCard(name,done,s,projectedScore,cls){
-  const finished=state(journey)==="finished";
-  const currentCorrect=projectedScore.correct;
-  const prize=prizeLabel(s.correct,s.resolved),gold=finished&&s.correct>=2;
-  const detail=finished?(prize||"Sin premio"):`${done}/6 pronosticados${projectedScore.considered?` · ${projectedScore.considered} valorados`:""}`;
-  return `<div class="qg-dashboard-card ${cls} ${gold?"prize":""}"><span>${esc(name)}</span><strong>${currentCorrect} aciertos</strong><small>${detail}</small></div>`;
+function gSummaryMetrics(j=journey){
+  const ms=j?msFor(j.id):[],finals=ms.filter(qgCalculated),live=ms.filter(qgIsLive);
+  const incidents=ms.filter(m=>!qgCalculated(m)&&Boolean(qgExceptionStatus(m)));
+  const pending=Math.max(0,6-finals.length-live.length-incidents.length);
+  const official=ms.filter(resolved).length,st=state(j);
+  const started=finals.length>0||live.length>0||incidents.length>0||st==="playing"||st==="finished";
+  return {ms,finals,live,incidents,pending,official,started,complete:finals.length===6,validated:finals.length===6&&official===6};
+}
+function gSummaryPlayer(uid,joint,m){
+  const selection=x=>joint?jointText(x.number,journey.id):uid?pickText(pick(uid,x.number,journey.id)):"—";
+  let correct=0,live=0;
+  for(const x of m.finals)if(selection(x)===qgCalculatedResult(x))correct++;
+  for(const x of m.live)if(selection(x)===projected(x))live++;
+  const picks=joint?m.ms.filter(x=>jointText(x.number,journey.id)!=="—").length:uid?completed(uid):0;
+  return {correct,live,total:correct+live,picks};
+}
+function gSummaryPlayerCard(name,s,slot,m){
+  return `<div class="overview-player overview-player-${slot}">
+    <span class="overview-player-name">${esc(name)}</span>
+    <strong class="overview-player-score">${m.started?s.correct:s.picks}<small>${m.started?" aciertos":"/6"}</small></strong>
+    <small class="overview-player-sub">${!m.started?"pronósticos preparados":m.complete?"aciertos de la jornada":"aciertos en partidos finalizados"}</small>
+    ${m.live.length?`<span class="overview-live-hint">${s.live?`+${s.live} acertando en directo`:"0 acertando en directo"}</span>`:""}
+  </div>`;
 }
 function renderDashboard(){
-  const el=$("#qgDashboard");if(!el)return;
-  const p1=member(1),p2=member(2);
-  const s1=p1?score(p1.user_id):{correct:0,resolved:0},s2=p2?score(p2.user_id):{correct:0,resolved:0},js=jointScore();
-  const ps1=p1?qgProjectedScore(p1.user_id):{correct:0,considered:0},ps2=p2?qgProjectedScore(p2.user_id):{correct:0,considered:0},pjs=qgProjectedJointScore();
-  const finished=state(journey)==="finished",jp=prizeLabel(js.correct,js.resolved),jointGold=finished&&js.correct>=2;
-  const jointDone=matches.filter(m=>effectiveJoint(m.number)).length;
-  const jointCorrect=pjs.correct;
-  const jointDetail=finished?(jp||"Sin premio"):`${jointDone}/6 marcadores${pjs.considered?` · ${pjs.considered} valorados`:""}`;
-  el.innerHTML=dashCard(p1?.display_name||"Salva",p1?completed(p1.user_id):0,s1,ps1,"player-one")+dashCard(p2?.display_name||"Ferran",p2?completed(p2.user_id):0,s2,ps2,"player-two")+`<div class="qg-dashboard-card joint ${jointGold?"prize":""}"><span>Conjunta</span><strong>${jointCorrect} aciertos</strong><small>${jointDetail}</small></div>`;
+  const el=$("#qgDashboard");if(!el||!journey)return;
+  const m=gSummaryMetrics(journey),p1=member(1),p2=member(2);
+  const a=gSummaryPlayer(p1?.user_id,false,m),b=gSummaryPlayer(p2?.user_id,false,m),c=gSummaryPlayer(null,true,m);
+  const done=m.finals.length,l=m.live.length,issues=m.incidents.length;
+  const status=!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
+  const title=!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
+  const desc=!m.started?"Preparad vuestros seis marcadores antes del cierre."
+    :m.validated?"Todos los resultados de la jornada están registrados."
+    :m.complete?"Partidos terminados. La revisión oficial se realiza aparte."
+    :"Cada final deportivo actualiza los aciertos sin esperar a SELAE.";
+  const badge=!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
+  const foot=!m.started?"<span>Pronósticos preparados para la jornada</span>"
+    :l?`<span>Si los partidos en directo acabaran así</span><strong>${esc(p1?.display_name||"J1")} ${a.total} <i>·</i> ${esc(p2?.display_name||"J2")} ${b.total} <i>·</i> Conjunta ${c.total}</strong>`
+    :`<span>Conjunta: ${c.correct} aciertos${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
+  el.className="journey-dashboard qg-dashboard results-overview results-overview-qg state-"+status;
+  el.innerHTML=`
+    <div class="overview-head"><div class="overview-head-copy"><span class="overview-eyebrow">EL QUINIGOL · JORNADA ${journey.number}</span><h3>${title}</h3><p>${desc}</p></div><span class="overview-status overview-status-${status}">${badge}</span></div>
+    <div class="overview-progress-section"><div class="overview-progress-title"><strong>${done} de 6 partidos finalizados</strong><span>${Math.round(done/6*100)}%</span></div>
+      <div class="overview-track" role="progressbar" aria-label="Partidos finalizados" aria-valuemin="0" aria-valuemax="6" aria-valuenow="${done}">
+        <span class="overview-track-done" style="width:${done/6*100}%"></span><span class="overview-track-live" style="width:${l/6*100}%"></span>
+      </div><div class="overview-breakdown"><span class="overview-meta-done">✓ ${done} finalizados</span>${l?`<span class="overview-meta-live">● ${l} en directo</span>`:""}${issues?`<span class="overview-meta-issue">⚠ ${issues} incidencias</span>`:""}${m.pending?`<span>${m.pending} por jugar o pendientes</span>`:""}</div>
+    </div>
+    <div class="overview-players">${gSummaryPlayerCard(p1?.display_name||"Salva",a,"one",m)}${gSummaryPlayerCard(p2?.display_name||"Ferran",b,"two",m)}${gSummaryPlayerCard("Conjunta",c,"joint",m)}</div><div class="overview-foot">${foot}</div>`;
 }
 function qgIsLive(m){return Boolean(m&&!qgExceptionStatus(m)&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null)}
 function qgLiveFreshnessMeta(value){
