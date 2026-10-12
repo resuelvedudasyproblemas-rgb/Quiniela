@@ -594,7 +594,7 @@ function qSummaryPlayerCard(player,s,slot,m){
   const name=escapeHtml(player?.display_name||(slot===1?"Jugador 1":"Jugador 2"));
   return `<div class="overview-player overview-player-${slot}">
     <span class="overview-player-name">${name}</span>
-    <strong class="overview-player-score">${m.started?s.correct:s.picks}<small>${m.started?" aciertos":"/15"}</small></strong>
+    <strong class="overview-player-score"><span class="overview-gold-value">${m.started?s.correct:s.picks}</span><small>${m.started?" aciertos":"/15"}</small></strong>
     <small class="overview-player-sub">${!m.started?"pronósticos preparados":m.complete?"aciertos de la jornada":"aciertos en partidos finalizados"}</small>
     ${m.live.length?`<span class="overview-live-hint">${s.live?`+${s.live} acertando en directo`:"0 acertando en directo"}</span>`:""}
   </div>`;
@@ -608,12 +608,12 @@ function renderJourneyDashboard(){
   const title=!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
   const badge=!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
   const foot=!m.started?"<span>Pronósticos preparados para la jornada</span>"
-    :l?`<span>Si los partidos en directo acabaran así</span><strong>${escapeHtml(p1?.display_name||"J1")} ${a.total} <i>·</i> ${escapeHtml(p2?.display_name||"J2")} ${b.total}</strong>`
+    :l?`<span>Si los partidos en directo acabaran así</span><strong>${escapeHtml(p1?.display_name||"J1")} <b class="overview-gold-value">${a.total}</b> <i>·</i> ${escapeHtml(p2?.display_name||"J2")} <b class="overview-gold-value">${b.total}</b></strong>`
     :`<span>${commonCorrectCount(journey)} coincidencias acertadas${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
   el.className="journey-dashboard results-overview results-overview-q state-"+status;
   el.innerHTML=`
     <div class="overview-head"><div class="overview-head-copy"><span class="overview-eyebrow">LA QUINIELA · JORNADA ${journey.number}</span><h3>${title}</h3></div><span class="overview-status overview-status-${status}">${badge}</span></div>
-    <div class="overview-progress-section"><div class="overview-progress-title"><strong>${done} de 15 partidos finalizados</strong><span>${Math.round(done/15*100)}%</span></div>
+    <div class="overview-progress-section"><div class="overview-progress-title"><strong><span class="overview-gold-value">${done}</span> de 15 partidos finalizados</strong><span class="overview-percent-value">${Math.round(done/15*100)}%</span></div>
       <div class="overview-track" role="progressbar" aria-label="Partidos finalizados" aria-valuemin="0" aria-valuemax="15" aria-valuenow="${done}">
         <span class="overview-track-done" style="width:${done/15*100}%"></span><span class="overview-track-live" style="width:${l/15*100}%"></span>
       </div><div class="overview-breakdown"><span class="overview-meta-done">✓ ${done} finalizados</span>${l?`<span class="overview-meta-live">● ${l} en directo</span>`:""}${issues?`<span class="overview-meta-issue">⚠ ${issues} incidencias</span>`:""}${m.pending?`<span>${m.pending} por jugar o pendientes</span>`:""}</div>
