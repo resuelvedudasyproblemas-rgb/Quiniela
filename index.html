@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=203" />
+  <link rel="stylesheet" href="styles.css?v=204" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -965,10 +965,14 @@ function goalButtons(n,side,selected,locked,attrs=""){
 }
 function qgPrizeState(j){
   if(!j||state(j)!=="finished")return "";
-  if(!qgLoadedJourneyIds.has(j.id))return qgJourneySummaries.get(Number(j.id))?.prize_state||"miss";
-  const personal=score(identityUserId,j);
-  const joint=jointScore(j);
-  return personal.correct>=2||joint.correct>=2?"prize":"miss";
+  // El dorado de la TARJETA corresponde exclusivamente a la conjunta.
+  // El jugador puede tener 2+ aciertos y mostrar su número dorado, pero
+  // eso no convierte la tarjeta de la jornada en dorada.
+  if(!qgLoadedJourneyIds.has(j.id)){
+    const summary=qgJourneySummaries.get(Number(j.id));
+    return Number(summary?.joint_correct||0)>=2?"prize":"miss";
+  }
+  return jointScore(j).correct>=2?"prize":"miss";
 }
 function competitionShort(name=""){
   const n=String(name||"");
@@ -1508,7 +1512,7 @@ function renderStats(){
   const el=$("#qgStats");if(!el)return;
   const p1=member(1),p2=member(2),s1=p1?stat(p1.user_id):{best:0,prizes:0},s2=p2?stat(p2.user_id):{best:0,prizes:0},sj=jstat();
   const card=(name,s,cls)=>`<div class="qg-stat-card ${cls}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con premio</small></div>`;
-  el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. En la app se considera jornada con premio visual cuando hay 2 o más aciertos.</div>`;
+  el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. La tarjeta de la jornada es dorada solo con 2 o más aciertos de la conjunta; los números de cada jugador se destacan individualmente.</div>`;
 }
 function qgHistoryFixtureHtml(m){
   const row=(name,logo,position,side)=>`<span class="qg-history-team ${side}">${crest(name,logo)}<span class="qg-history-team-pos">${Number(position)>0?Number(position)+".º":""}</span><span class="qg-history-team-name">${esc(stripTeam(name))}</span></span>`;
@@ -1568,9 +1572,9 @@ function renderHistory(){
           <span class="qg-history-winner ${winnerSide}">${winnerText}</span>
         </div>
         <div class="qg-history-score">
-          <span class="p1 ${winnerSide==="one"?"is-winner":""}"><small>${esc(p1?.display_name||"J1")}</small><b>${s1.correct}/6</b></span>
-          <span class="p2 ${winnerSide==="two"?"is-winner":""}"><small>${esc(p2?.display_name||"J2")}</small><b>${s2.correct}/6</b></span>
-          <span class="pj"><small>Conj.</small><b>${sj.correct}/6</b></span>
+          <span class="p1 ${winnerSide==="one"?"is-winner":""}"><small>${esc(p1?.display_name||"J1")}</small><b class="${s1.correct>=2?"qg-gold-number":""}">${s1.correct}/6</b></span>
+          <span class="p2 ${winnerSide==="two"?"is-winner":""}"><small>${esc(p2?.display_name||"J2")}</small><b class="${s2.correct>=2?"qg-gold-number":""}">${s2.correct}/6</b></span>
+          <span class="pj"><small>Conj.</small><b class="${sj.correct>=2?"qg-gold-number":""}">${sj.correct}/6</b></span>
         </div>
       </summary>
       <div class="qg-history-body">${rows}</div>

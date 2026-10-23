@@ -9910,3 +9910,13 @@ html[data-theme="dark"] .results-overview{--overview-gold:#f2c968}
  .results-overview .overview-player-sub{font-size:.57rem}
  .results-overview-qg .overview-player-joint{min-height:61px}
 }
+
+/* Quinigol: cifra dorada individual; la tarjeta depende SOLO de la conjunta. */
+.qg-history-score span b.qg-gold-number{
+  color:#a27319!important;
+  font-weight:950;
+  font-variant-numeric:tabular-nums;
+}
+html[data-theme="dark"] .qg-history-score span b.qg-gold-number{
+  color:#f2c968!important;
+}
