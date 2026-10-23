@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=204" />
+  <link rel="stylesheet" href="styles.css?v=205" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -724,7 +724,7 @@ async function qgRefreshRealtimeTable(table){
   try{
     const ids=[...qgLoadedJourneyIds];
     if(table==="qg_picks")await Promise.all([qgLoadPicksOnly(ids),qgLoadSummaries()]);
-    else if(table==="qg_joint_picks")await qgLoadJointOnly(ids);
+    else if(table==="qg_joint_picks")await Promise.all([qgLoadJointOnly(ids),qgLoadSummaries()]);
     else if(table==="room_wallets"||table==="wallet_transactions"||table==="bet_confirmations")await qgLoadWalletData();
     else return;
     if(journey)matches=msFor(journey.id);
@@ -965,14 +965,15 @@ function goalButtons(n,side,selected,locked,attrs=""){
 }
 function qgPrizeState(j){
   if(!j||state(j)!=="finished")return "";
-  // El dorado de la TARJETA corresponde exclusivamente a la conjunta.
-  // El jugador puede tener 2+ aciertos y mostrar su número dorado, pero
-  // eso no convierte la tarjeta de la jornada en dorada.
-  if(!qgLoadedJourneyIds.has(j.id)){
-    const summary=qgJourneySummaries.get(Number(j.id));
-    return Number(summary?.joint_correct||0)>=2?"prize":"miss";
-  }
-  return jointScore(j).correct>=2?"prize":"miss";
+  // Único criterio para tarjeta grande y selector: conjunta >= 2.
+  // Jugar / recargar puede alternar entre resumen del servidor y datos
+  // detallados; ambos calculan ahora la misma conjunta, sin sesgo por ranking.
+  const jid=Number(j.id);
+  const loaded=qgLoadedJourneyIds.has(jid)&&msFor(jid).length===6;
+  const summary=qgJourneySummaries.get(jid);
+  const jointCorrect=loaded?jointScore(j).correct:Number(summary?.joint_correct);
+  if(!Number.isFinite(jointCorrect))return "";
+  return jointCorrect>=2?"prize":"miss";
 }
 function competitionShort(name=""){
   const n=String(name||"");
@@ -1198,6 +1199,9 @@ function renderHero(){
   renderJourneyCompetitions();
   const card=$("#qgJourneyCard");
   card.dataset.status=st;
+  // Evitar clases antiguas que podían mantener el dorado aunque la
+  // conjunta no llegase al mínimo al cambiar entre juegos.
+  card.classList.remove("qg-prize","qg-miss");
   const prizeState=qgPrizeState(journey);
   if(prizeState)card.dataset.prize=prizeState;
   else delete card.dataset.prize;
@@ -1617,8 +1621,21 @@ function setGame(g,persist=true){
   $("#qgRoot")?.classList.toggle("hidden",!q);$("#journeyCard")?.classList.toggle("hidden",q);$("#journeySwitcher")?.classList.toggle("hidden",q);$("#quinielaTabs")?.classList.toggle("hidden",q);$("#quinielaMain")?.classList.toggle("hidden",q);
   if(q){
     if(qgDataReady){
+      // Volver a pintar inmediatamente, sin conservar ni un instante los
+      // estados visuales anteriores al cambiar de juego.
+      renderAll();
       void (async()=>{
-        if(previousGame!==activeGame)await qgSelectOpenOnEntry();
+        if(previousGame!==activeGame){
+          await qgSelectOpenOnEntry();
+          if(Date.now()-qgLastCrossDeviceRefreshAt>60000){
+            await Promise.all([
+              qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),
+              qgLoadSummaries()
+            ]);
+            qgLastCrossDeviceRefreshAt=Date.now();
+            if(journey)matches=msFor(journey.id);
+          }
+        }
         if(!channel){await qgSyncRealtimeAuth();subscribe()}
         renderAll();
       })().catch(e=>{console.error("Entrar en Quinigol:",e);toast("No se pudo cargar Quinigol")});
@@ -1752,6 +1769,13 @@ async function qgEnsureDataReady(){
       }
       const v=readPref("quinigol-view","play");activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
       const f=readPref("quinigol-filter","all");activeFilter=["all","pending","live","correct","wrong"].includes(f)?f:"all";
+      // El bootstrap puede haberse generado antes de una rectificación de
+      // resultados. Conciliarlo una sola vez con los datos actuales.
+      await Promise.all([
+        qgLoadBundle([...qgLoadedJourneyIds],{replace:true}),
+        qgLoadSummaries()
+      ]);
+      qgLastCrossDeviceRefreshAt=Date.now();
       selectJourney();
     }else{
       await load();
