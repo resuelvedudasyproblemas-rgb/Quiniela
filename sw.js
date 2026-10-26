@@ -1,4 +1,4 @@
-const CACHE="quiniela-v243";
+const CACHE="quiniela-v244";
 const CORE=["./","index.html","styles.css?v=207","app.js?v=224","journey-archive.js?v=2","config.js","sofa-client.js?v=1","manifest.webmanifest","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install",event=>{
@@ -57,16 +57,24 @@ self.addEventListener("push",event=>{
   const visual=pushVisual(tag);
   const rawTitle=data.title||"Nuestra Quiniela";
   const title=/^[\p{Extended_Pictographic}]/u.test(rawTitle)?rawTitle:`${visual.emoji} ${rawTitle}`;
-  event.waitUntil(self.registration.showNotification(title,{
-    body:data.body||"",
-    icon:"icon-192.svg",
-    badge:"icon-192.svg",
-    tag,
-    data:{url:data.url||"./"},
-    renotify:true,
-    timestamp:Date.now(),
-    vibrate:visual.vibrate
-  }));
+  event.waitUntil((async()=>{
+    // Si el proveedor reentrega el mismo ID, no volver a mostrarlo.
+    const pushId=data.push_id==null?"":String(data.push_id);
+    if(pushId){
+      const visible=await self.registration.getNotifications({tag}).catch(()=>[]);
+      if(visible.some(n=>String(n.data?.push_id||"")===pushId))return;
+    }
+    await self.registration.showNotification(title,{
+      body:data.body||"",
+      icon:"icon-192.svg",
+      badge:"icon-192.svg",
+      tag,
+      data:{url:data.url||"./",push_id:pushId},
+      renotify:false,
+      timestamp:Date.now(),
+      vibrate:visual.vibrate
+    });
+  })());
 });
 
 self.addEventListener("notificationclick",event=>{
