@@ -9951,3 +9951,47 @@ html #qgJourneyCard[data-status="unplayed"] .status-dot{
 }
 html[data-theme="dark"] .results-overview.state-unplayed .overview-status{color:#b6c9df!important}
 .results-overview.state-unplayed .overview-gold-value{color:inherit!important}
+
+/* Copa del Rey: escudo sobre blanco también en modo oscuro */
+html .match-competition-badge.is-cup,
+html[data-theme="dark"] .match-competition-badge.is-cup,
+html .journey-league-logo.is-cup,
+html[data-theme="dark"] .journey-league-logo.is-cup{
+  background:#fff!important;
+  border:1px solid #d6dce2!important;
+  box-shadow:0 2px 9px rgba(0,0,0,.14)!important;
+}
+html .match-competition-badge.is-cup .match-competition-fallback{
+  background:#fff!important;color:#1c2434!important;
+}
+html .journey-league-logo.is-cup>b{color:#263547!important}
+html .match-competition-badge.is-cup img,
+html .journey-league-logo.is-cup img{
+  filter:none!important;mix-blend-mode:normal!important;opacity:1!important;
+}
+/* Copa es eliminatoria: no presentar clasificaciones de liga */
+.cup-knockout-panel{padding:13px 14px 16px}
+.cup-knockout-intro{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:12px}
+.cup-knockout-eyebrow{display:block;font-size:.62rem;letter-spacing:.08em;font-weight:850;color:var(--muted);margin-bottom:4px}
+.cup-knockout-intro h3{font-size:1rem;line-height:1.2;margin:0 0 6px;color:var(--text);font-weight:850}
+.cup-knockout-intro p{font-size:.75rem;line-height:1.48;margin:0;color:var(--muted)}
+.cup-fixture-list{display:grid;gap:7px}
+.cup-fixture{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:10px 12px}
+.cup-fixture-meta{display:flex;justify-content:space-between;gap:8px;margin-bottom:9px;color:var(--muted);font-size:.65rem}
+.cup-fixture-meta>span{font-weight:800}
+.cup-fixture-meta>small{font-size:.66rem;white-space:normal;text-align:right}
+.cup-fixture-teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px}
+.cup-fixture-teams>div{display:flex;align-items:center;gap:7px;min-width:0}
+.cup-fixture-teams>div:last-child{justify-content:flex-end}
+.cup-fixture-teams strong{font-size:.77rem;font-weight:850;line-height:1.24;color:var(--text);overflow-wrap:anywhere}
+.cup-fixture-teams>div:last-child strong{text-align:right}
+.cup-fixture-teams .team-crest{flex:0 0 auto}
+.cup-fixture-result,.cup-fixture-versus{text-align:center;min-width:40px;font-size:.76rem;font-weight:900;white-space:nowrap;color:var(--text)}
+.cup-fixture-versus{font-size:.64rem;color:var(--muted);font-weight:800}
+@media(max-width:430px){
+  .cup-knockout-panel{padding:10px}
+  .cup-fixture{padding:10px 9px}
+  .cup-fixture-teams{gap:5px}
+  .cup-fixture-teams>div{gap:4px}
+  .cup-fixture-teams strong{font-size:.69rem}
+}

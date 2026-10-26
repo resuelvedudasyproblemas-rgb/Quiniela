@@ -2224,13 +2224,34 @@ async function refreshData(){
   renderAll();
 }
 
+function isCupCompetition(comp){
+  return Number(comp?.id||comp?.competition_id)===3951 ||
+    /copa del rey/i.test(String(comp?.name||comp?.competition_name||""));
+}
+function cupFixturesHtmlQ(comp,j){
+  const cup=matchesForJourney(j.id).filter(m=>Number(m.competition_id)===Number(comp.id));
+  const fixtures=cup.map(m=>{
+    const official=m.home_score!=null&&m.away_score!=null;
+    const live=m.live_status==="inprogress"||m.live_status==="finished";
+    const known=official||(live&&m.live_home_score!=null&&m.live_away_score!=null);
+    const home=official?m.home_score:m.live_home_score,away=official?m.away_score:m.live_away_score;
+    const result=known?`<strong class="cup-fixture-result">${home} – ${away}</strong>`:'<span class="cup-fixture-versus">VS</span>';
+    const time=m.kickoff?new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(m.kickoff)):"Horario por confirmar";
+    const state=official?"Final":m.live_status==="finished"?"Final · provisional":m.live_status==="inprogress"?"En directo":time;
+    return `<div class="cup-fixture">
+      <div class="cup-fixture-meta"><span>Partido ${Number(m.number)}</span><small>${escapeHtml(state)}</small></div>
+      <div class="cup-fixture-teams"><div>${teamCrestHtml(m.home,"xs",m.home_logo_url)}<strong>${escapeHtml(m.home.replace(/\s*\([MF]\)$/i,""))}</strong></div>${result}<div>${teamCrestHtml(m.away,"xs",m.away_logo_url)}<strong>${escapeHtml(m.away.replace(/\s*\([MF]\)$/i,""))}</strong></div></div>
+    </div>`;
+  }).join("");
+  return `<div class="cup-knockout-panel"><div class="cup-knockout-intro"><span class="cup-knockout-eyebrow">COMPETICIÓN ELIMINATORIA</span><h3>Cruces de Copa del Rey</h3><p>La Copa del Rey no tiene una clasificación por puntos: cada cruce decide qué equipo continúa. Aquí puedes consultar los partidos de esta jornada.</p></div><div class="cup-fixture-list">${fixtures||'<div class="standings-empty">Todavía no hay cruces disponibles.</div>'}</div></div>`;
+}
 function matchCompetitionBadgeHtml(m){
   const name=String(m?.competition_name||"").trim();
   const logo=String(m?.competition_logo_url||"").trim();
   if(!name||!logo)return "";
   const primary=logoStorageUrl(logo);
   const fallback=logoProxyUrl(logo);
-  return `<span class="match-competition-badge" title="${escapeHtml(name)}" aria-label="${escapeHtml(name)}"><b class="match-competition-fallback">${escapeHtml(leagueShortLabel(name))}</b><img src="${escapeHtml(primary)}" data-logo-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
+  return `<span class="match-competition-badge ${isCupCompetition(m)?"is-cup":""}" title="${escapeHtml(name)}" aria-label="${escapeHtml(name)}"><b class="match-competition-fallback">${escapeHtml(leagueShortLabel(name))}</b><img src="${escapeHtml(primary)}" data-logo-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
 }
 function historyFixtureHtml(m){
   const row=(name,logo,position,side)=>`<span class="history-fixture-team ${side}">${teamCrestHtml(name,"xs",logo)}<span class="history-team-pos">${Number(position)>0?Number(position)+".º":""}</span><span class="history-team-name">${escapeHtml(name)}</span></span>`;
@@ -2265,7 +2286,7 @@ function renderJourneyLeagues(){
   el.classList.remove("hidden");
   const canShow=journeyVisualState(journey)!=="finished";
   const shown=comps.slice(0,3);
-  const logos=shown.map((c,i)=>`<button type="button" class="journey-league-logo ${standingsExpanded&&Number(activeStandingCompetitionId)===Number(c.id)?"active":""}" style="--league-i:${i}" data-standing-logo="${c.id}" title="Ver clasificación de ${escapeHtml(c.name)}" aria-label="Ver clasificación de ${escapeHtml(c.name)}" ${canShow?"":"disabled"}><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoStorageUrl(c.logo))}" data-logo-fallback="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()}"></button>`).join("")+(comps.length>3?`<button type="button" class="journey-league-more" data-standing-logo="${comps[3].id}" title="Ver otras clasificaciones" aria-label="Ver otras clasificaciones" ${canShow?"":"disabled"}>+${comps.length-3}</button>`:"");
+  const logos=shown.map((c,i)=>`<button type="button" class="journey-league-logo ${isCupCompetition(c)?"is-cup":""} ${standingsExpanded&&Number(activeStandingCompetitionId)===Number(c.id)?"active":""}" style="--league-i:${i}" data-standing-logo="${c.id}" title="${isCupCompetition(c)?"Ver cruces de":"Ver clasificación de"} ${escapeHtml(c.name)}" aria-label="${isCupCompetition(c)?"Ver cruces de":"Ver clasificación de"} ${escapeHtml(c.name)}" ${canShow?"":"disabled"}><b>${escapeHtml(leagueShortLabel(c.name))}</b><img src="${escapeHtml(logoStorageUrl(c.logo))}" data-logo-fallback="${escapeHtml(logoProxyUrl(c.logo))}" alt="${escapeHtml(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()}"></button>`).join("")+(comps.length>3?`<button type="button" class="journey-league-more" data-standing-logo="${comps[3].id}" title="Ver otras clasificaciones" aria-label="Ver otras clasificaciones" ${canShow?"":"disabled"}>+${comps.length-3}</button>`:"");
   el.innerHTML=logos;
   el.querySelectorAll("[data-standing-logo]").forEach(btn=>btn.addEventListener("click",()=>{
     if(!canShow)return;
@@ -2447,9 +2468,15 @@ function renderStandingsPanel(){
   el.classList.remove("hidden");
   const ids=comps.map(c=>Number(c.id));
   if(!activeStandingCompetitionId||!ids.includes(Number(activeStandingCompetitionId)))activeStandingCompetitionId=ids[0];
+  const active=comps.find(c=>Number(c.id)===Number(activeStandingCompetitionId))||comps[0];
+  if(isCupCompetition(active)){
+    el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>COPA DEL REY</span><strong>Jornada ${journey.number} · Eliminatorias</strong></div><button type="button" class="standings-close" data-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-standing-comp="${c.id}">${matchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${escapeHtml(c.name)}</span></button>`).join("")}</div>${cupFixturesHtmlQ(active,journey)}</div>`;
+    el.querySelector("[data-standings-close]")?.addEventListener("click",()=>{standingsExpanded=false;renderStandingsPanel();renderJourneyLeagues()});
+    el.querySelectorAll("[data-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{activeStandingCompetitionId=Number(btn.dataset.standingComp);renderStandingsPanel()}));
+    return;
+  }
   const missing=ids.filter(id=>!standingsCache.has(id));
   if(missing.length)ensureStandingsForCompetitions(missing);
-  const active=comps.find(c=>Number(c.id)===Number(activeStandingCompetitionId))||comps[0];
   const journeyRows=matchesForJourney(journey.id);
   const baseRows=standingsRowsForCompetition(active.id,journey);
   const liveTable=liveStandingsProjection(baseRows,active.id,journeyRows);

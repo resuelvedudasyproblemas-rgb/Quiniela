@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=206" />
+  <link rel="stylesheet" href="styles.css?v=207" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -371,7 +371,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=223"></script>
+  <script type="module" src="app.js?v=224"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=2";
@@ -995,13 +995,30 @@ function competitionShort(name=""){
   if(n==="UEFA Nations League")return "NL";
   return n.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()||"L";
 }
+function qgIsCupCompetition(comp){
+  return Number(comp?.id||comp?.competition_id)===3951||
+    /copa del rey/i.test(String(comp?.name||comp?.competition_name||""));
+}
+function qgCupFixturesHtml(comp,j){
+  const cup=msFor(j.id).filter(m=>Number(m.competition_id)===Number(comp.id));
+  return `<div class="cup-knockout-panel"><div class="cup-knockout-intro"><span class="cup-knockout-eyebrow">COMPETICIÓN ELIMINATORIA</span><h3>Cruces de Copa del Rey</h3><p>La Copa del Rey no se ordena por puntos ni posiciones. Aquí se muestran los encuentros eliminatorios incluidos en esta jornada.</p></div><div class="cup-fixture-list">${cup.map(m=>{
+    const official=m.home_score!=null&&m.away_score!=null;
+    const live=m.live_status==="inprogress"||m.live_status==="finished";
+    const known=official||(live&&m.live_home_score!=null&&m.live_away_score!=null);
+    const home=official?m.home_score:m.live_home_score,away=official?m.away_score:m.live_away_score;
+    const result=known?`<strong class="cup-fixture-result">${home} – ${away}</strong>`:'<span class="cup-fixture-versus">VS</span>';
+    const time=m.kickoff?new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(m.kickoff)):"Horario por confirmar";
+    const state=official?"Final":m.live_status==="finished"?"Final · provisional":m.live_status==="inprogress"?"En directo":time;
+    return `<div class="cup-fixture"><div class="cup-fixture-meta"><span>Partido ${Number(m.number)}</span><small>${esc(state)}</small></div><div class="cup-fixture-teams"><div>${crest(m.home,m.home_logo_url)}<strong>${esc(stripTeam(m.home))}</strong></div>${result}<div>${crest(m.away,m.away_logo_url)}<strong>${esc(stripTeam(m.away))}</strong></div></div></div>`;
+  }).join("")||'<div class="standings-empty">Todavía no hay cruces disponibles.</div>'}</div></div>`;
+}
 function qgMatchCompetitionBadgeHtml(m){
   const name=String(m?.competition_name||"").trim();
   const logo=String(m?.competition_logo_url||"").trim();
   if(!name||!logo)return "";
   const primary=competitionLogoUrl(logo);
   const fallback=competitionLogoFallback(logo);
-  return `<span class="match-competition-badge" title="${esc(name)}" aria-label="${esc(name)}"><b class="match-competition-fallback">${esc(competitionShort(name))}</b><img src="${esc(primary)}" data-logo-fallback="${esc(fallback)}" alt="${esc(name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
+  return `<span class="match-competition-badge ${qgIsCupCompetition(m)?"is-cup":""}" title="${esc(name)}" aria-label="${esc(name)}"><b class="match-competition-fallback">${esc(competitionShort(name))}</b><img src="${esc(primary)}" data-logo-fallback="${esc(fallback)}" alt="${esc(name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()"></span>`;
 }
 function renderJourneyCompetitions(){
   const el=$("#qgJourneyLeagues");
@@ -1017,7 +1034,7 @@ function renderJourneyCompetitions(){
   el.classList.remove("hidden");
   const canShow=qgVisualState(journey)!=="finished";
   const shown=comps.slice(0,3);
-  const logos=shown.map((c,i)=>`<button type="button" class="journey-league-logo ${qgStandingsExpanded&&Number(qgActiveStandingCompetitionId)===Number(c.id)?"active":""}" style="--league-i:${i}" data-qg-standing-logo="${c.id}" title="Ver clasificación de ${esc(c.name)}" aria-label="Ver clasificación de ${esc(c.name)}" ${canShow?"":"disabled"}><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()}"></button>`).join("")+(comps.length>3?`<button type="button" class="journey-league-more" data-qg-standing-logo="${comps[3].id}" title="Ver otras clasificaciones" aria-label="Ver otras clasificaciones" ${canShow?"":"disabled"}>+${comps.length-3}</button>`:"");
+  const logos=shown.map((c,i)=>`<button type="button" class="journey-league-logo ${qgIsCupCompetition(c)?"is-cup":""} ${qgStandingsExpanded&&Number(qgActiveStandingCompetitionId)===Number(c.id)?"active":""}" style="--league-i:${i}" data-qg-standing-logo="${c.id}" title="${qgIsCupCompetition(c)?"Ver cruces de":"Ver clasificación de"} ${esc(c.name)}" aria-label="${qgIsCupCompetition(c)?"Ver cruces de":"Ver clasificación de"} ${esc(c.name)}" ${canShow?"":"disabled"}><b>${esc(competitionShort(c.name))}</b><img src="${esc(competitionLogoUrl(c.logo))}" data-logo-fallback="${esc(competitionLogoFallback(c.logo))}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onload="this.previousElementSibling.style.display='none'" onerror="const f=this.dataset.logoFallback;if(f&&this.src!==f){this.src=f}else this.remove()}"></button>`).join("")+(comps.length>3?`<button type="button" class="journey-league-more" data-qg-standing-logo="${comps[3].id}" title="Ver otras clasificaciones" aria-label="Ver otras clasificaciones" ${canShow?"":"disabled"}>+${comps.length-3}</button>`:"");
   el.innerHTML=logos;
   el.querySelectorAll("[data-qg-standing-logo]").forEach(btn=>btn.addEventListener("click",()=>{
     if(!canShow)return;
@@ -1186,8 +1203,14 @@ function qgRenderStandings(){
   el.classList.remove("hidden");
   const ids=comps.map(c=>Number(c.id));
   if(!qgActiveStandingCompetitionId||!ids.includes(Number(qgActiveStandingCompetitionId)))qgActiveStandingCompetitionId=ids[0];
-  const missing=ids.filter(id=>!qgStandingsCache.has(id));if(missing.length)qgEnsureStandings(missing);
   const active=comps.find(c=>Number(c.id)===Number(qgActiveStandingCompetitionId))||comps[0];
+  if(qgIsCupCompetition(active)){
+    el.innerHTML=`<div class="standings-sheet"><div class="standings-sheet-head"><div><span>COPA DEL REY</span><strong>Jornada ${journey.number} · Eliminatorias</strong></div><button type="button" class="standings-close" data-qg-standings-close aria-label="Cerrar">×</button></div><div class="standings-chips">${comps.map(c=>`<button type="button" class="standings-chip ${Number(c.id)===Number(active.id)?"active":""}" data-qg-standing-comp="${c.id}">${qgMatchCompetitionBadgeHtml({competition_id:c.id,competition_name:c.name,competition_logo_url:c.logo})}<span>${esc(c.name)}</span></button>`).join("")}</div>${qgCupFixturesHtml(active,journey)}</div>`;
+    el.querySelector("[data-qg-standings-close]")?.addEventListener("click",()=>{qgStandingsExpanded=false;qgRenderStandings();renderJourneyCompetitions()});
+    el.querySelectorAll("[data-qg-standing-comp]").forEach(btn=>btn.addEventListener("click",()=>{qgActiveStandingCompetitionId=Number(btn.dataset.qgStandingComp);qgRenderStandings()}));
+    return;
+  }
+  const missing=ids.filter(id=>!qgStandingsCache.has(id));if(missing.length)qgEnsureStandings(missing);
   const baseRows=qgStandingsRows(active.id,journey);
   const liveTable=qgLiveStandingsProjection(baseRows,active.id,matches||[]);
   const rows=liveTable.rows,teamIds=new Set((matches||[]).flatMap(m=>[Number(m.home_team_id),Number(m.away_team_id)]).filter(Boolean));
