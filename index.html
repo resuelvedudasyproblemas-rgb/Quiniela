@@ -544,9 +544,23 @@ function state(j){
   return ms.some(m=>m.kickoff&&Date.now()>=new Date(m.kickoff).getTime())?"playing":"closed";
 }
 function qgBetConfirmed(j=journey){return Boolean(j&&qgWalletConfirmation(j.id))}
+function qgUnplayed(j){
+ if(!j||qgBetConfirmed(j))return false;
+ if(j.status==="finished"||state(j)==="finished")return true;
+ const ms=msFor(j.id);
+ if(ms.length===6&&ms.every(qgCalculated))return true;
+ if(ms.some(m=>m.live_status==="inprogress"))return false;
+ const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
+ if(ks.length===6)return Date.now()>Math.max(...ks)+4*3600000;
+ if(j.status!=="open"&&j.draw_date){
+   const d=new Date(String(j.draw_date).slice(0,10)+"T12:00:00Z").getTime();
+   if(Number.isFinite(d)&&Date.now()>d+72*3600000)return true;
+ }
+ return false;
+}
 function qgVisualState(j=journey){
   const st=state(j);
-  return qgBetConfirmed(j)&&(st==="open"||st==="closed")?"confirmed":st;
+  return qgUnplayed(j)?"unplayed":qgBetConfirmed(j)&&(st==="open"||st==="closed")?"confirmed":st;
 }
 function canEdit(j=journey){return Boolean(j&&j.status==="open"&&!qgBetConfirmed(j)&&Date.now()<new Date(j.close_at).getTime())}
 function qgEditBlockedMessage(j=journey){return qgBetConfirmed(j)?"Apuesta confirmada: pronósticos y conjunta bloqueados":"Esta jornada de Quinigol ya está cerrada"}
@@ -964,7 +978,7 @@ function goalButtons(n,side,selected,locked,attrs=""){
   return GOALS.map(v=>`<button type="button" class="qg-goal ${selected===v?"selected":""}" data-qg-match="${n}" data-qg-side="${side}" data-qg-goal="${v}" ${attrs} ${locked?"disabled":""}>${v}</button>`).join("");
 }
 function qgPrizeState(j){
-  if(!j||state(j)!=="finished")return "";
+  if(!j||!qgBetConfirmed(j)||state(j)!=="finished")return "";
   // Único criterio para tarjeta grande y selector: conjunta >= 2.
   // Jugar / recargar puede alternar entre resumen del servidor y datos
   // detallados; ambos calculan ahora la misma conjunta, sin sesgo por ranking.
@@ -1188,14 +1202,14 @@ function renderHero(){
   if(!journey)return;
   const st=qgVisualState(journey),res=msFor(journey.id).filter(resolved).length,calc=qgCalculatedCount(journey);
   $("#qgJourneyNumber").textContent=`Jornada ${journey.number}`;
-  $("#qgJourneyKicker").textContent=st==="open"?"PRÓXIMO QUINIGOL":st==="confirmed"?"APUESTA CONFIRMADA":st==="playing"?(calc===6?"RESULTADOS COMPLETOS":"SEGUIMIENTO DE RESULTADOS"):st==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
-  $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?(calc===6?"Resultados completos · 6/6":`En juego · ${calc}/6 resultados`):st==="finished"?"Finalizada · 6/6 resultados":"Cerrada";
+  $("#qgJourneyKicker").textContent=st==="open"?"PRÓXIMO QUINIGOL":st==="confirmed"?"APUESTA CONFIRMADA":st==="playing"?(calc===6?"RESULTADOS COMPLETOS":"SEGUIMIENTO DE RESULTADOS"):st==="finished"?"JORNADA FINALIZADA":st==="unplayed"?"JORNADA SIN APUESTA":"JORNADA CERRADA";
+  $("#qgStatusText").textContent=st==="open"?"Abierta para pronósticos":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?(calc===6?"Resultados completos · 6/6":`En juego · ${calc}/6 resultados`):st==="finished"?"Finalizada · 6/6 resultados":st==="unplayed"?"Sin apuesta confirmada · no cuenta para el historial":"Cerrada";
   const qgDate=$("#qgJourneyDate");
   if(qgDate){
     qgDate.classList.toggle("hidden",st==="playing");
     qgDate.textContent=st==="playing"?"":qgCloseLabel(journey.close_at);
   }
-  $("#qgJourneyCountdown").textContent=st==="open"?`Cierra en ${timeLeft(journey.close_at)}`:st==="confirmed"?"Pronósticos bloqueados":st==="playing"?(calc===6?"Resultados completos":"Resultados en directo"):st==="finished"?"Resultados completos":"Pronósticos cerrados";
+  $("#qgJourneyCountdown").textContent=st==="open"?`Cierra en ${timeLeft(journey.close_at)}`:st==="confirmed"?"Pronósticos bloqueados":st==="playing"?(calc===6?"Resultados completos":"Resultados en directo"):st==="finished"?"Resultados completos":st==="unplayed"?"Solo para consulta · Sin apostar":"Pronósticos cerrados";
   renderJourneyCompetitions();
   const card=$("#qgJourneyCard");
   card.dataset.status=st;
@@ -1212,7 +1226,7 @@ function renderSwitcher(){
     const st=qgVisualState(j),prizeState=st==="finished"?qgPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
     const res=msFor(j.id).filter(resolved).length;
-    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey?.id?"true":"false"}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?(qgCalculatedCount(j)===6?"Completada":"En juego"):st==="finished"?"Finalizada":"Cerrada"}</strong><small>${st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?`${qgCalculatedCount(j)}/6 resultados`:"Pronósticos abiertos"}</small></button>`;
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey?.id?"true":"false"}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?(qgCalculatedCount(j)===6?"Completada":"En juego"):st==="finished"?"Finalizada":st==="unplayed"?"Sin apostar":"Cerrada"}</strong><small>${st==="unplayed"?"Sin confirmar · no cuenta":st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?`${qgCalculatedCount(j)}/6 resultados`:"Pronósticos abiertos"}</small></button>`;
   };
   renderJourneyArchive(el,journeys,journey?.id,qgVisualState,buttonHtml,async id=>{
     try{await ensureQGJourneyLoaded(id);selectedJourneyId=id;savePref("quinigol-journey",id);selectJourney();renderAll();}
@@ -1242,7 +1256,7 @@ function gSummaryMetrics(j=journey){
   const incidents=ms.filter(m=>!qgCalculated(m)&&Boolean(qgExceptionStatus(m)));
   const pending=Math.max(0,6-finals.length-live.length-incidents.length);
   const official=ms.filter(resolved).length,st=state(j);
-  const started=finals.length>0||live.length>0||incidents.length>0||st==="playing"||st==="finished";
+  const started=finals.length>0||live.length>0||incidents.length>0||st==="playing"||st==="finished"||qgUnplayed(j);
   return {ms,finals,live,incidents,pending,official,started,complete:finals.length===6,validated:finals.length===6&&official===6};
 }
 function gSummaryPlayer(uid,joint,m){
@@ -1256,7 +1270,7 @@ function gSummaryPlayer(uid,joint,m){
 function gSummaryPlayerCard(name,s,slot,m){
   return `<div class="overview-player overview-player-${slot}">
     <span class="overview-player-name">${esc(name)}</span>
-    <strong class="overview-player-score"><span class="${m.started&&s.correct>=2?"overview-gold-value":""}">${m.started?s.correct:s.picks}</span><small>${m.started?" aciertos":"/6"}</small></strong>
+    <strong class="overview-player-score"><span class="${m.started&&qgBetConfirmed(journey)&&s.correct>=2?"overview-gold-value":""}">${m.started?s.correct:s.picks}</span><small>${m.started?" aciertos":"/6"}</small></strong>
     <small class="overview-player-sub">${!m.started?"pronósticos preparados":m.complete?"aciertos de la jornada":"aciertos en partidos finalizados"}</small>
     ${m.live.length?`<span class="overview-live-hint">${s.live?`+${s.live} acertando en directo`:"0 acertando en directo"}</span>`:""}
   </div>`;
@@ -1266,10 +1280,10 @@ function renderDashboard(){
   const m=gSummaryMetrics(journey),p1=member(1),p2=member(2);
   const a=gSummaryPlayer(p1?.user_id,false,m),b=gSummaryPlayer(p2?.user_id,false,m),c=gSummaryPlayer(null,true,m);
   const done=m.finals.length,l=m.live.length,issues=m.incidents.length;
-  const status=!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
-  const title=!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
-  const badge=!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
-  const foot=!m.started?"<span>Pronósticos preparados para la jornada</span>"
+  const status=qgUnplayed(journey)?"unplayed":!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
+  const title=status==="unplayed"?"Jornada sin apostar":!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
+  const badge=status==="unplayed"?"SIN APUESTA":!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
+  const foot=status==="unplayed"?"<span>Solo para consulta · No cuenta para el historial ni las estadísticas</span>":!m.started?"<span>Pronósticos preparados para la jornada</span>"
     :l?`<span>Si los partidos en directo acabaran así</span><strong>${esc(p1?.display_name||"J1")} <b class="${a.total>=2?"overview-gold-value":""}">${a.total}</b> <i>·</i> ${esc(p2?.display_name||"J2")} <b class="${b.total>=2?"overview-gold-value":""}">${b.total}</b> <i>·</i> Conjunta <b class="${c.total>=2?"overview-gold-value":""}">${c.total}</b></strong>`
     :`<span>Conjunta: <b class="${c.correct>=2?"overview-gold-value":""}">${c.correct}</b> aciertos${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
   el.className="journey-dashboard qg-dashboard results-overview results-overview-qg state-"+status;
@@ -1505,11 +1519,11 @@ function renderCompare(){
   }).join("");
 }
 function stat(uid){
-  const done=journeys.filter(j=>state(j)==="finished"),scores=done.map(j=>score(uid,j));
+  const done=journeys.filter(j=>state(j)==="finished"&&qgBetConfirmed(j)),scores=done.map(j=>score(uid,j));
   return {best:scores.length?Math.max(...scores.map(s=>s.correct)):0,prizes:scores.filter(s=>s.correct>=2).length,total:scores.reduce((a,s)=>a+s.correct,0),journeys:done.length};
 }
 function jstat(){
-  const done=journeys.filter(j=>state(j)==="finished"),scores=done.map(j=>jointScore(j));
+  const done=journeys.filter(j=>state(j)==="finished"&&qgBetConfirmed(j)),scores=done.map(j=>jointScore(j));
   return {best:scores.length?Math.max(...scores.map(s=>s.correct)):0,prizes:scores.filter(s=>s.correct>=2).length,total:scores.reduce((a,s)=>a+s.correct,0),journeys:done.length};
 }
 function renderStats(){
@@ -1546,7 +1560,7 @@ function qgHistoryJointState(m,jid){
 }
 function renderHistory(){
   const el=$("#qgHistory");if(!el)return;
-  const p1=member(1),p2=member(2),done=[...journeys].filter(j=>state(j)==="finished").sort((a,b)=>b.number-a.number);
+  const p1=member(1),p2=member(2),done=[...journeys].filter(j=>state(j)==="finished"&&qgBetConfirmed(j)).sort((a,b)=>b.number-a.number);
   if(!done.length){el.innerHTML='<div class="empty-card"><div class="empty-icon">⚽</div><h2>Aún no hay historial</h2><p>La primera jornada finalizada aparecerá aquí con los seis marcadores.</p></div>';return}
   renderHistoryBrowser(el,done,j=>{
     const s1=p1?score(p1.user_id,j):{correct:0},s2=p2?score(p2.user_id,j):{correct:0},sj=jointScore(j);

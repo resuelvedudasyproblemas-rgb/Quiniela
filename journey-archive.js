@@ -33,8 +33,9 @@ function renderJourneyArchive(el,allJ,selectedId,displayState,renderButton,onSel
  if(!el)return;
  const st=el.__archiveState||(el.__archiveState={open:false,query:"",all:false});
  const ordered=[...allJ].sort((a,b)=>Number(a.number)-Number(b.number));
- const pending=ordered.filter(j=>displayState(j)!=="finished");
- const finished=ordered.filter(j=>displayState(j)==="finished").reverse();
+ const isPast=s=>s==="finished"||s==="unplayed";
+ const pending=ordered.filter(j=>!isPast(displayState(j)));
+ const finished=ordered.filter(j=>isPast(displayState(j))).reverse();
  const primary=[...pending.slice(0,2)];
  if(finished[0])primary.push(finished[0]);else if(pending[2])primary.push(pending[2]);
  const chosen=ordered.find(j=>Number(j.id)===Number(selectedId));

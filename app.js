@@ -404,12 +404,28 @@ function renderNextJourneyCountdown(){
     el.textContent="Resultados en directo";
   }else if(state==="finished"){
     el.textContent="Resultados oficiales completos";
+  }else if(state==="unplayed"){
+    el.textContent="Sin apuesta · fuera del historial";
   }else{
     el.textContent="Pronósticos cerrados";
   }
 }
 function journeyBetConfirmed(j=journey){
   return Boolean(j&&walletConfirmation("quiniela",j.id));
+}
+function journeyUnplayed(j){
+ if(!j||journeyBetConfirmed(j))return false;
+ if(j.status==="finished"||journeyDisplayState(j)==="finished")return true;
+ const ms=matchesForJourney(j.id);
+ if(ms.length===15&&ms.every(matchCalculated))return true;
+ if(ms.some(m=>m.live_status==="inprogress"))return false;
+ const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
+ if(ks.length===15)return Date.now()>Math.max(...ks)+4*3600000;
+ if(j.status!=="open"&&j.draw_date){
+   const d=new Date(String(j.draw_date).slice(0,10)+"T12:00:00Z").getTime();
+   if(Number.isFinite(d)&&Date.now()>d+72*3600000)return true;
+ }
+ return false;
 }
 function journeyCanEdit(j){
   if(!j || j.status!=="open" || journeyBetConfirmed(j)) return false;
@@ -423,11 +439,11 @@ function journeyEditBlockedMessage(j=journey){
 }
 function journeyVisualState(j){
   const state=journeyDisplayState(j);
-  return journeyBetConfirmed(j)&&(state==="open"||state==="closed")?"confirmed":state;
+  return journeyUnplayed(j)?"unplayed":journeyBetConfirmed(j)&&(state==="open"||state==="closed")?"confirmed":state;
 }
 function journeyStateLabel(j){
   const state=journeyVisualState(j);
-  return state==="open"?"Abierta":state==="confirmed"?"Confirmada":state==="playing"?(journeyCalculatedCount(j)===15?"Completada":"En juego"):state==="finished"?"Finalizada":"Cerrada";
+  return state==="unplayed"?"Sin apostar":state==="open"?"Abierta":state==="confirmed"?"Confirmada":state==="playing"?(journeyCalculatedCount(j)===15?"Completada":"En juego"):state==="finished"?"Finalizada":"Cerrada";
 }
 function resultBarHtml(m,p){
   if(!matchResolved(m)&&matchExceptionStatus(m))return matchExceptionNoticeHtml(m);
@@ -460,7 +476,7 @@ function resultBarHtml(m,p){
   return "";
 }
 function finishedJourneyPrizeState(j){
-  if(!j||journeyDisplayState(j)!=="finished")return "";
+  if(!j||!journeyBetConfirmed(j)||journeyDisplayState(j)!=="finished")return "";
   if(!loadedJourneyIds.has(j.id))return journeySummaries.get(Number(j.id))?.prize_state||"miss";
   const normal=identityUserId?scoreUserJourney(identityUserId,j):{correct:0,resolved:0};
   const e8=scoreJointElige8(j);
@@ -478,7 +494,7 @@ function renderJourneySwitcher(){
     const state=journeyVisualState(j),resolved=journeyResolvedCount(j);
     const prizeState=state==="finished"?finishedJourneyPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
-    const detail=state==="playing"?`${journeyCalculatedCount(j)}/15 resultados`:state==="confirmed"?"Apuesta confirmada · esperando partidos":state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
+    const detail=state==="unplayed"?"Sin confirmar · no cuenta":state==="playing"?`${journeyCalculatedCount(j)}/15 resultados`:state==="confirmed"?"Apuesta confirmada · esperando partidos":state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
     return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey.id?"true":"false"}"><span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small></button>`;
   };
   renderJourneyArchive(el,journeys,journey.id,journeyVisualState,buttonHtml,async id=>{
@@ -579,7 +595,7 @@ function qSummaryMetrics(j=journey){
   const incidents=ms.filter(m=>!matchCalculated(m)&&Boolean(matchExceptionStatus(m)));
   const pending=Math.max(0,15-finals.length-live.length-incidents.length);
   const official=ms.filter(matchResolved).length,st=journeyVisualState(j);
-  const started=finals.length>0||live.length>0||incidents.length>0||st==="playing"||st==="finished";
+  const started=finals.length>0||live.length>0||incidents.length>0||st==="playing"||st==="finished"||st==="unplayed";
   return {ms,finals,live,incidents,pending,official,started,complete:finals.length===15,validated:finals.length===15&&official===15};
 }
 function qSummaryPlayer(uid,m){
@@ -594,7 +610,7 @@ function qSummaryPlayerCard(player,s,slot,m){
   const name=escapeHtml(player?.display_name||(slot===1?"Jugador 1":"Jugador 2"));
   return `<div class="overview-player overview-player-${slot}">
     <span class="overview-player-name">${name}</span>
-    <strong class="overview-player-score"><span class="${m.started&&s.correct>=10?"overview-gold-value":""}">${m.started?s.correct:s.picks}</span><small>${m.started?" aciertos":"/15"}</small></strong>
+    <strong class="overview-player-score"><span class="${m.started&&journeyBetConfirmed(journey)&&s.correct>=10?"overview-gold-value":""}">${m.started?s.correct:s.picks}</span><small>${m.started?" aciertos":"/15"}</small></strong>
     <small class="overview-player-sub">${!m.started?"pronósticos preparados":m.complete?"aciertos de la jornada":"aciertos en partidos finalizados"}</small>
     ${m.live.length?`<span class="overview-live-hint">${s.live?`+${s.live} acertando en directo`:"0 acertando en directo"}</span>`:""}
   </div>`;
@@ -604,10 +620,10 @@ function renderJourneyDashboard(){
   const m=qSummaryMetrics(journey),p1=memberBySlot(1),p2=memberBySlot(2);
   const a=qSummaryPlayer(p1?.user_id,m),b=qSummaryPlayer(p2?.user_id,m);
   const done=m.finals.length,l=m.live.length,issues=m.incidents.length;
-  const status=!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
-  const title=!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
-  const badge=!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
-  const foot=!m.started?"<span>Pronósticos preparados para la jornada</span>"
+  const status=journeyUnplayed(journey)?"unplayed":!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
+  const title=status==="unplayed"?"Jornada sin apostar":!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
+  const badge=status==="unplayed"?"SIN APUESTA":!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
+  const foot=status==="unplayed"?"<span>Solo para consulta · No cuenta para el historial ni las estadísticas</span>":!m.started?"<span>Pronósticos preparados para la jornada</span>"
     :l?`<span>Si los partidos en directo acabaran así</span><strong>${escapeHtml(p1?.display_name||"J1")} <b class="${a.total>=10?"overview-gold-value":""}">${a.total}</b> <i>·</i> ${escapeHtml(p2?.display_name||"J2")} <b class="${b.total>=10?"overview-gold-value":""}">${b.total}</b></strong>`
     :`<span>${commonCorrectCount(journey)} coincidencias acertadas${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
   el.className="journey-dashboard results-overview results-overview-q state-"+status;
@@ -1684,7 +1700,7 @@ function jointPrizeStats(completed){
 }
 function renderStats(){
   const el=$("#statsContent");if(!el)return;
-  const completed=journeys.filter(j=>journeyResolvedCount(j)===15).sort((a,b)=>a.number-b.number),p1=memberBySlot(1),p2=memberBySlot(2);
+  const completed=journeys.filter(j=>journeyResolvedCount(j)===15&&journeyBetConfirmed(j)).sort((a,b)=>a.number-b.number),p1=memberBySlot(1),p2=memberBySlot(2);
   if(!completed.length||!p1||!p2){el.innerHTML=`<div class="stats-empty">Las estadísticas completas aparecerán cuando haya jornadas con 15/15 resultados.</div>`;return}
   const a=statsForUser(p1.user_id,completed),b=statsForUser(p2.user_id,completed),joint=jointPrizeStats(completed);
   let wins1=0,wins2=0,ties=0;
@@ -2478,9 +2494,9 @@ function renderAll(){
       deadlineEl.innerHTML="";
     }
   }
-  const statusLabels={open:"Abierta para pronósticos",confirmed:"Apuesta confirmada · esperando partidos",playing:calculated===15?"Resultados completos · 15/15":`En juego · ${calculated}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
+  const statusLabels={unplayed:"Sin apuesta confirmada · no cuenta para el historial",open:"Abierta para pronósticos",confirmed:"Apuesta confirmada · esperando partidos",playing:calculated===15?"Resultados completos · 15/15":`En juego · ${calculated}/15 resultados`,closed:"Cerrada · esperando partidos",finished:"Finalizada · 15/15 resultados"};
   $(".status-text").textContent=statusLabels[state]||"Jornada";
-  const kicker=$("#journeyCard .journey-kicker");if(kicker)kicker.textContent=state==="playing"?(calculated===15?"RESULTADOS COMPLETOS":"SEGUIMIENTO DE RESULTADOS"):state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":"JORNADA CERRADA";
+  const kicker=$("#journeyCard .journey-kicker");if(kicker)kicker.textContent=state==="playing"?(calculated===15?"RESULTADOS COMPLETOS":"SEGUIMIENTO DE RESULTADOS"):state==="confirmed"?"APUESTA CONFIRMADA":state==="open"?"PRÓXIMA JORNADA":state==="finished"?"JORNADA FINALIZADA":state==="unplayed"?"JORNADA SIN APUESTA":"JORNADA CERRADA";
   const journeyCard=$("#journeyCard");
   if(journeyCard){
     journeyCard.dataset.status=state;
@@ -2499,7 +2515,7 @@ function renderAll(){
 
 function renderMatches(){
   const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),opponent=members.find(m=>m.user_id!==identityUserId);
-  const showJointE8=journeyBetConfirmed(journey)||journeyDisplayState(journey)==="finished";
+  const showJointE8=journeyBetConfirmed(journey);
   const confirmedJointE8=new Set(showJointE8?jointElige8Selections(journey.id).map(e=>Number(e.match_number)):[]);
   $("#matches").innerHTML=normal.map(m=>{
     const mp=myPickFor(m.number),jointE8=confirmedJointE8.has(Number(m.number)),highlightJointE8Card=jointE8&&Number(journey?.number)===8,resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
@@ -2862,7 +2878,7 @@ function scoreElige8(uid,j){
 }
 
 function renderHistory(){
-  const historic=journeys.filter(j=>journeyResolvedCount(j)===15).sort((a,b)=>b.number-a.number);$("#historyCount").textContent=historic.length;
+  const historic=journeys.filter(j=>journeyResolvedCount(j)===15&&journeyBetConfirmed(j)).sort((a,b)=>b.number-a.number);$("#historyCount").textContent=historic.length;
   if(!historic.length){$("#historyList").innerHTML=`<div class="history-empty">Todavía no hay jornadas con los 15 resultados oficiales. Las jornadas en juego se mantienen arriba hasta completarse.</div>`;return}
   const p1=memberBySlot(1),p2=memberBySlot(2);
   renderHistoryBrowser($("#historyList"),historic,j=>{
@@ -2892,7 +2908,7 @@ function renderHistory(){
 
 function openHistory(jid){
   const j=journeys.find(x=>x.id===jid);
-  if(!j) return;
+  if(!j||!journeyBetConfirmed(j))return;
 
   const ms=journeyMatches(j.id);
   const p1=memberBySlot(1),p2=memberBySlot(2);
