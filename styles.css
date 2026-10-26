@@ -9920,3 +9920,34 @@ html[data-theme="dark"] .results-overview{--overview-gold:#f2c968}
 html[data-theme="dark"] .qg-history-score span b.qg-gold-number{
   color:#f2c968!important;
 }
+
+/* Estado final sin apuesta confirmada: gris pizarra (ambos juegos) */
+html .journey-choice.state-unplayed,
+html .journey-choice.state-unplayed.active,
+html #journeySwitcher .journey-choice.state-unplayed,
+html #qgJourneySwitcher .journey-choice.state-unplayed{
+ background:linear-gradient(145deg,#687a8c,#506378 62%,#405268)!important;
+ border-color:#52647b!important;color:#fff!important;opacity:1!important;
+ box-shadow:0 5px 14px rgba(44,64,83,.2)!important;
+}
+html .journey-choice.state-unplayed>span{
+ background:rgba(255,255,255,.16)!important;color:#fff!important;
+}
+html .journey-choice.state-unplayed>strong,
+html .journey-choice.state-unplayed>small{color:#fff!important}
+html .journey-choice.state-unplayed>small{opacity:.88!important}
+html #journeyCard[data-status="unplayed"],
+html #qgJourneyCard[data-status="unplayed"]{
+ background:linear-gradient(135deg,#52677d,#677c90 62%,#8293a2)!important;
+ color:#fff!important;box-shadow:0 12px 25px rgba(41,58,75,.2)!important;
+}
+html #journeyCard[data-status="unplayed"] .status-dot,
+html #qgJourneyCard[data-status="unplayed"] .status-dot{
+ background:#cddce8!important;box-shadow:0 0 0 4px rgba(226,235,243,.17)!important;
+}
+.results-overview.state-unplayed .overview-status{
+ color:#60738a!important;background:color-mix(in srgb,#6b7d91 13%,var(--surface))!important;
+ border-color:color-mix(in srgb,#6b7d91 30%,var(--border))!important;
+}
+html[data-theme="dark"] .results-overview.state-unplayed .overview-status{color:#b6c9df!important}
+.results-overview.state-unplayed .overview-gold-value{color:inherit!important}
