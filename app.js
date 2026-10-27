@@ -560,6 +560,16 @@ function nextUnresolvedMatch(j=journey){
     return at-bt || a.number-b.number;
   })[0]||null;
 }
+// El Pleno al 15 solo suma un acierto si la MISMA columna acierta
+// los otros 14 signos. La valoración visual del Pleno se mantiene aparte.
+function plenoCountableForUser(uid,jid,resultOf=calculatedResultForMatch){
+  if(!uid||jid==null)return false;
+  const normal=matchesForJourney(jid).filter(m=>m.number>=1&&m.number<=14);
+  return normal.length===14&&normal.every(m=>{
+    const actual=resultOf(m);
+    return actual!=="—"&&displayPickForJourney(uid,jid,m.number)===actual;
+  });
+}
 function commonCorrectCount(j=journey){
   const p1=memberBySlot(1),p2=memberBySlot(2);
   if(!p1||!p2) return 0;
@@ -569,7 +579,9 @@ function commonCorrectCount(j=journey){
     if(actual==="—") continue;
     const a=displayPickForJourney(p1.user_id,j.id,m.number);
     const b=displayPickForJourney(p2.user_id,j.id,m.number);
-    if(a===b && a===actual) n++;
+    if(a===b&&a===actual&&(m.number!==15||(
+      plenoCountableForUser(p1.user_id,j.id)&&plenoCountableForUser(p2.user_id,j.id)
+    )))n++;
   }
   return n;
 }
@@ -590,7 +602,9 @@ function projectedScoreUserJourney(uid,j){
     if(actual==="—") continue;
     considered++;
     if(!matchResolved(m)) live++;
-    if(displayPickForJourney(uid,j.id,m.number)===actual) correct++;
+    if(displayPickForJourney(uid,j.id,m.number)===actual&&(
+      m.number!==15||plenoCountableForUser(uid,j.id,projectedResultForMatch)
+    ))correct++;
   }
   return {correct,considered,live};
 }
@@ -606,8 +620,16 @@ function qSummaryMetrics(j=journey){
 function qSummaryPlayer(uid,m){
   let correct=0,live=0;
   if(uid){
-    for(const x of m.finals)if(displayPickForJourney(uid,x.journey_id,x.number)===calculatedResultForMatch(x))correct++;
-    for(const x of m.live)if(displayPickForJourney(uid,x.journey_id,x.number)===projectedResultForMatch(x))live++;
+    for(const x of m.finals){
+      if(displayPickForJourney(uid,x.journey_id,x.number)===calculatedResultForMatch(x)&&(
+        x.number!==15||plenoCountableForUser(uid,x.journey_id)
+      ))correct++;
+    }
+    for(const x of m.live){
+      if(displayPickForJourney(uid,x.journey_id,x.number)===projectedResultForMatch(x)&&(
+        x.number!==15||plenoCountableForUser(uid,x.journey_id,projectedResultForMatch)
+      ))live++;
+    }
   }
   return {picks:uid?completedCountForUser(uid):0,correct,live,total:correct+live};
 }
@@ -2889,7 +2911,9 @@ function scoreUserJourney(uid,j){
     if(actual==="—") continue;
     resolved++;
     const mine=displayPickForJourney(uid,j.id,m.number);
-    if(mine===actual) correct++;
+    if(mine===actual&&(
+      m.number!==15||plenoCountableForUser(uid,j.id,actualResultForMatch)
+    ))correct++;
   }
   return {correct,resolved};
 }
@@ -3338,7 +3362,13 @@ function liveMatchLabel(m){
   const text=String(m.live_status_text||"");
   if(m.live_status==="inprogress"){
     if(/^Penaltis/i.test(text))return "PENALTIS · sin tanda";
-    if(/^Prórroga/i.test(text))return text;
+    if(/^Prórroga/i.test(text)){
+      // Etiqueta corta: en el marcador pequeño deben caber fase Y minuto.
+      const clock=Number(m.live_minute);
+      const fromText=text.match(/(\d{2,3})(?:['′])/);
+      const minute=Number.isFinite(clock)&&clock>=90?clock:(fromText?Number(fromText[1]):null);
+      return minute!=null?`PRÓR. ${minute}′`:"PRÓRROGA";
+    }
     return text||"En directo";
   }
   if(m.live_status==="finished"){
