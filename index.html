@@ -1249,7 +1249,11 @@ function renderSwitcher(){
     const st=qgVisualState(j),prizeState=st==="finished"?qgPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
     const res=msFor(j.id).filter(resolved).length;
-    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey?.id?"true":"false"}"><span>J${j.number}</span><strong>${st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?(qgCalculatedCount(j)===6?"Completada":"En juego"):st==="finished"?"Finalizada":st==="unplayed"?"Sin apostar":"Cerrada"}</strong><small>${st==="unplayed"?"Sin confirmar · no cuenta":st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?`${qgCalculatedCount(j)}/6 resultados`:"Pronósticos abiertos"}</small></button>`;
+    const status=st==="open"?"Abierta":st==="confirmed"?"Confirmada":st==="playing"?(qgCalculatedCount(j)===6?"Completada":"En juego"):st==="finished"?"Finalizada":st==="unplayed"?"Sin apostar":"Cerrada";
+    const detail=st==="unplayed"?"Sin confirmar · no cuenta":st==="finished"?"6/6 resultados · finalizada":st==="confirmed"?"Apuesta confirmada · esperando partidos":st==="playing"?`${qgCalculatedCount(j)}/6 resultados`:"Pronósticos abiertos";
+    const shortDetail=st==="unplayed"?"No cuenta":st==="finished"?"6/6 resultados":st==="confirmed"?"Apuesta cerrada":st==="playing"?`${qgCalculatedCount(j)}/6 resultados`:st==="open"?"Pronósticos":"Pendiente";
+    const fullLabel=esc(`Jornada ${j.number} · ${status} · ${detail}`);
+    return `<button type="button" class="journey-choice ${j.id===journey?.id?"active":""} state-${st}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey?.id?"true":"false"}" aria-label="${fullLabel}" title="${fullLabel}"><span>J${j.number}</span><strong>${status}</strong><small>${shortDetail}</small></button>`;
   };
   renderJourneyArchive(el,journeys,journey?.id,qgVisualState,buttonHtml,async id=>{
     try{await ensureQGJourneyLoaded(id);selectedJourneyId=id;savePref("quinigol-journey",id);selectJourney();renderAll();}
