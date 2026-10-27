@@ -10135,3 +10135,33 @@ html .journey-league-logo.is-cup img{
   #journeySwitcher .journey-choice>small,
   #qgJourneySwitcher .journey-choice>small{font-size:.52rem!important}
 }
+
+/* Copa: minuto visible durante la prórroga en los dos marcadores v211 */
+.match-card.has-live-result .live-fixture-score.is-extra-time small{
+  white-space:nowrap!important;
+  letter-spacing:0!important;
+  font-size:.57rem!important;
+  line-height:1.15;
+  font-weight:950;
+  font-variant-numeric:tabular-nums;
+}
+.qg-match-card .qg-live-header-score.qg-extra-time-score>small{
+  font-size:.49rem!important;
+  line-height:1.12!important;
+  letter-spacing:0!important;
+  white-space:normal!important;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+@media(max-width:430px){
+  .match-card.has-live-result .live-fixture-score.is-extra-time small{
+    font-size:.53rem!important;
+  }
+  .qg-match-card .qg-live-header-score.qg-extra-time-score{
+    min-height:42px;
+  }
+  .qg-match-card .qg-live-header-score.qg-extra-time-score>small{
+    font-size:.48rem!important;
+  }
+}
+
