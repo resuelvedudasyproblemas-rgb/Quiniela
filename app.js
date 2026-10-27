@@ -3331,13 +3331,22 @@ function hasLiveMatch(m){
     && (m.live_status==="inprogress" || m.live_status==="finished");
 }
 function liveMatchPaused(m){
-  return String(m?.live_status_text||"").trim().toLowerCase()==="descanso";
+  return String(m?.live_status_text||"").trim().toLowerCase().startsWith("descanso");
 }
 function liveMatchLabel(m){
-  if(!m) return "";
-  if(m.live_status==="inprogress") return m.live_status_text || "En directo";
-  if(m.live_status==="finished") return "FINAL";
-  return m.live_status_text || "";
+  if(!m)return "";
+  const text=String(m.live_status_text||"");
+  if(m.live_status==="inprogress"){
+    if(/^Penaltis/i.test(text))return "PENALTIS · sin tanda";
+    if(/^Prórroga/i.test(text))return text;
+    return text||"En directo";
+  }
+  if(m.live_status==="finished"){
+    if(/penaltis/i.test(text))return "FINAL · sin tanda";
+    if(/prórroga/i.test(text))return "FINAL · prórroga";
+    return "FINAL";
+  }
+  return text;
 }
 function scorerLabel(g){
   const name=String(g?.name||"").trim();
@@ -3578,7 +3587,7 @@ openMatchDetail=function(n,jid){
   var strong=document.createElement("strong");
   strong.textContent=String(m.live_home_score)+"–"+String(m.live_away_score);
   var note=document.createElement("em");
-  note.textContent=m.live_status==="finished"?"RESULTADO FINAL":"EN DIRECTO";
+  note.textContent=m.live_status==="finished"?"RESULTADO FINAL":/^Penaltis/i.test(String(m.live_status_text||""))?"PENALTIS · NO CUENTAN":/^Prórroga/i.test(String(m.live_status_text||""))?"EN PRÓRROGA":"EN DIRECTO";
   score.appendChild(small);
   score.appendChild(strong);
   score.appendChild(note);
