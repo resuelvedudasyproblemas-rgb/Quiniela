@@ -570,12 +570,20 @@ function pickText(p){return p?.home_goals&&p?.away_goals?`${p.home_goals}-${p.aw
 function goalNum(v){return v==="M"?3:Number(v)}
 function goalToken(v){const n=Math.max(0,Math.min(3,Math.round(Number(v)||0)));return n>=3?"M":String(n)}
 function actual(m){return resolved(m)?`${m.home_score>=3?"M":m.home_score}-${m.away_score>=3?"M":m.away_score}`:"—"}
-function qgIsHalftime(m){return String(m?.live_status_text||"").trim().toLowerCase()==="descanso"}
+function qgIsHalftime(m){return String(m?.live_status_text||"").trim().toLowerCase().startsWith("descanso")}
+function qgLivePhase(m){
+  const label=String(m?.live_status_text||"");
+  if(/penaltis/i.test(label))return m?.live_status==="finished"?"Final tras penaltis":"Penaltis · sin contar";
+  if(/prórroga/i.test(label))return m?.live_status==="finished"?"Final tras prórroga":qgIsHalftime(m)?"Descanso prórroga":"Prórroga";
+  return qgIsHalftime(m)?"Descanso":m?.live_status==="finished"?"Final":"En directo";
+}
 function qgHeaderScore(m){
   if(resolved(m))return {home:String(m.home_score),away:String(m.away_score),cls:"official",label:"FINAL"};
   if(qgExceptionStatus(m))return {home:m.live_home_score!=null?String(m.live_home_score):"–",away:m.live_away_score!=null?String(m.live_away_score):"–",cls:"exception",label:qgExceptionLabel(m).toUpperCase()};
   if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
-    const label=m.live_status==="inprogress"?(qgIsHalftime(m)?"DESCANSO":(m.live_minute?m.live_minute+"′":"EN DIRECTO")):"FINAL";
+    const phase=qgLivePhase(m);
+    const label=m.live_status==="finished"?(/penaltis/i.test(phase)?"FIN PEN.":/prórroga/i.test(phase)?"FIN PRÓR.":"FINAL"):
+      (/^Penaltis/i.test(phase)?"PENALTIS":/^Prórroga/i.test(phase)?"PRÓRROGA":qgIsHalftime(m)?"DESCANSO":(m.live_minute?m.live_minute+"′":"EN DIRECTO"));
     return {home:String(m.live_home_score),away:String(m.live_away_score),cls:"live",label};
   }
   return {home:"–",away:"–",cls:"pending",label:""};
@@ -1435,7 +1443,7 @@ function renderPlay(){
     let result="";
     if(r!=="—")result=`<div class="qg-result ${saved?(ok?"correct":"wrong"):"pending"} ${official?"":"sports-final-result"}"><span>${qgOfficialConflict(m)?"Corregido por SELAE":"Resultado final"}</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
     else if(qgExceptionStatus(m))result=qgExceptionResultHtml(m);
-    else if(proj!=="—")result=`<div class="qg-result live"><span>${qgIsHalftime(m)?"Descanso":"En directo"}</span><strong>${esc(proj)}</strong>${qgLiveFreshnessHtml(m)}</div>`;
+    else if(proj!=="—")result=`<div class="qg-result live"><span>${esc(qgLivePhase(m))}</span><strong>${esc(proj)}</strong>${qgLiveFreshnessHtml(m)}</div>`;
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
     const scoreHeader=hs.cls==="live"||hs.cls==="official"||hs.cls==="exception"
