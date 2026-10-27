@@ -3453,7 +3453,7 @@ function livePickLabel(m){return livePickSummary(m).label;}
 function buildLiveScoreNode(m){
   var score=document.createElement("span");
   var pickState=livePickState(m);
-  score.className="fixture-score live-fixture-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState;
+  score.className="fixture-score live-fixture-score "+(m.live_status==="inprogress"?"is-live":"is-provisional")+" live-pick-"+pickState+(/^Prórroga/i.test(String(m.live_status_text||""))?" is-extra-time":"");
   var small=document.createElement("small");
   if(m.live_status==="inprogress"&&!liveMatchPaused(m)){
     var dot=document.createElement("i");
