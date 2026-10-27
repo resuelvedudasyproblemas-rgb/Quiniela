@@ -10026,3 +10026,96 @@ html .journey-league-logo.is-cup img{
     font-size:.68rem;
   }
 }
+
+
+/* Selector de jornadas: tarjetas legibles, alineadas y sin desbordamiento v209 */
+#journeySwitcher .journey-primary-row,
+#qgJourneySwitcher .journey-primary-row{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:stretch!important;
+  gap:8px!important;
+  width:100%;
+  max-width:620px;
+  margin-inline:auto;
+}
+#journeySwitcher .journey-primary-row .journey-choice,
+#qgJourneySwitcher .journey-primary-row .journey-choice,
+#journeySwitcher .archive-selector-items .journey-choice,
+#qgJourneySwitcher .archive-selector-items .journey-choice{
+  box-sizing:border-box!important;
+  flex:none!important;
+  display:grid!important;
+  grid-template-rows:23px minmax(13px,auto) minmax(12px,auto);
+  justify-items:center;
+  align-content:center;
+  gap:4px;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:80px!important;
+  padding:8px 6px!important;
+  border-radius:15px;
+  overflow:hidden;
+  text-align:center;
+}
+#journeySwitcher .journey-choice>span,
+#qgJourneySwitcher .journey-choice>span{
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  height:23px;
+  padding:0 7px;
+  margin:0!important;
+  line-height:1;
+}
+#journeySwitcher .journey-choice>strong,
+#qgJourneySwitcher .journey-choice>strong{
+  display:block;
+  width:100%;
+  min-width:0;
+  margin:0;
+  font-size:.69rem!important;
+  line-height:1.18!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#journeySwitcher .journey-choice>small,
+#qgJourneySwitcher .journey-choice>small{
+  display:block;
+  width:100%;
+  min-width:0;
+  margin:0!important;
+  font-size:.60rem!important;
+  line-height:1.2!important;
+  font-weight:700;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  overflow-wrap:normal!important;
+}
+#journeySwitcher .journey-choice.active,
+#qgJourneySwitcher .journey-choice.active{
+  outline:2px solid var(--brand);
+  outline-offset:1px;
+}
+#journeySwitcher .journey-choice:focus-visible,
+#qgJourneySwitcher .journey-choice:focus-visible{
+  outline:3px solid var(--brand);
+  outline-offset:2px;
+}
+@media(max-width:370px){
+  #journeySwitcher .journey-primary-row,
+  #qgJourneySwitcher .journey-primary-row{gap:5px!important}
+  #journeySwitcher .journey-primary-row .journey-choice,
+  #qgJourneySwitcher .journey-primary-row .journey-choice{
+    padding:7px 4px!important;
+  }
+  #journeySwitcher .journey-choice>strong,
+  #qgJourneySwitcher .journey-choice>strong{font-size:.65rem!important}
+  #journeySwitcher .journey-choice>small,
+  #qgJourneySwitcher .journey-choice>small{font-size:.55rem!important}
+}
