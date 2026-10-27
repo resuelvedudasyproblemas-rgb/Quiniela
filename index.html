@@ -1459,7 +1459,7 @@ function renderPlay(){
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
     const scoreHeader=hs.cls==="live"||hs.cls==="official"||hs.cls==="exception"
-      ? `<div class="qg-live-header-score ${hs.cls==="official"?"official":hs.cls==="exception"?"exception":""}"><strong><span>${esc(hs.home)}</span><b>–</b><span>${esc(hs.away)}</span></strong>${hs.label?`<small>${esc(hs.label)}</small>`:""}</div>`
+      ? `<div class="qg-live-header-score ${hs.cls==="official"?"official":hs.cls==="exception"?"exception":""} ${/^PRÓR\./.test(hs.label)?"qg-extra-time-score":""}" aria-label="${esc(qgLivePhase(m))}"><strong><span>${esc(hs.home)}</span><b>–</b><span>${esc(hs.away)}</span></strong>${hs.label?`<small>${esc(hs.label)}</small>`:""}</div>`
       : "";
     const homeHeader=hs.cls==="pending"?`<strong class="qg-head-score pending">${esc(hs.home)}</strong>`:"";
     const awayHeader=hs.cls==="pending"?`<strong class="qg-head-score pending">${esc(hs.away)}</strong>`:"";
