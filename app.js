@@ -498,7 +498,9 @@ function renderJourneySwitcher(){
     const prizeState=state==="finished"?finishedJourneyPrizeState(j):"";
     const prizeClass=prizeState?` finished-${prizeState}`:"";
     const detail=state==="unplayed"?"Sin confirmar · no cuenta":state==="playing"?`${journeyCalculatedCount(j)}/15 resultados`:state==="confirmed"?"Apuesta confirmada · esperando partidos":state==="open"?"Pronósticos abiertos":state==="finished"?`${resolved}/15 resultados · finalizada`:"Esperando partidos";
-    return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey.id?"true":"false"}"><span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${detail}</small></button>`;
+    const shortDetail=state==="unplayed"?"No cuenta":state==="playing"?`${journeyCalculatedCount(j)}/15 resultados`:state==="confirmed"?"Apuesta cerrada":state==="open"?"Pronósticos":state==="finished"?`${resolved}/15 resultados`:"Pendiente";
+    const fullLabel=escapeHtml(`Jornada ${j.number} · ${journeyStateLabel(j)} · ${detail}`);
+    return `<button type="button" class="journey-choice ${j.id===journey.id?"active":""} state-${state}${prizeClass}" data-journey-open="${j.id}" aria-current="${j.id===journey.id?"true":"false"}" aria-label="${fullLabel}" title="${fullLabel}"><span>J${j.number}</span><strong>${journeyStateLabel(j)}</strong><small>${shortDetail}</small></button>`;
   };
   renderJourneyArchive(el,journeys,journey.id,journeyVisualState,buttonHtml,async id=>{
     try{await ensureJourneyLoaded(id);selectedJourneyId=id;saveSelectedJourneyId(id);selectActiveJourney();renderAll();}
