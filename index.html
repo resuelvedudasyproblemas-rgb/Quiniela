@@ -1028,7 +1028,8 @@ function qgCupFixturesHtml(comp,j){
     const home=official?m.home_score:m.live_home_score,away=official?m.away_score:m.live_away_score;
     const result=known?`<strong class="cup-fixture-result">${home} – ${away}</strong>`:'<span class="cup-fixture-versus">VS</span>';
     const time=m.kickoff?new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(m.kickoff)):"Horario por confirmar";
-    const state=official?"Final":m.live_status==="finished"?(m.live_status_text||"Final · provisional"):m.live_status==="inprogress"?(m.live_status_text||"En directo"):time;
+    const exception=qgExceptionStatus(m);
+    const state=official?"Final":exception==="postponed"?"Aplazado · "+time:exception?qgExceptionLabel(m):m.live_status==="finished"?(m.live_status_text||"Final · provisional"):m.live_status==="inprogress"?(m.live_status_text||"En directo"):time;
     return `<div class="cup-fixture"><div class="cup-fixture-meta"><span>Partido ${Number(m.number)}</span><small>${esc(state)}</small></div><div class="cup-fixture-teams"><div>${crest(m.home,m.home_logo_url)}<strong>${esc(stripTeam(m.home))}</strong></div>${result}<div>${crest(m.away,m.away_logo_url)}<strong>${esc(stripTeam(m.away))}</strong></div></div></div>`;
   }).join("")||'<div class="standings-empty">Todavía no hay cruces disponibles.</div>'}</div></div>`;
 }
