@@ -2264,7 +2264,8 @@ function cupFixturesHtmlQ(comp,j){
     const home=official?m.home_score:m.live_home_score,away=official?m.away_score:m.live_away_score;
     const result=known?`<strong class="cup-fixture-result">${home} – ${away}</strong>`:'<span class="cup-fixture-versus">VS</span>';
     const time=m.kickoff?new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(m.kickoff)):"Horario por confirmar";
-    const state=official?"Final":m.live_status==="finished"?(m.live_status_text||"Final · provisional"):m.live_status==="inprogress"?(m.live_status_text||"En directo"):time;
+    const exception=matchExceptionStatus(m);
+    const state=official?"Final":exception==="postponed"?"Aplazado · "+time:exception?matchExceptionLabel(m):m.live_status==="finished"?(m.live_status_text||"Final · provisional"):m.live_status==="inprogress"?(m.live_status_text||"En directo"):time;
     return `<div class="cup-fixture">
       <div class="cup-fixture-meta"><span>Partido ${Number(m.number)}</span><small>${escapeHtml(state)}</small></div>
       <div class="cup-fixture-teams"><div>${teamCrestHtml(m.home,"xs",m.home_logo_url)}<strong>${escapeHtml(m.home.replace(/\s*\([MF]\)$/i,""))}</strong></div>${result}<div>${teamCrestHtml(m.away,"xs",m.away_logo_url)}<strong>${escapeHtml(m.away.replace(/\s*\([MF]\)$/i,""))}</strong></div></div>
