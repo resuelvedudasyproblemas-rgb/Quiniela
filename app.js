@@ -259,7 +259,15 @@ function matchExceptionLabel(m){
 }
 function matchExceptionBadgeHtml(m){
   const label=matchExceptionLabel(m);
-  return label?`<span class="match-exception-badge" title="${escapeHtml(label)}">⚠ ${escapeHtml(label)}</span>`:"";
+  const exception=label?`<span class="match-exception-badge" title="${escapeHtml(label)}">⚠ ${escapeHtml(label)}</span>`:"";
+  const method=String(m?.resolution_method||"");
+  const resolution=method==="draw"?'<span class="match-resolution-badge by-draw">🎲 SORTEO SELAE</span>':method==="played"?'<span class="match-resolution-badge by-played">✓ JUGADO</span>':"";
+  return exception+resolution;
+}
+function officialResolutionInfoHtml(m){
+  if(!m?.resolution_method)return "";
+  const note=String(m.resolution_note||"").trim();
+  return `<div class="official-resolution-note">${escapeHtml(note)} <a href="https://www.selae.es/es/web-corporativa/comunicacion/avisos-de-interes" target="_blank" rel="noopener noreferrer">Fuente: SELAE</a></div>`;
 }
 function matchExceptionNoticeHtml(m){
   const label=matchExceptionLabel(m);
@@ -292,7 +300,7 @@ function calculatedResultForMatch(m){
 function matchCalculated(m){return calculatedResultForMatch(m)!=="—"}
 function journeyCalculatedCount(j){return j?matchesForJourney(j.id).filter(matchCalculated).length:0}
 function officialResultConflict(m){
-  if(!m||!matchResolved(m)||m.live_status!=="finished"||
+  if(!m||!matchResolved(m)||m.resolution_method==="draw"||m.live_status!=="finished"||
      m.live_home_score==null||m.live_away_score==null)return false;
   const sports=Number(m.number)===15
     ? `${normalizedGoalScore(m.live_home_score)}-${normalizedGoalScore(m.live_away_score)}`
@@ -449,7 +457,7 @@ function journeyStateLabel(j){
   return state==="unplayed"?"Sin apostar":state==="open"?"Abierta":state==="confirmed"?"Confirmada":state==="playing"?(journeyCalculatedCount(j)===15?"Completada":"En juego"):state==="finished"?"Finalizada":"Cerrada";
 }
 function resultBarHtml(m,p){
-  if(!matchResolved(m)&&matchExceptionStatus(m))return matchExceptionNoticeHtml(m);
+  if(!matchResolved(m)&&matchExceptionStatus(m))return matchExceptionNoticeHtml(m)+officialResolutionInfoHtml(m);
   if(matchResolved(m)){
     if(m.number===15){
       const officialToken=actualResultForMatch(m);
@@ -464,7 +472,8 @@ function resultBarHtml(m,p){
     const ok=hasPick && p.pick===actual;
     const outcome=!hasPick?"Sin pronóstico":ok?"Acierto":"Fallo";
     const cls=!hasPick?"neutral":ok?"correct":"wrong";
-    return `<div class="match-result-bar ${cls}"><span>${officialResultConflict(m)?"Corregido por SELAE · ":""}Signo <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span></div>`;
+    const method=m.resolution_method==="draw"?"🎲 Sorteo SELAE · ":m.resolution_method==="played"?"Resultado jugado · ":officialResultConflict(m)?"Corregido por SELAE · ":"";
+    return `<div class="match-result-bar ${cls}"><span>${method}Signo <strong>${actual}</strong></span><span class="result-outcome">${outcome}</span>${officialResolutionInfoHtml(m)}</div>`;
   }
   if(finalSportsResult(m)){
     const h=Number(m.live_home_score),a=Number(m.live_away_score),sign=calculatedResultForMatch(m);
@@ -2830,8 +2839,8 @@ function renderCompare(){
     const official=matchResolved(m);
     const projectedResult=projectedResultForMatch(m);
     const liveResult=!official&&projectedResult!=="—";
-    const resultStatus=official?"Oficial":matchExceptionStatus(m)?matchExceptionLabel(m):finalSportsResult(m)?"Final":liveResult?"En directo":"Pendiente";
-    const rawScore=m.home_score!=null&&m.away_score!=null
+    const resultStatus=official?(m.resolution_method==="draw"?"Sorteo SELAE":"Oficial"):matchExceptionStatus(m)?matchExceptionLabel(m):finalSportsResult(m)?"Final":liveResult?"En directo":"Pendiente";
+    const rawScore=m.resolution_method==="draw"?"Sorteo SELAE":m.home_score!=null&&m.away_score!=null
       ? `${m.home_score}-${m.away_score}`
       : m.live_status==="finished"&&m.live_home_score!=null&&m.live_away_score!=null
         ? `${m.live_home_score}-${m.live_away_score}`
@@ -3000,7 +3009,7 @@ function openHistory(jid){
     const a=p1?displayPickForJourney(p1.user_id,j.id,m.number):"—";
     const b=p2?displayPickForJourney(p2.user_id,j.id,m.number):"—";
     const r=actualResultForMatch(m);
-    const exactScore=m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:m.number===15?actualResultForMatch(m).replace("-","–"):"—";
+    const exactScore=m.resolution_method==="draw"?`🎲 ${r}`:m.home_score!=null&&m.away_score!=null?`${m.home_score}–${m.away_score}`:m.number===15?actualResultForMatch(m).replace("-","–"):"—";
     const resultSign=m.number<=14?r:"";
     const e8a=Boolean(p1&&m.number<=14&&allElige8.some(e=>e.user_id===p1.user_id&&e.journey_id===j.id&&e.match_number===m.number));
     const e8b=Boolean(p2&&m.number<=14&&allElige8.some(e=>e.user_id===p2.user_id&&e.journey_id===j.id&&e.match_number===m.number));
