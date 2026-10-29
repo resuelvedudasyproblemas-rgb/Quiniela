@@ -502,7 +502,14 @@ function qgExceptionStatus(m){
 function qgExceptionLabel(m){return ({suspended:"Suspendido",postponed:"Aplazado",cancelled:"Cancelado"})[qgExceptionStatus(m)]||""}
 function qgExceptionBadgeHtml(m){
   const label=qgExceptionLabel(m);
-  return label?`<span class="match-exception-badge">⚠ ${esc(label)}</span>`:"";
+  const exception=label?`<span class="match-exception-badge">⚠ ${esc(label)}</span>`:"";
+  const method=String(m?.resolution_method||"");
+  const source=method==="draw"?'<span class="match-resolution-badge by-draw">🎲 SORTEO SELAE</span>':method==="played"?'<span class="match-resolution-badge by-played">✓ JUGADO</span>':"";
+  return exception+source;
+}
+function qgResolutionInfoHtml(m){
+  if(!m?.resolution_method)return "";
+  return `<div class="official-resolution-note">${esc(String(m.resolution_note||""))} <a href="https://www.selae.es/es/web-corporativa/comunicacion/avisos-de-interes" target="_blank" rel="noopener noreferrer">Fuente: SELAE</a></div>`;
 }
 function qgExceptionResultHtml(m){
   const label=qgExceptionLabel(m);
@@ -517,7 +524,7 @@ function qgSportsFinal(m){
 }
 function qgCalculated(m){return resolved(m)||qgSportsFinal(m)}
 function qgOfficialConflict(m){
-  if(!resolved(m)||m?.live_status!=="finished"||m.live_home_score==null||m.live_away_score==null)return false;
+  if(!resolved(m)||m?.resolution_method==="draw"||m?.live_status!=="finished"||m.live_home_score==null||m.live_away_score==null)return false;
   const sporting=`${m.live_home_score>=3?"M":m.live_home_score}-${m.live_away_score>=3?"M":m.live_away_score}`;
   return actual(m)!==sporting;
 }
@@ -589,7 +596,7 @@ function qgLivePhase(m){
   return qgIsHalftime(m)?"Descanso":m?.live_status==="finished"?"Final":"En directo";
 }
 function qgHeaderScore(m){
-  if(resolved(m))return {home:String(m.home_score),away:String(m.away_score),cls:"official",label:"FINAL"};
+  if(resolved(m))return {home:String(m.home_score),away:String(m.away_score),cls:"official",label:m.resolution_method==="draw"?"SORTEO":"FINAL"};
   if(qgExceptionStatus(m))return {home:m.live_home_score!=null?String(m.live_home_score):"–",away:m.live_away_score!=null?String(m.live_away_score):"–",cls:"exception",label:qgExceptionLabel(m).toUpperCase()};
   if(m?.live_home_score!=null&&m?.live_away_score!=null&&(m.live_status==="inprogress"||m.live_status==="finished")){
     const phase=qgLivePhase(m);
@@ -1454,8 +1461,11 @@ function renderPlay(){
     const jointImpossible=qgJointLost(m);
     const show=activeFilter==="all"||(activeFilter==="pending"&&r==="—"&&!qgIsLive(m))||(activeFilter==="live"&&qgIsLive(m))||(activeFilter==="correct"&&ok)||(activeFilter==="wrong"&&Boolean(saved)&&r!=="—"&&!ok);
     let result="";
-    if(r!=="—")result=`<div class="qg-result ${saved?(ok?"correct":"wrong"):"pending"} ${official?"":"sports-final-result"}"><span>${qgOfficialConflict(m)?"Corregido por SELAE":"Resultado final"}</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong></div>`;
-    else if(qgExceptionStatus(m))result=qgExceptionResultHtml(m);
+    if(r!=="—"){
+      const how=m.resolution_method==="draw"?"🎲 Resultado por sorteo SELAE":m.resolution_method==="played"?"Resultado del partido disputado":qgOfficialConflict(m)?"Corregido por SELAE":"Resultado final";
+      result=`<div class="qg-result ${saved?(ok?"correct":"wrong"):"pending"} ${official?"":"sports-final-result"}"><span>${esc(how)}</span><strong>${esc(r)} · ${ok?"Acierto":saved?"Fallo":"Sin pronóstico"}</strong>${qgResolutionInfoHtml(m)}</div>`;
+    }
+    else if(qgExceptionStatus(m))result=qgExceptionResultHtml(m)+qgResolutionInfoHtml(m);
     else if(proj!=="—")result=`<div class="qg-result live"><span>${esc(qgLivePhase(m))}</span><strong>${esc(proj)}</strong>${qgLiveFreshnessHtml(m)}</div>`;
     const scorers=qgScorersHtml(m),jointLine=qgJointLineHtml(m);
     const hs=qgHeaderScore(m);
