@@ -892,6 +892,13 @@ function qgWalletCanManage(){return Number(member(1)?.user_id===identityUserId?1
 function qgWalletConfirmation(jid=journey?.id){
   return qgBetConfirmations.find(x=>x.game==="quinigol"&&Number(x.journey_id)===Number(jid))||null;
 }
+// La modalidad del boleto se conserva en la confirmación; no se recalcula
+// después de cerrarla. Las confirmaciones antiguas son de una columna.
+function qgBetMode(j=journey){
+  const conf=j?qgWalletConfirmation(j.id):null;
+  return conf?.qg_mode==="two"?"two":conf?.qg_mode==="multiple"?"multiple":"one";
+}
+function qgTwoColumns(j=journey){return qgBetConfirmed(j)&&qgBetMode(j)==="two";}
 function qgEuro(value){return Number(value||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"}
 function qgWalletDate(v){
   if(!v)return "";
@@ -904,20 +911,25 @@ function qgWalletMovementLabel(t){
 function renderQGWallet(){
   const el=$("#qgJointWallet");if(!el||!journey)return;
   const manager=qgWalletCanManage(),conf=qgWalletConfirmation(journey.id),plan=planData();
+  const two=qgTwoColumns(journey);
+  const activeMode=conf?.qg_mode||((plan.ready&&["one","two","multiple"].includes(plan.mode))?plan.mode:"one");
+  const modeOptions=[["one","1 columna conjunta"],["two","2 columnas individuales"],["multiple","Apuesta múltiple"]]
+    .map(([value,label])=>`<option value="${value}" ${activeMode===value?"selected":""}>${label}</option>`).join("");
   const estimated=plan?.ready?Number(plan.cost):null;
   const costValue=conf?Number(conf.cost).toFixed(2):(estimated!=null?estimated.toFixed(2):"");
   const status=conf
-    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))} · Pronósticos y conjunta bloqueados</small></div>`
+    ? `<div class="wallet-bet-status confirmed"><span>✓ Apuesta confirmada</span><strong>${esc(qgEuro(conf.cost))}</strong><small>${esc(qgWalletDate(conf.confirmed_at))} · ${two?"Dos columnas · pronósticos bloqueados":"Pronósticos y conjunta bloqueados"}</small></div>`
     : `<div class="wallet-bet-status pending"><span>Pendiente de confirmar</span><small>${estimated!=null?`Coste recomendado: ${esc(qgEuro(estimated))}`:"Introduce el coste real al confirmarla"}</small></div>`;
   const controls=manager?`
     <div class="wallet-confirm-controls">
+      <label><span>Modalidad del boleto</span><select id="qgWalletBetMode" aria-label="Columnas confirmadas">${modeOptions}</select></label>
       <label><span>Coste de este Quinigol</span><div><input id="qgWalletBetCost" type="number" min="0.01" step="0.01" inputmode="decimal" value="${esc(costValue)}" placeholder="0,00"><b>€</b></div></label>
       <button id="qgWalletConfirmBtn" type="button">${conf?"Actualizar":"Confirmar apuesta"}</button>
       ${conf?'<button id="qgWalletUnconfirmBtn" class="wallet-secondary" type="button">Deshacer</button>':""}
     </div>`
     : `<p class="wallet-readonly">Confirmación gestionada por Salva.</p>`;
   el.innerHTML=`<section class="bet-confirm-card">
-    <div class="bet-confirm-head"><div><span>APUESTA CONJUNTA</span><small>Quinigol · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${esc(qgEuro(qgWalletBalance))}</button></div>
+    <div class="bet-confirm-head"><div><span>${two?"APUESTA · 2 COLUMNAS":"APUESTA CONJUNTA"}</span><small>Quinigol · Jornada ${journey.number}</small></div><button type="button" class="bet-wallet-link" data-open-global-wallet>Monedero · ${esc(qgEuro(qgWalletBalance))}</button></div>
     <div class="wallet-confirmation">${status}${controls}</div>
   </section>`;
   if(manager){
@@ -929,8 +941,11 @@ function renderQGWallet(){
 async function qgConfirmWalletBet(){
   const cost=Number(String($("#qgWalletBetCost")?.value||"").replace(",","."));
   if(!Number.isFinite(cost)||cost<=0){toast("Introduce un coste válido");return}
+  const mode=String($("#qgWalletBetMode")?.value||"one");
+  if(!["one","two","multiple"].includes(mode)){toast("Selecciona la modalidad del boleto");return}
+  if((mode==="two"||mode==="multiple")&&cost<2){toast("Dos apuestas requieren al menos 2 €");return}
   try{
-    const {error}=await sb.rpc("wallet_confirm_bet",{p_room_id:roomId,p_game:"quinigol",p_journey_id:journey.id,p_cost:cost});
+    const {error}=await sb.rpc("wallet_confirm_qg_bet",{p_room_id:roomId,p_journey_id:journey.id,p_cost:cost,p_mode:mode});
     if(error)throw error;
     await qgLoadWalletData();renderAll();window.dispatchEvent(new CustomEvent("wallet:refresh"));toast("✓ Quinigol confirmado · pronósticos bloqueados");
   }catch(e){console.error(e);toast(String(e?.message||e).includes("Saldo insuficiente")?"Saldo insuficiente":"No se pudo confirmar la apuesta")}
@@ -1006,15 +1021,20 @@ function goalButtons(n,side,selected,locked,attrs=""){
 }
 function qgPrizeState(j){
   if(!j||!qgBetConfirmed(j)||state(j)!=="finished")return "";
-  // Único criterio para tarjeta grande y selector: conjunta >= 2.
-  // Jugar / recargar puede alternar entre resumen del servidor y datos
-  // detallados; ambos calculan ahora la misma conjunta, sin sesgo por ranking.
   const jid=Number(j.id);
   const loaded=qgLoadedJourneyIds.has(jid)&&msFor(jid).length===6;
   const summary=qgJourneySummaries.get(jid);
-  const jointCorrect=loaded?jointScore(j).correct:Number(summary?.joint_correct);
-  if(!Number.isFinite(jointCorrect))return "";
-  return jointCorrect>=2?"prize":"miss";
+  if(!loaded){
+    // La misma regla la calcula el servidor para el selector de jornadas
+    // todavía no descargadas, con independencia de quién haya iniciado sesión.
+    return ["prize","miss"].includes(summary?.prize_state)?summary.prize_state:"";
+  }
+  if(qgTwoColumns(j)){
+    const p1=member(1),p2=member(2);
+    return [p1,p2].some(p=>p&&score(p.user_id,j).correct>=2)?"prize":"miss";
+  }
+  // Una columna (y apuesta múltiple): se mantiene el criterio de siempre.
+  return jointScore(j).correct>=2?"prize":"miss";
 }
 function competitionShort(name=""){
   const n=String(name||"");
@@ -1535,7 +1555,13 @@ function planGrid(items,multipleMatch=null){
 }
 function renderPlan(){
   const el=$("#qgJointPlan");if(!el)return;
-  const plan=planData();
+  const rawPlan=planData();
+  const plan=qgTwoColumns(journey)&&rawPlan.ready?{
+    ...rawPlan,mode:"two",bets:2,cost:Number(qgWalletConfirmation(journey.id)?.cost||2),
+    title:"2 columnas individuales confirmadas",
+    column1:rawPlan.rows.map(r=>({n:r.n,value:r.a})),
+    column2:rawPlan.rows.map(r=>({n:r.n,value:r.b}))
+  }:rawPlan;
   if(!plan.ready){
     el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>Propuesta pendiente</h3></div><div class="qg-plan-price"><strong>—</strong><small>Esperando</small></div></div><p>Faltan pronósticos · ${esc(plan.p1?.display_name||"Salva")} ${plan.c1}/6 · ${esc(plan.p2?.display_name||"Ferran")} ${plan.c2}/6.</p></section>`;
     return;
@@ -1551,15 +1577,21 @@ function renderPlan(){
     reason=`Solo hay una discrepancia importante. En vez de dos columnas completas, se cubren los dos resultados del partido ${mm.n}: genera 2 apuestas y cuesta 2 €.`;
     detail=`<div class="qg-plan-block"><div class="qg-plan-block-head"><span>APUESTA MÚLTIPLE</span><strong>Doble resultado en P${mm.n}</strong></div>${planGrid(plan.column1,mm)}</div>`;
   }else{
-    reason=`Hay ${plan.major.length} discrepancias importantes. Dos columnas cuestan 2 € y conservan las dos líneas de pronóstico sin disparar el coste.`;
+    reason=qgTwoColumns(journey)
+      ?"Boleto confirmado con dos columnas independientes. Cada jugador conserva sus seis marcadores; no existe una apuesta conjunta."
+      :`Hay ${plan.major.length} discrepancias importantes. Dos columnas cuestan 2 € y conservan las dos líneas de pronóstico sin disparar el coste.`;
     detail=`<div class="qg-plan-columns"><div class="qg-plan-block player-one"><div class="qg-plan-block-head"><span>COLUMNA 1</span><strong>${esc(plan.p1?.display_name||"Salva")}</strong></div>${planGrid(plan.column1)}</div><div class="qg-plan-block player-two"><div class="qg-plan-block-head"><span>COLUMNA 2</span><strong>${esc(plan.p2?.display_name||"Ferran")}</strong></div>${planGrid(plan.column2)}</div></div>`;
   }
 
-  const alternative=plan.major.length>=2?`<div class="qg-plan-alternative">Cubrir todas las discrepancias como múltiple generaría <strong>${plan.fullCoverBets} apuestas · ${plan.fullCoverBets.toFixed(2).replace(".",",")} €</strong>. Por coste, la app prefiere las 2 columnas.</div>`:"";
+  const alternative=!qgTwoColumns(journey)&&plan.major.length>=2?`<div class="qg-plan-alternative">Cubrir todas las discrepancias como múltiple generaría <strong>${plan.fullCoverBets} apuestas · ${plan.fullCoverBets.toFixed(2).replace(".",",")} €</strong>. Por coste, la app prefiere las 2 columnas.</div>`:"";
   el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>PROPUESTA DE APUESTA</span><h3>${esc(plan.title)}</h3></div><div class="qg-plan-price"><strong>${plan.cost.toFixed(2).replace(".",",")} €</strong><small>${plan.bets} apuesta${plan.bets===1?"":"s"} · 1 € cada una</small></div></div><p>${reason}</p>${detail}${alternative}</section>`;
 }
 function renderJoint(){
   const el=$("#qgJointList");if(!el||!journey)return;renderQGWallet();renderPlan();
+  if(qgTwoColumns(journey)){
+    el.innerHTML='<p class="qg-two-column-notice">Dos columnas individuales confirmadas: los aciertos se calculan por separado. No hay apuesta conjunta en esta jornada.</p>';
+    return;
+  }
   const p1=member(1),p2=member(2),locked=!canEdit();
   el.innerHTML=matches.map(m=>{
     const a=p1?pick(p1.user_id,m.number):null,b=p2?pick(p2.user_id,m.number):null,man=jointOverride(m.number),auto=autoJoint(m.number),autoKind=auto?.kind||"Pendiente",sel=currentJointDraft(m.number);
