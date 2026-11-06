@@ -490,9 +490,14 @@ function resultBarHtml(m,p){
 function finishedJourneyPrizeState(j){
   if(!j||!journeyBetConfirmed(j)||journeyDisplayState(j)!=="finished")return "";
   if(!loadedJourneyIds.has(j.id))return journeySummaries.get(Number(j.id))?.prize_state||"miss";
-  const normal=identityUserId?scoreUserJourney(identityUserId,j):{correct:0,resolved:0};
+  // La tarjeta es común para la sala: da igual quién abra la aplicación.
+  // Si cualquiera de los dos consigue 10+, ambos verán la jornada dorada.
+  const normalPrize=[memberBySlot(1),memberBySlot(2)].some(player=>{
+    if(!player)return false;
+    const score=scoreUserJourney(player.user_id,j);
+    return score.resolved===15&&score.correct>=10;
+  });
   const e8=scoreJointElige8(j);
-  const normalPrize=normal.resolved===15&&normal.correct>=10;
   const e8Prize=e8.selected===8&&e8.resolved===8&&e8.correct===8;
   return normalPrize||e8Prize?"prize":"miss";
 }
