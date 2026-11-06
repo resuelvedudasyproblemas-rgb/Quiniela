@@ -1660,7 +1660,7 @@ function renderPlan(){
     ?`<div class="qg-plan-alternative">Cubrir todas las discrepancias importantes como múltiples requeriría <strong>${raw.fullCoverBets||Math.pow(2,plan.major.length)} apuestas</strong>. Estas dos columnas cuestan ${qgEuro(plan.cost)}.</div>`:"";
   const pendingChange=qgBetConfirmed(journey)&&!confirmedMode
     ?'<div class="qg-plan-alternative">Este cambio todavía no está confirmado. Pulsa «Actualizar» para guardarlo.</div>':"";
-  el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>${confirmedMode?"APUESTA CONFIRMADA":"PROPUESTA DE APUESTA · VISTA PREVIA"}</span><h3>${esc(plan.title)}</h3></div><div class="qg-plan-price"><strong>${esc(qgEuro(plan.cost))}</strong><small>${plan.bets} apuesta${plan.bets===1?"":"s"} · 1 € cada una</small></div></div><p>${reason}</p>${detail}${incomplete}${suggested}${alternative}${pendingChange}</section>`;
+  el.innerHTML=`<section class="qg-plan-card"><div class="qg-plan-top"><div><span>${confirmedMode?"APUESTA CONFIRMADA":"PROPUESTA DE APUESTA · VISTA PREVIA"}</span><h3>${esc(plan.title)}</h3></div><div class="qg-plan-price"><strong>${esc(qgEuro(plan.cost))}</strong><small>${plan.bets} apuesta${plan.bets===1?"":"s"} · ${Math.abs(plan.cost-plan.bets)<0.005?"1 € cada una":"coste total registrado"}</small></div></div><p>${reason}</p>${detail}${incomplete}${suggested}${alternative}${pendingChange}</section>`;
 }
 function renderJoint(){
   const el=$("#qgJointList");if(!el||!journey)return;renderQGWallet();renderPlan();
