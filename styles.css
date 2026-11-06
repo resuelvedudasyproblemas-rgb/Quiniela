@@ -4844,9 +4844,22 @@ html[data-theme="dark"] .match-filter[data-match-filter="live"].active{
   border:0;
   background:transparent;
   color:var(--muted);
-  font-size:.48rem;
-  font-weight:800;
-  padding:2px;
+  font-size:.56rem;
+  font-weight:850;
+  padding:5px 9px;
+  min-height:28px;
+  border-radius:999px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+}
+.qg-clear:hover,.qg-clear:focus-visible{
+  background:var(--surface-2);
+  color:var(--text);
+}
+.qg-clear:focus-visible{
+  outline:2px solid var(--brand);
+  outline-offset:2px;
 }
 .qg-opponent-pick{
   margin-top:7px;
