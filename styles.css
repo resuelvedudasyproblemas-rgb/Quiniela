@@ -10321,3 +10321,49 @@ html[data-theme="dark"] .pleno-prediction.state-wrong .pleno-prediction-main str
 html[data-theme="dark"] .pleno-prediction.state-wrong>small,
 html[data-theme="dark"] .compare-pick-box.pleno-state-wrong .compare-pick-value strong,
 html[data-theme="dark"] .history-player-pick.joint.bad>strong{color:#ff9898}
+
+/* Un único Pleno al 15: color del boleto según su apuesta compartida.
+   Estas reglas se aplican también al detalle de jornadas anteriores. */
+#historyDialogBody .history-detail-match[data-pleno-state="correct"],
+#historyDialogBody .history-detail-match[data-pleno-state="live"]{
+  border-color:color-mix(in srgb,#24a56f 65%,var(--border))!important;
+  background:color-mix(in srgb,#24a56f 7%,var(--surface))!important;
+  box-shadow:inset 5px 0 0 #24a56f,0 7px 18px rgba(27,139,91,.08)!important;
+}
+#compareView .compare-card.pleno-shared-correct,
+#compareView .compare-card.pleno-shared-live{
+  border-color:color-mix(in srgb,#24a56f 60%,var(--border))!important;
+  box-shadow:inset 4px 0 0 #24a56f,var(--shadow-md)!important;
+}
+#compareView .compare-card.pleno-shared-wrong{
+  border-color:color-mix(in srgb,#cf3f49 65%,var(--border))!important;
+  box-shadow:inset 4px 0 0 #cf3f49,var(--shadow-md)!important;
+}
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-correct,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-correct{
+  border:1px solid color-mix(in srgb,#24a56f 58%,var(--border))!important;
+  box-shadow:inset 0 -2px 0 #24a56f;
+}
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-correct strong,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-correct strong,
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-correct small,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-correct small{color:#168057}
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-live,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-live{
+  border:1px solid color-mix(in srgb,#24a56f 45%,var(--border))!important;
+}
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-live strong,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-live strong{color:#1b9a66}
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-wrong,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-wrong{
+  border:1px solid color-mix(in srgb,#cf3f49 60%,var(--border))!important;
+  box-shadow:inset 0 -2px 0 #cf3f49;
+}
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-wrong strong,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-wrong strong,
+.match-detail-picks.pleno-detail-picks .pleno-detail-player.state-wrong small,
+.match-detail-picks.pleno-detail-picks .pleno-detail-shared.state-wrong small{color:#bc434b}
+html[data-theme="dark"] .match-detail-picks.pleno-detail-picks .state-correct strong,
+html[data-theme="dark"] .match-detail-picks.pleno-detail-picks .state-correct small{color:#79e7ad}
+html[data-theme="dark"] .match-detail-picks.pleno-detail-picks .state-wrong strong,
+html[data-theme="dark"] .match-detail-picks.pleno-detail-picks .state-wrong small{color:#ff9898}
