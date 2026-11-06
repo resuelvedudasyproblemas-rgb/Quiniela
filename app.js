@@ -718,12 +718,8 @@ function plenoPickImpossibleForUser(m,uid,jid=m?.journey_id){
       || !plenoGoalStillPossible(p.away_goals,m.live_away_score);
 }
 function plenoCardImpossible(m,jid=m?.journey_id){
-  const users=[memberBySlot(1)?.user_id,memberBySlot(2)?.user_id].filter(Boolean);
-  const withPick=users.filter(uid=>{
-    const p=pickForJourney(uid,jid,15);
-    return Boolean(p?.home_goals&&p?.away_goals);
-  });
-  return withPick.length>0&&withPick.every(uid=>plenoPickImpossibleForUser(m,uid,jid));
+  // Los dos pronósticos personales no deciden el color del boleto compartido.
+  return Boolean(m&&Number(m.number)===15&&plenoSharedPresentation(m,jid).lost);
 }
 
 function playerVerdictState(v1,v2){
@@ -1109,6 +1105,15 @@ function plenoPickVisualState(value,m){
        !plenoGoalStillPossible(sel.away,m.live_away_score))return "wrong";
   }
   return "pending";
+}
+
+function plenoSharedPresentation(m,jid=m?.journey_id){
+  const raw=effectiveJointPlenoSelection(jid)||"";
+  const valid=/^[012M]-[012M]$/.test(raw);
+  const status=valid?plenoPickVisualState(raw,m):"missing";
+  return {value:valid?raw:"—",status,valid,
+    cardState:status==="correct"||status==="live"?"both":status==="wrong"?"none":"neutral",
+    lost:status==="wrong"};
 }
 function plenoPickVisualLabel(state){
   return ({correct:"Acierto",wrong:"Fallo",live:"Acertando · provisional",
@@ -2644,17 +2649,11 @@ function renderPleno(){
   plenoCard.classList.remove("hidden");
   plenoCard.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral","pleno-impossible-strong");
   const showOpponent=completedCountForUser(identityUserId,journey?.id)===15;
-  const ownResult=matchOutcomeForUser(m);
-  const ownResultState=ownResult==="correct"?(myMember?.slot===2?"player-two":"player-one"):ownResult==="wrong"?"none":"neutral";
-  const sharedResult=showOpponent?effectiveJointPlenoSelection(journey.id):"";
-  const sharedValid=/^[012M]-[012M]$/.test(sharedResult);
-  const sharedState=sharedValid?plenoPickVisualState(sharedResult,m):"pending";
-  const visualState=sharedValid
-    ?sharedState==="correct"||sharedState==="live"?"both":sharedState==="wrong"?"none":"neutral"
-    :showOpponent?officialPlayersState(m):ownResultState;
-  plenoCard.classList.add("result-state-"+visualState);
-  if(sharedValid?sharedState==="wrong":showOpponent?plenoCardImpossible(m):plenoPickImpossibleForUser(m,identityUserId))
-    plenoCard.classList.add("pleno-impossible-strong");
+  const sharedPresentation=plenoSharedPresentation(m,journey.id);
+  // No revelar el pronóstico ajeno a través del color de la tarjeta.
+  plenoCard.classList.add("result-state-"+(showOpponent?sharedPresentation.cardState:"neutral"));
+  plenoCard.dataset.plenoState=showOpponent?sharedPresentation.status:"pending";
+  if(showOpponent&&sharedPresentation.lost)plenoCard.classList.add("pleno-impossible-strong");
   $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
   $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchCalculated(m)&&!matchExceptionStatus(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
@@ -2671,7 +2670,7 @@ function renderPleno(){
   plenoClear.querySelector(".clear-pleno-btn")?.addEventListener("click",()=>deletePick(15));
   const oppEl=$("#plenoOpponent");if(oppEl){oppEl.classList.add("hidden");oppEl.innerHTML=""}
   const visual=$("#plenoPredictions");
-  const sharedPick=effectiveJointPlenoSelection(journey.id)||"—";
+  const sharedPick=sharedPresentation.value;
   const p1=memberBySlot(1),p2=memberBySlot(2);
   if(visual){
     // La conjunta se puede inferir de los marcadores ajenos:
@@ -3083,11 +3082,14 @@ function openHistory(jid){
     const e8j=Boolean(m.number<=14&&allJointElige8.some(e=>e.journey_id===j.id&&e.match_number===m.number));
     const ca=r==="—"||a==="—"?"":a===r?"ok":"bad";
     const cb=r==="—"||b==="—"?"":b===r?"ok":"bad";
-    const p15=m.number===15,sharedP15=p15?(effectiveJointPlenoSelection(j.id)||"—"):"—";
-    const cj=r==="—"||sharedP15==="—"?"":sharedP15===r?"ok":"bad";
-    const historyState=r==="—"?"neutral":playerVerdictState(a===r?"correct":"wrong",b===r?"correct":"wrong");
-    const plenoImpossible=m.number===15&&plenoCardImpossible(m,j.id);
-    return `<article class="history-detail-match result-state-${historyState}${plenoImpossible?" pleno-impossible-strong":""}" data-history-jid="${j.id}" data-history-match="${m.number}">
+    const p15=m.number===15;
+    const sharedPresentation=p15?plenoSharedPresentation(m,j.id):null;
+    const sharedP15=sharedPresentation?.value||"—";
+    const cj=sharedPresentation?.status==="correct"?"ok":sharedPresentation?.status==="wrong"?"bad":"";
+    const historyState=p15?sharedPresentation.cardState:
+      r==="—"?"neutral":playerVerdictState(a===r?"correct":"wrong",b===r?"correct":"wrong");
+    const plenoImpossible=Boolean(p15&&sharedPresentation.lost);
+    return `<article class="history-detail-match result-state-${historyState}${plenoImpossible?" pleno-impossible-strong":""}" data-history-jid="${j.id}" data-history-match="${m.number}"${p15?` data-pleno-state="${sharedPresentation.status}"`:""}>
       <div class="history-detail-head">
         <div class="history-match-meta"><span class="history-match-number">${m.number===15?"P15":String(m.number).padStart(2,"0")}</span>${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}</div>
         <div class="history-detail-fixture">${historyFixtureHtml(m)}</div>
