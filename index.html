@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=218" />
+  <link rel="stylesheet" href="styles.css?v=219" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -1504,7 +1504,7 @@ function qgTwoColumnPresentation(m,showOpponent=true,jid=m?.journey_id){
       bothImpossible:false};
   }
   const hitA=hits.includes(a),hitB=hits.includes(b);
-  const state=hitA&&hitB?"both-players":hitA?"player-one":hitB?"player-two":
+  const state=hitA&&hitB?"both":hitA?"player-one":hitB?"player-two":
     lost.includes(a)&&lost.includes(b)?"none":"neutral";
   return {a,b,state,bothImpossible:a==="impossible"&&b==="impossible"};
 }

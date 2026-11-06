@@ -10459,3 +10459,20 @@ html[data-theme="dark"] .qg-history-picks .state-wrong{color:#ff9898!important}
  .qg-two-status>strong{font-size:.72rem}
  .qg-two-status>small{font-size:.48rem}
 }
+
+/* Quinigol: cuando las dos columnas están acertando, la tarjeta completa es verde. */
+#qgRoot.qg-two-columns .qg-match-card.result-state-both .qg-live-header-score:not(.official):not(.exception),
+#qgRoot.qg-two-columns .qg-match-card.result-state-both .qg-result.live {
+  background:color-mix(in srgb,#24a56f 10%,var(--surface-2))!important;
+  border-color:color-mix(in srgb,#24a56f 50%,var(--border))!important;
+  color:#168057!important;
+}
+#qgRoot.qg-two-columns .qg-compare-card.qg-two-status-both {
+  border-color:color-mix(in srgb,#24a56f 60%,var(--border))!important;
+  background:color-mix(in srgb,#24a56f 7%,var(--surface))!important;
+  box-shadow:inset 4px 0 0 #24a56f,0 8px 22px rgba(27,139,91,.09)!important;
+}
+html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.result-state-both .qg-live-header-score:not(.official):not(.exception),
+html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.result-state-both .qg-result.live {
+  color:#79e7ad!important;
+}
