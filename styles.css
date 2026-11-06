@@ -10250,3 +10250,24 @@ html[data-theme="dark"] .match-resolution-badge.by-played{background:#163d2e;col
  #qgRoot.qg-two-columns .qg-stats-grid{gap:6px}
  #qgRoot .wallet-confirm-controls select{font-size:.57rem}
 }
+
+/* Mi Quiniela / Mi Quinigol: apuestas ajenas visibles al terminar tu boleto */
+.opponent-picks-locked{
+  grid-column:1/-1;
+  width:100%;
+  box-sizing:border-box;
+  margin:4px 0 10px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--surface-2);
+  color:var(--muted);
+  font-size:.67rem;
+  font-weight:750;
+  line-height:1.5;
+  text-align:center;
+}
+html[data-theme="dark"] .opponent-picks-locked{
+  background:var(--surface-2);
+  border-color:var(--border);
+}
