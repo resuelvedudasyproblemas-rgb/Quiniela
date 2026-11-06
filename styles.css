@@ -10192,3 +10192,48 @@ html[data-theme="dark"] .match-resolution-badge.by-played{background:#163d2e;col
  .match-resolution-badge{font-size:.48rem;padding:3px 5px}
  .official-resolution-note{font-size:.57rem}
 }
+
+/* Quinigol 2 columnas confirmadas v213 */
+#qgRoot.qg-two-columns .results-overview-qg .overview-players{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+#qgRoot.qg-two-columns .qg-compare-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+#qgRoot.qg-two-columns .qg-stats-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+#qgRoot .wallet-confirm-controls{
+  grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr) auto auto;
+}
+#qgRoot .wallet-confirm-controls select{
+  display:block;width:100%;min-height:34px;box-sizing:border-box;
+  border:1px solid var(--border);border-radius:9px;
+  background:var(--surface);color:var(--text);
+  padding:5px 7px;font-size:.62rem;font-weight:800;
+}
+#qgRoot .qg-two-column-notice{
+  margin:10px 0 2px;padding:11px 13px;
+  border:1px solid var(--border);border-radius:12px;
+  background:var(--surface-2);color:var(--muted);
+  line-height:1.5;font-size:.7rem;font-weight:700;
+}
+.qg-history-item.qg-history-two-columns .qg-history-score{
+  gap:6px;
+}
+.qg-history-item.qg-history-two-columns .qg-history-score>span{
+  min-width:56px;
+}
+@media(max-width:650px){
+ #qgRoot .wallet-confirm-controls{
+   grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+ }
+ #qgRoot .wallet-confirm-controls>button{
+   width:100%;
+ }
+}
+@media(max-width:420px){
+ #qgRoot.qg-two-columns .results-overview-qg .overview-players{gap:6px}
+ #qgRoot.qg-two-columns .qg-stats-grid{gap:6px}
+ #qgRoot .wallet-confirm-controls select{font-size:.57rem}
+}
