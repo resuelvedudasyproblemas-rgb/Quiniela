@@ -2584,13 +2584,20 @@ function renderAll(){
 
 function renderMatches(){
   const normal=matches.filter(m=>m.number<=14),locked=!journeyCanEdit(journey),opponent=members.find(m=>m.user_id!==identityUserId);
+  // No mostrar pistas sobre los signos del otro mientras falte cualquiera
+  // de los 14 partidos o alguno de los dos goles del Pleno al 15.
+  const showOpponent=completedCountForUser(identityUserId,journey?.id)===15;
   const showJointE8=journeyBetConfirmed(journey);
   const confirmedJointE8=new Set(showJointE8?jointElige8Selections(journey.id).map(e=>Number(e.match_number)):[]);
-  $("#matches").innerHTML=normal.map(m=>{
-    const mp=myPickFor(m.number),jointE8=confirmedJointE8.has(Number(m.number)),highlightJointE8Card=jointE8&&Number(journey?.number)===8,resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=Boolean(mp?.pick);
+  const hiddenNotice=opponent&&!showOpponent?
+    `<div class="opponent-picks-locked" role="status">🔒 Pronósticos de ${escapeHtml(opponent.display_name)} ocultos hasta que completes los 15 partidos, incluido el Pleno al 15.</div>`:"";
+  $("#matches").innerHTML=hiddenNotice+normal.map(m=>{
+    const mp=myPickFor(m.number),jointE8=confirmedJointE8.has(Number(m.number)),highlightJointE8Card=jointE8&&Number(journey?.number)===8,resultHtml=resultBarHtml(m,mp),outcome=matchOutcomeForUser(m),oppPick=opponent?pickFor(opponent.user_id,m.number):null,reveal=showOpponent&&Boolean(mp?.pick);
+    const myResultState=outcome==="correct"?(myMember?.slot===2?"player-two":"player-one"):outcome==="wrong"?"none":"neutral";
+    const cardResultState=showOpponent?officialPlayersState(m):myResultState;
     const myLabel=escapeHtml(myMember?.display_name||"Tú"),opponentLabel=escapeHtml(opponent?.display_name||"Compañero"),myInitial=escapeHtml((myMember?.display_name||"T").trim().charAt(0).toUpperCase()||"T"),opponentInitial=escapeHtml((opponent?.display_name||"C").trim().charAt(0).toUpperCase()||"C");
     const myOwnerClass=myMember?.slot===2?"player-two":"player-one",opponentOwnerClass=opponent?.slot===2?"player-two":"player-one";
-    return `<article class="match-card ${highlightJointE8Card?"e8-active":""} ${matchCalculated(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${officialPlayersState(m)}" data-resolved="${matchCalculated(m)}" data-live="${matchInProgress(m)}" data-e8="${isJointElige8(m.number,journey.id)}" data-outcome="${outcome}">
+    return `<article class="match-card ${highlightJointE8Card?"e8-active":""} ${matchCalculated(m)?"has-result":"pre-match"} ${mp?.pick?"has-pick":"no-pick"} result-state-${cardResultState}" data-resolved="${matchCalculated(m)}" data-live="${matchInProgress(m)}" data-e8="${isJointElige8(m.number,journey.id)}" data-outcome="${outcome}">
       <div class="match-card-head"><div class="match-number-wrap"><span class="match-index">${String(m.number).padStart(2,"0")}</span><span class="match-label">PARTIDO</span>${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}</div><div class="match-head-actions"><div class="kickoff-stack"><span class="kickoff ${m.kickoff?"":"pending-time"}">◷ ${escapeHtml(formatKickoff(m.kickoff))}</span>${!matchCalculated(m)&&!matchExceptionStatus(m)&&m.kickoff?`<small class="match-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</div>${jointE8?'<span class="confirmed-joint-e8-badge">★ E8 conjunto</span>':""}</div></div>
       <div class="fixture-teams"><div class="fixture-team home-team">${teamCrestHtml(m.home,"",m.home_logo_url)}<div><small class="team-meta">LOCAL ${teamPositionHtml(m.home_position)}</small><strong>${escapeHtml(displayTeamName(m.home))}</strong></div></div>${matchCalculated(m)?`<span class="fixture-score" aria-label="${m.resolution_method==="draw"?"Signo oficial de sorteo SELAE":"Resultado final"}"><small>${m.resolution_method==="draw"?"🎲 SORTEO":matchResolved(m)&& (m.home_score==null||m.away_score==null)?"SIGNO FINAL":"FINAL"}</small><strong>${m.resolution_method==="draw"?escapeHtml(resultSignForMatch(m)||"—"):matchResolved(m)&&(m.home_score==null||m.away_score==null)?escapeHtml(resultSignForMatch(m)||"—"):`${m.home_score??m.live_home_score??"–"}<b>–</b>${m.away_score??m.live_away_score??"–"}`}</strong></span>`:matchExceptionStatus(m)?`<span class="fixture-score exception-score"><small>${escapeHtml(matchExceptionLabel(m).toUpperCase())}</small><strong>${m.live_home_score!=null&&m.live_away_score!=null?`${m.live_home_score}<b>–</b>${m.live_away_score}`:"–"}</strong></span>`:`<span class="fixture-vs" aria-hidden="true">VS</span>`}<div class="fixture-team away-team">${teamCrestHtml(m.away,"",m.away_logo_url)}<div><small class="team-meta">VISITANTE ${teamPositionHtml(m.away_position)}</small><strong>${escapeHtml(displayTeamName(m.away))}</strong></div></div></div>
       ${matchCalculated(m)||matchExceptionStatus(m)?"":tvBroadcastHtml(m)}
@@ -2609,8 +2616,11 @@ function renderPleno(){
   const plenoCard=$("#plenoCard");
   plenoCard.classList.remove("hidden");
   plenoCard.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral","pleno-impossible-strong");
-  plenoCard.classList.add("result-state-"+officialPlayersState(m));
-  if(plenoCardImpossible(m))plenoCard.classList.add("pleno-impossible-strong");
+  const showOpponent=completedCountForUser(identityUserId,journey?.id)===15;
+  const ownResult=matchOutcomeForUser(m);
+  const ownResultState=ownResult==="correct"?(myMember?.slot===2?"player-two":"player-one"):ownResult==="wrong"?"none":"neutral";
+  plenoCard.classList.add("result-state-"+(showOpponent?officialPlayersState(m):ownResultState));
+  if(showOpponent?plenoCardImpossible(m):plenoPickImpossibleForUser(m,identityUserId))plenoCard.classList.add("pleno-impossible-strong");
   $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
   $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchCalculated(m)&&!matchExceptionStatus(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
@@ -2626,7 +2636,7 @@ function renderPleno(){
   plenoClear.innerHTML=mp&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn clear-pleno-btn" type="button">Borrar Pleno al 15</button></div>`:"";
   plenoClear.querySelector(".clear-pleno-btn")?.addEventListener("click",()=>deletePick(15));
   const opponent=members.find(x=>x.user_id!==identityUserId),opp=opponent?pickFor(opponent.user_id,15):null,oppEl=$("#plenoOpponent");
-  if(oppEl){const reveal=Boolean(mp?.home_goals&&mp?.away_goals);oppEl.classList.toggle("hidden",!reveal);if(reveal)oppEl.innerHTML=`<span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${opp?.home_goals&&opp?.away_goals?`${opp.home_goals}-${opp.away_goals}`:"pendiente"}</strong>`}
+  if(oppEl){const reveal=showOpponent&&Boolean(mp?.home_goals&&mp?.away_goals);oppEl.classList.toggle("hidden",!reveal);if(reveal)oppEl.innerHTML=`<span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${opp?.home_goals&&opp?.away_goals?`${opp.home_goals}-${opp.away_goals}`:"pendiente"}</strong>`}
   const resultEl=$("#plenoResult"),resultHtml=resultBarHtml(m,mp);resultEl.className="match-result-bar";
   if(resultHtml){const wrapper=document.createElement("div");wrapper.innerHTML=resultHtml;resultEl.className=wrapper.firstElementChild.className;resultEl.innerHTML=wrapper.firstElementChild.innerHTML}else{resultEl.classList.add("hidden");resultEl.innerHTML=""}
   $$(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));$$("#plenoTv [data-detail-match]").forEach(b=>b.addEventListener("click",()=>openMatchDetail(15)));updateCountdowns();
