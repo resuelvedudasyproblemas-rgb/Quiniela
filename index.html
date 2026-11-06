@@ -1498,7 +1498,9 @@ function qgTwoColumnPresentation(m,showOpponent=true,jid=m?.journey_id){
   if(!showOpponent){
     const mine=p1&&p1.user_id===identityUserId?a:p2&&p2.user_id===identityUserId?b:"missing";
     const owner=p1&&p1.user_id===identityUserId?"player-one":"player-two";
-    return {a,b,state:hits.includes(mine)?owner:lost.includes(mine)?"none":"neutral",
+    // Si la columna contraria sigue oculta, su viabilidad es desconocida:
+    // no pintar la tarjeta roja por haber fallado solo el marcador propio.
+    return {a,b,state:hits.includes(mine)?owner:"neutral",
       bothImpossible:false};
   }
   const hitA=hits.includes(a),hitB=hits.includes(b);
