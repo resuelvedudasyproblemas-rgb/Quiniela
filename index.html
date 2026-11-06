@@ -936,7 +936,7 @@ function renderQGWallet(){
   if(manager){
     $("#qgWalletBetMode")?.addEventListener("change",e=>{
       qgDraftBetModes.set(Number(journey.id),e.target.value);
-      renderJoint(); // Actualiza al instante la vista previa y el coste de la modalidad.
+      renderAll(); // Actualiza la vista previa y oculta la conjunta en todas las pestañas.
     });
     $("#qgWalletConfirmBtn")?.addEventListener("click",qgConfirmWalletBet);
     $("#qgWalletUnconfirmBtn")?.addEventListener("click",qgUnconfirmWalletBet);
@@ -1383,7 +1383,7 @@ function gSummaryPlayerCard(name,s,slot,m){
 function renderDashboard(){
   const el=$("#qgDashboard");if(!el||!journey)return;
   const m=gSummaryMetrics(journey),p1=member(1),p2=member(2);
-  const two=qgTwoColumns(journey);
+  const two=qgShowingTwoColumns(journey);
   const a=gSummaryPlayer(p1?.user_id,false,m),b=gSummaryPlayer(p2?.user_id,false,m),c=two?null:gSummaryPlayer(null,true,m);
   const done=m.finals.length,l=m.live.length,issues=m.incidents.length;
   const status=qgUnplayed(journey)?"unplayed":!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
@@ -1455,7 +1455,7 @@ function qgJointImpossible(m,jid=m?.journey_id){
   return exceeded(parts[1],m.live_home_score)||exceeded(parts[2],m.live_away_score);
 }
 function qgJointLost(m,jid=m?.journey_id){
-  if(qgTwoColumns(journeys.find(j=>Number(j.id)===Number(jid))))return false;
+  if(qgShowingTwoColumns(journeys.find(j=>Number(j.id)===Number(jid))))return false;
   if(!m||(!resolved(m)&&qgExceptionStatus(m)))return false;
   const joint=jointText(m.number,jid);
   if(joint==="—")return false;
@@ -1479,7 +1479,7 @@ function qgPlayersState(m,showOpponent=true){
 
   // En Quinigol la conjunta manda visualmente:
   // si acierta el marcador actual, la tarjeta siempre es verde.
-  const joint=qgTwoColumns(journeys.find(j=>Number(j.id)===Number(m.journey_id)))?"—":jointText(m.number,m.journey_id);
+  const joint=qgShowingTwoColumns(journeys.find(j=>Number(j.id)===Number(m.journey_id)))?"—":jointText(m.number,m.journey_id);
   if(joint!=="—"&&joint===current)return "joint";
 
   const p1=member(1),p2=member(2);
@@ -1494,7 +1494,7 @@ function qgPlayersState(m,showOpponent=true){
   return "neutral";
 }
 function qgJointLineHtml(m){
-  if(qgTwoColumns(journeys.find(j=>Number(j.id)===Number(m.journey_id))))return "";
+  if(qgShowingTwoColumns(journeys.find(j=>Number(j.id)===Number(m.journey_id))))return "";
   const value=jointText(m.number,m.journey_id);
   if(value==="—")return `<div class="qg-joint-pick pending"><span>Conjunta</span><strong>Pendiente</strong></div>`;
   const current=resolved(m)?actual(m):projected(m);
@@ -1599,6 +1599,15 @@ function qgPlanSelectedMode(rawPlan=planData()){
   if(qgBetConfirmed(journey))return qgBetMode(journey);
   return rawPlan.ready?rawPlan.mode:"one";
 }
+// En las pantallas de la jornada se muestra la modalidad seleccionada,
+// incluso antes de confirmar. Los premios siguen usando qgTwoColumns()
+// (modalidad realmente confirmada), sin modificar datos ni históricos.
+function qgShowingTwoColumns(j=journey){
+  if(!j)return false;
+  if(Number(j.id)===Number(journey?.id))
+    return qgPlanSelectedMode(planData())==="two";
+  return qgTwoColumns(j);
+}
 function qgPlanForMode(rawPlan=planData()){
   const mode=qgPlanSelectedMode(rawPlan);
   const rows=rawPlan.rows;
@@ -1665,8 +1674,7 @@ function renderPlan(){
 function renderJoint(){
   const el=$("#qgJointList");if(!el||!journey)return;renderQGWallet();renderPlan();
   const confirmedTwo=qgTwoColumns(journey);
-  const previewTwo=!confirmedTwo&&qgPlanSelectedMode(planData())==="two";
-  const two=confirmedTwo||previewTwo;
+  const two=qgShowingTwoColumns(journey);
   const hero=$("#qgJointView .section-hero");
   if(hero){
     hero.querySelector(".eyebrow").textContent=two?(confirmedTwo?"DOS COLUMNAS":"VISTA PREVIA · 2 COLUMNAS"):"QUINIGOL CONJUNTO";
@@ -1691,7 +1699,7 @@ function renderJoint(){
 }
 function renderCompare(){
   const el=$("#qgCompareList");if(!el||!journey)return;
-  const p1=member(1),p2=member(2),two=qgTwoColumns(journey);
+  const p1=member(1),p2=member(2),two=qgShowingTwoColumns(journey);
   el.innerHTML=matches.map(m=>{
     const r=projected(m);
     return `<article class="qg-compare-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div>${two?"":`<div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div>`}</div><div class="qg-compare-result"><span>${resolved(m)?(qgOfficialConflict(m)?"Corregido por SELAE":"Resultado final"):qgExceptionStatus(m)?qgExceptionLabel(m)+" · pendiente SELAE":qgSportsFinal(m)?"Resultado final":r!=="—"?"En directo":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
@@ -1708,7 +1716,7 @@ function jstat(){
 function renderStats(){
   const el=$("#qgStats");if(!el)return;
   const p1=member(1),p2=member(2),s1=p1?stat(p1.user_id):{best:0,prizes:0},s2=p2?stat(p2.user_id):{best:0,prizes:0},sj=jstat();
-  const two=qgTwoColumns(journey);
+  const two=qgShowingTwoColumns(journey);
   const card=(name,s,cls)=>`<div class="qg-stat-card ${cls}"><span>${esc(name)}</span><strong>${s.best}/6</strong><small>Mejor · ${s.prizes} con premio</small></div>`;
   const help=two?"Esta jornada utiliza dos columnas independientes: la tarjeta será dorada si cualquiera consigue 2 o más aciertos.":"En jornadas de una columna, la tarjeta es dorada con 2 o más aciertos de la conjunta; los números de cada jugador se resaltan individualmente.";
   el.innerHTML=`<div class="qg-stats-grid">${card(p1?.display_name||"Salva",s1,"player-one")}${card(p2?.display_name||"Ferran",s2,"player-two")}${two?"":card("Conjunta",sj,"joint")}</div><div class="qg-stats-note">Categorías: <strong>6 aciertos = 1ª</strong>, 5 = 2ª, 4 = 3ª, 3 = 4ª y 2 = 5ª. ${help}</div>`;
@@ -1722,7 +1730,7 @@ function qgHistoryMatchState(m,jid){
   if(current==="—")return "neutral";
 
   // En un boleto de dos columnas no existe pronóstico conjunto.
-  const joint=qgTwoColumns(journeys.find(j=>Number(j.id)===Number(jid)))?"—":jointText(m.number,jid);
+  const joint=qgShowingTwoColumns(journeys.find(j=>Number(j.id)===Number(jid)))?"—":jointText(m.number,jid);
   if(joint!=="—"&&joint===current)return "joint";
 
   const p1=member(1),p2=member(2);
@@ -1744,7 +1752,7 @@ function renderHistory(){
   const p1=member(1),p2=member(2),done=[...journeys].filter(j=>state(j)==="finished"&&qgBetConfirmed(j)).sort((a,b)=>b.number-a.number);
   if(!done.length){el.innerHTML='<div class="empty-card"><div class="empty-icon">⚽</div><h2>Aún no hay historial</h2><p>La primera jornada finalizada aparecerá aquí con los seis marcadores.</p></div>';return}
   renderHistoryBrowser(el,done,j=>{
-    const two=qgTwoColumns(j);
+    const two=qgShowingTwoColumns(j);
     const s1=p1?score(p1.user_id,j):{correct:0},s2=p2?score(p2.user_id,j):{correct:0},sj=two?null:jointScore(j);
     const winnerSide=!p1||!p2?"tie":s1.correct>s2.correct?"one":s2.correct>s1.correct?"two":"tie";
     const winnerText=winnerSide==="one"?`Gana ${esc(p1.display_name)}`:winnerSide==="two"?`Gana ${esc(p2.display_name)}`:"Empate";
@@ -1786,7 +1794,7 @@ function setView(v,persist=true){
   activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
   if(persist)savePref("quinigol-view",activeView);
   $$(".qg-tab").forEach(b=>{
-    if(b.dataset.qgView==="joint")b.textContent=qgTwoColumns(journey)?"Columnas":"Conjunta";
+    if(b.dataset.qgView==="joint")b.textContent=qgShowingTwoColumns(journey)?"Columnas":"Conjunta";
     b.classList.toggle("active",b.dataset.qgView===activeView);
   });
   $$(".qg-view").forEach(x=>x.classList.toggle("active",x.id===`qg${activeView.charAt(0).toUpperCase()+activeView.slice(1)}View`));
@@ -1845,7 +1853,7 @@ function setGame(g,persist=true){
 }
 function renderAll(){
   if(!journey)return;
-  const two=qgTwoColumns(journey);
+  const two=qgShowingTwoColumns(journey);
   $("#qgRoot")?.classList.toggle("qg-two-columns",two);
   const historyIntro=$("#qgHistoryView .section-hero p");
   if(historyIntro)historyIntro.textContent=two?"Pronósticos individuales y resultados oficiales de cada columna.":"Pronósticos, conjunta y resultados oficiales.";
