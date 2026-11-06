@@ -839,7 +839,7 @@ function recordNotice(title,body){
 }
 async function ensureServiceWorkerReady(){
   let reg=await navigator.serviceWorker.getRegistration();
-  if(!reg)reg=await navigator.serviceWorker.register("./sw.js");
+  if(!reg)reg=await navigator.serviceWorker.register("./sw.js?v=256");
   try{await reg.update()}catch{}
   return navigator.serviceWorker.ready;
 }
@@ -3354,7 +3354,7 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     const hadController=Boolean(navigator.serviceWorker.controller);
     try{
-      const reg=await navigator.serviceWorker.register("./sw.js");
+      const reg=await navigator.serviceWorker.register("./sw.js?v=256");
       await reg.update();
       if(hadController){
         let reloading=false;
