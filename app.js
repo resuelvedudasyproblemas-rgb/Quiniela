@@ -574,6 +574,16 @@ function nextUnresolvedMatch(j=journey){
     return at-bt || a.number-b.number;
   })[0]||null;
 }
+// La Quiniela solo juega UN Pleno: la apuesta compartida es la que
+// puede sumar al total, nunca los marcadores personales usados como referencia.
+// La condición de 14/14 se comprueba por separado para cada columna.
+function scoringPickForJourney(uid,jid,n){
+  if(Number(n)===15){
+    const joint=effectiveJointPlenoSelection(jid);
+    return /^[012M]-[012M]$/.test(joint)?joint:"—";
+  }
+  return displayPickForJourney(uid,jid,n);
+}
 // El Pleno al 15 solo suma un acierto si la MISMA columna acierta
 // los otros 14 signos. La valoración visual del Pleno se mantiene aparte.
 function plenoCountableForUser(uid,jid,resultOf=calculatedResultForMatch){
@@ -593,9 +603,10 @@ function commonCorrectCount(j=journey){
     if(actual==="—") continue;
     const a=displayPickForJourney(p1.user_id,j.id,m.number);
     const b=displayPickForJourney(p2.user_id,j.id,m.number);
-    if(a===b&&a===actual&&(m.number!==15||(
-      plenoCountableForUser(p1.user_id,j.id)&&plenoCountableForUser(p2.user_id,j.id)
-    )))n++;
+    if(m.number===15){
+      if(scoringPickForJourney(p1.user_id,j.id,15)===actual&&
+        plenoCountableForUser(p1.user_id,j.id)&&plenoCountableForUser(p2.user_id,j.id))n++;
+    }else if(a===b&&a===actual)n++;
   }
   return n;
 }
@@ -616,7 +627,7 @@ function projectedScoreUserJourney(uid,j){
     if(actual==="—") continue;
     considered++;
     if(!matchResolved(m)) live++;
-    if(displayPickForJourney(uid,j.id,m.number)===actual&&(
+    if(scoringPickForJourney(uid,j.id,m.number)===actual&&(
       m.number!==15||plenoCountableForUser(uid,j.id,projectedResultForMatch)
     ))correct++;
   }
@@ -635,12 +646,12 @@ function qSummaryPlayer(uid,m){
   let correct=0,live=0;
   if(uid){
     for(const x of m.finals){
-      if(displayPickForJourney(uid,x.journey_id,x.number)===calculatedResultForMatch(x)&&(
+      if(scoringPickForJourney(uid,x.journey_id,x.number)===calculatedResultForMatch(x)&&(
         x.number!==15||plenoCountableForUser(uid,x.journey_id)
       ))correct++;
     }
     for(const x of m.live){
-      if(displayPickForJourney(uid,x.journey_id,x.number)===projectedResultForMatch(x)&&(
+      if(scoringPickForJourney(uid,x.journey_id,x.number)===projectedResultForMatch(x)&&(
         x.number!==15||plenoCountableForUser(uid,x.journey_id,projectedResultForMatch)
       ))live++;
     }
@@ -2986,7 +2997,7 @@ function scoreUserJourney(uid,j){
     const actual=actualResultForMatch(m);
     if(actual==="—") continue;
     resolved++;
-    const mine=displayPickForJourney(uid,j.id,m.number);
+    const mine=scoringPickForJourney(uid,j.id,m.number);
     if(mine===actual&&(
       m.number!==15||plenoCountableForUser(uid,j.id,actualResultForMatch)
     ))correct++;
