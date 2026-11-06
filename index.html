@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=215" />
+  <link rel="stylesheet" href="styles.css?v=216" />
   <title>Nuestra Quiniela</title>
 </head>
 <body>
@@ -224,6 +224,7 @@
           </div>
           <p class="hint">M = 3 o más goles</p>
           <div id="plenoOpponent" class="opponent-pick hidden"></div>
+          <div id="plenoPredictions" class="pleno-predictions hidden" aria-label="Marcadores del Pleno al 15"></div>
           <div id="plenoResult" class="match-result-bar hidden"></div>
         </section>
       </section>
@@ -371,7 +372,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=232"></script>
+  <script type="module" src="app.js?v=233"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=2";

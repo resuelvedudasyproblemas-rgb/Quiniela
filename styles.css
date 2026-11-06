@@ -10271,3 +10271,53 @@ html[data-theme="dark"] .opponent-picks-locked{
   background:var(--surface-2);
   border-color:var(--border);
 }
+
+/* Pleno al 15: una apuesta compartida, dos pronósticos personales */
+.pleno-predictions{max-width:560px;margin:10px auto 0;display:grid;gap:7px}
+.pleno-predictions.hidden{display:none!important}
+.pleno-personal-predictions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.pleno-prediction{min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:13px;background:var(--surface-2);text-align:left}
+.pleno-prediction.shared{background:var(--joint-soft);border-color:color-mix(in srgb,var(--joint-color) 32%,var(--border))}
+.pleno-prediction.player-one{background:var(--player-one-soft);border-color:var(--player-one-border)}
+.pleno-prediction.player-two{background:var(--player-two-soft);border-color:var(--player-two-border)}
+.pleno-prediction-main{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pleno-prediction-main>span{display:flex;align-items:center;min-width:0;gap:6px;font-size:.65rem;font-weight:900;color:var(--text)}
+.pleno-prediction-main>span i{flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pleno-prediction.joint .pleno-prediction-main>span i{background:var(--joint-color)}
+.pleno-prediction.player-one .pleno-prediction-main>span i{background:var(--player-one)}
+.pleno-prediction.player-two .pleno-prediction-main>span i{background:var(--player-two)}
+.pleno-prediction-main strong{flex:0 0 auto;font-size:.95rem;font-weight:950;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--text)}
+.pleno-prediction.shared .pleno-prediction-main strong{font-size:1.1rem}
+.pleno-prediction>small{display:block;margin-top:4px;color:var(--muted);font-size:.53rem;font-weight:800}
+.pleno-prediction.state-correct,.compare-pick-box.pleno-state-correct{border-color:color-mix(in srgb,#26976a 65%,var(--border))!important}
+.pleno-prediction.state-correct .pleno-prediction-main strong,.pleno-prediction.state-correct>small,
+.compare-pick-box.pleno-state-correct .compare-pick-value strong,.compare-pick-box.pleno-state-correct .pleno-compare-status{color:#168057}
+.pleno-prediction.state-live .pleno-prediction-main strong,.pleno-prediction.state-live>small,
+.compare-pick-box.pleno-state-live .compare-pick-value strong,.compare-pick-box.pleno-state-live .pleno-compare-status{color:#1b9a66}
+.pleno-prediction.state-wrong,.compare-pick-box.pleno-state-wrong{border-color:color-mix(in srgb,#c54b51 60%,var(--border))!important}
+.pleno-prediction.state-wrong .pleno-prediction-main strong,.pleno-prediction.state-wrong>small,
+.compare-pick-box.pleno-state-wrong .compare-pick-value strong,.compare-pick-box.pleno-state-wrong .pleno-compare-status{color:#b4434b}
+.pleno-compare-status{display:block;margin-top:2px;font-size:.5rem;font-weight:800;color:var(--muted);text-align:center}
+.history-player-pick.joint{background:var(--joint-soft);border-color:color-mix(in srgb,var(--joint-color) 30%,var(--border))}
+.history-player-pick.joint>div>i{background:var(--joint-color)}
+.history-player-pick.joint>div>span{color:var(--joint-color)}
+.history-player-pick.joint>strong{color:var(--joint-color)}
+.history-player-pick.joint.ok>strong{color:#168057}
+.history-player-pick.joint.bad>strong{color:#b4434b}
+.pleno-detail-shared{background:var(--joint-soft)!important;border:1px solid color-mix(in srgb,var(--joint-color) 33%,var(--border));border-radius:12px;padding:10px;text-align:center}
+.pleno-detail-shared span{display:block;font-size:.55rem;color:var(--joint-color);font-weight:900}
+.pleno-detail-shared strong{display:block;margin-top:4px;font-size:1rem;color:var(--text)}
+.pleno-detail-shared small{display:block;margin-top:3px;color:var(--muted);font-size:.52rem}
+@media(min-width:721px){#compareView .compare-picks.p15-with-joint{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:521px) and (max-width:720px){#compareView .compare-picks.p15-with-joint{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:700px){.history-detail-picks.has-shared-pleno,.match-detail-picks.pleno-detail-picks{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:521px) and (max-width:699px){.history-detail-picks.has-shared-pleno{grid-template-columns:repeat(2,minmax(0,1fr))}.history-detail-picks.has-shared-pleno .history-player-pick.joint{grid-column:1/-1}}
+@media(max-width:420px){.pleno-prediction{padding:8px}.pleno-prediction-main>span{font-size:.57rem}.pleno-prediction-main strong{font-size:.84rem}.pleno-prediction.shared .pleno-prediction-main strong{font-size:1rem}.match-detail-picks.pleno-detail-picks{grid-template-columns:1fr}}
+html[data-theme="dark"] .pleno-prediction.state-correct .pleno-prediction-main strong,
+html[data-theme="dark"] .pleno-prediction.state-correct>small,
+html[data-theme="dark"] .compare-pick-box.pleno-state-correct .compare-pick-value strong,
+html[data-theme="dark"] .history-player-pick.joint.ok>strong{color:#79e7ad}
+html[data-theme="dark"] .pleno-prediction.state-wrong .pleno-prediction-main strong,
+html[data-theme="dark"] .pleno-prediction.state-wrong>small,
+html[data-theme="dark"] .compare-pick-box.pleno-state-wrong .compare-pick-value strong,
+html[data-theme="dark"] .history-player-pick.joint.bad>strong{color:#ff9898}
