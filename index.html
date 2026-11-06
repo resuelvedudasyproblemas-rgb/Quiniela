@@ -1353,13 +1353,15 @@ function gSummaryPlayerCard(name,s,slot,m){
 function renderDashboard(){
   const el=$("#qgDashboard");if(!el||!journey)return;
   const m=gSummaryMetrics(journey),p1=member(1),p2=member(2);
-  const a=gSummaryPlayer(p1?.user_id,false,m),b=gSummaryPlayer(p2?.user_id,false,m),c=gSummaryPlayer(null,true,m);
+  const two=qgTwoColumns(journey);
+  const a=gSummaryPlayer(p1?.user_id,false,m),b=gSummaryPlayer(p2?.user_id,false,m),c=two?null:gSummaryPlayer(null,true,m);
   const done=m.finals.length,l=m.live.length,issues=m.incidents.length;
   const status=qgUnplayed(journey)?"unplayed":!m.started?"upcoming":l?"live":m.complete?"complete":issues?"exception":"playing";
   const title=status==="unplayed"?"Jornada sin apostar":!m.started?"Antes del primer partido":m.complete?"Jornada completada":"Resultados de la jornada";
   const badge=status==="unplayed"?"SIN APUESTA":!m.started?"POR COMENZAR":l?`● ${l} EN DIRECTO`:m.complete?"✓ COMPLETA":issues?"⚠ INCIDENCIA":"EN SEGUIMIENTO";
   const foot=status==="unplayed"?"<span>Solo para consulta · No cuenta para el historial ni las estadísticas</span>":!m.started?"<span>Pronósticos preparados para la jornada</span>"
-    :l?`<span>Si los partidos en directo acabaran así</span><strong>${esc(p1?.display_name||"J1")} <b class="${a.total>=2?"overview-gold-value":""}">${a.total}</b> <i>·</i> ${esc(p2?.display_name||"J2")} <b class="${b.total>=2?"overview-gold-value":""}">${b.total}</b> <i>·</i> Conjunta <b class="${c.total>=2?"overview-gold-value":""}">${c.total}</b></strong>`
+    :l?`<span>Si los partidos en directo acabaran así</span><strong>${esc(p1?.display_name||"J1")} <b class="${a.total>=2?"overview-gold-value":""}">${a.total}</b> <i>·</i> ${esc(p2?.display_name||"J2")} <b class="${b.total>=2?"overview-gold-value":""}">${b.total}</b>${two?"":` <i>·</i> Conjunta <b class="${c.total>=2?"overview-gold-value":""}">${c.total}</b>`}</strong>`
+    :two?`<span>Dos columnas individuales · ${esc(p1?.display_name||"J1")} <b class="${a.correct>=2?"overview-gold-value":""}">${a.correct}</b> · ${esc(p2?.display_name||"J2")} <b class="${b.correct>=2?"overview-gold-value":""}">${b.correct}</b>${m.complete&&!m.validated?" · pendiente SELAE":""}</span>`
     :`<span>Conjunta: <b class="${c.correct>=2?"overview-gold-value":""}">${c.correct}</b> aciertos${m.complete&&!m.validated?" · revisión de SELAE pendiente":""}</span>`;
   el.className="journey-dashboard qg-dashboard results-overview results-overview-qg state-"+status;
   el.innerHTML=`
@@ -1369,7 +1371,7 @@ function renderDashboard(){
         <span class="overview-track-done" style="width:${done/6*100}%"></span><span class="overview-track-live" style="width:${l/6*100}%"></span>
       </div><div class="overview-breakdown"><span class="overview-meta-done">✓ ${done} finalizados</span>${l?`<span class="overview-meta-live">● ${l} en directo</span>`:""}${issues?`<span class="overview-meta-issue">⚠ ${issues} incidencias</span>`:""}${m.pending?`<span>${m.pending} por jugar o pendientes</span>`:""}</div>
     </div>
-    <div class="overview-players">${gSummaryPlayerCard(p1?.display_name||"Salva",a,"one",m)}${gSummaryPlayerCard(p2?.display_name||"Ferran",b,"two",m)}${gSummaryPlayerCard("Conjunta",c,"joint",m)}</div><div class="overview-foot">${foot}</div>`;
+    <div class="overview-players">${gSummaryPlayerCard(p1?.display_name||"Salva",a,"one",m)}${gSummaryPlayerCard(p2?.display_name||"Ferran",b,"two",m)}${two?"":gSummaryPlayerCard("Conjunta",c,"joint",m)}</div><div class="overview-foot">${foot}</div>`;
 }
 function qgIsLive(m){return Boolean(m&&!qgExceptionStatus(m)&&m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null)}
 function qgLiveFreshnessMeta(value){
@@ -1423,6 +1425,7 @@ function qgJointImpossible(m,jid=m?.journey_id){
   return exceeded(parts[1],m.live_home_score)||exceeded(parts[2],m.live_away_score);
 }
 function qgJointLost(m,jid=m?.journey_id){
+  if(qgTwoColumns(journeys.find(j=>Number(j.id)===Number(jid))))return false;
   if(!m||(!resolved(m)&&qgExceptionStatus(m)))return false;
   const joint=jointText(m.number,jid);
   if(joint==="—")return false;
@@ -1440,7 +1443,7 @@ function qgPlayersState(m){
 
   // En Quinigol la conjunta manda visualmente:
   // si acierta el marcador actual, la tarjeta siempre es verde.
-  const joint=jointText(m.number,m.journey_id);
+  const joint=qgTwoColumns(journeys.find(j=>Number(j.id)===Number(m.journey_id)))?"—":jointText(m.number,m.journey_id);
   if(joint!=="—"&&joint===current)return "joint";
 
   const p1=member(1),p2=member(2);
@@ -1455,6 +1458,7 @@ function qgPlayersState(m){
   return "neutral";
 }
 function qgJointLineHtml(m){
+  if(qgTwoColumns(journeys.find(j=>Number(j.id)===Number(m.journey_id))))return "";
   const value=jointText(m.number,m.journey_id);
   if(value==="—")return `<div class="qg-joint-pick pending"><span>Conjunta</span><strong>Pendiente</strong></div>`;
   const current=resolved(m)?actual(m):projected(m);
@@ -1602,10 +1606,10 @@ function renderJoint(){
 }
 function renderCompare(){
   const el=$("#qgCompareList");if(!el||!journey)return;
-  const p1=member(1),p2=member(2);
+  const p1=member(1),p2=member(2),two=qgTwoColumns(journey);
   el.innerHTML=matches.map(m=>{
     const r=projected(m);
-    return `<article class="qg-compare-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div></div><div class="qg-compare-result"><span>${resolved(m)?(qgOfficialConflict(m)?"Corregido por SELAE":"Resultado final"):qgExceptionStatus(m)?qgExceptionLabel(m)+" · pendiente SELAE":qgSportsFinal(m)?"Resultado final":r!=="—"?"En directo":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
+    return `<article class="qg-compare-card"><div class="qg-card-head"><div class="qg-index-competition"><span class="match-index">${String(m.number).padStart(2,"0")}</span>${qgMatchCompetitionBadgeHtml(m)}${qgExceptionBadgeHtml(m)}</div><div class="qg-card-fixture"><div class="qg-card-team">${teamHtml(m.home,m.home_logo_url,m.home_position)}</div><div class="qg-card-team">${teamHtml(m.away,m.away_logo_url,m.away_position)}</div></div>${tvHtml(m)}<span class="qg-card-kickoff">◷ ${esc(formatKickoff(m.kickoff))}</span></div><div class="qg-compare-grid"><div class="qg-compare-box player-one"><span>${esc(p1?.display_name||"Salva")}</span><strong>${esc(p1?pickText(pick(p1.user_id,m.number)):"—")}</strong></div><div class="qg-compare-box player-two"><span>${esc(p2?.display_name||"Ferran")}</span><strong>${esc(p2?pickText(pick(p2.user_id,m.number)):"—")}</strong></div>${two?"":`<div class="qg-compare-box joint"><span>Conjunta</span><strong>${esc(jointText(m.number))}</strong></div>`}</div><div class="qg-compare-result"><span>${resolved(m)?(qgOfficialConflict(m)?"Corregido por SELAE":"Resultado final"):qgExceptionStatus(m)?qgExceptionLabel(m)+" · pendiente SELAE":qgSportsFinal(m)?"Resultado final":r!=="—"?"En directo":"Resultado pendiente"}</span><strong>${esc(r)}</strong></div></article>`;
   }).join("");
 }
 function stat(uid){
@@ -1613,7 +1617,7 @@ function stat(uid){
   return {best:scores.length?Math.max(...scores.map(s=>s.correct)):0,prizes:scores.filter(s=>s.correct>=2).length,total:scores.reduce((a,s)=>a+s.correct,0),journeys:done.length};
 }
 function jstat(){
-  const done=journeys.filter(j=>state(j)==="finished"&&qgBetConfirmed(j)),scores=done.map(j=>jointScore(j));
+  const done=journeys.filter(j=>state(j)==="finished"&&qgBetConfirmed(j)&&!qgTwoColumns(j)),scores=done.map(j=>jointScore(j));
   return {best:scores.length?Math.max(...scores.map(s=>s.correct)):0,prizes:scores.filter(s=>s.correct>=2).length,total:scores.reduce((a,s)=>a+s.correct,0),journeys:done.length};
 }
 function renderStats(){
