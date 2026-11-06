@@ -2646,8 +2646,15 @@ function renderPleno(){
   const showOpponent=completedCountForUser(identityUserId,journey?.id)===15;
   const ownResult=matchOutcomeForUser(m);
   const ownResultState=ownResult==="correct"?(myMember?.slot===2?"player-two":"player-one"):ownResult==="wrong"?"none":"neutral";
-  plenoCard.classList.add("result-state-"+(showOpponent?officialPlayersState(m):ownResultState));
-  if(showOpponent?plenoCardImpossible(m):plenoPickImpossibleForUser(m,identityUserId))plenoCard.classList.add("pleno-impossible-strong");
+  const sharedResult=showOpponent?effectiveJointPlenoSelection(journey.id):"";
+  const sharedValid=/^[012M]-[012M]$/.test(sharedResult);
+  const sharedState=sharedValid?plenoPickVisualState(sharedResult,m):"pending";
+  const visualState=sharedValid
+    ?sharedState==="correct"||sharedState==="live"?"both":sharedState==="wrong"?"none":"neutral"
+    :showOpponent?officialPlayersState(m):ownResultState;
+  plenoCard.classList.add("result-state-"+visualState);
+  if(sharedValid?sharedState==="wrong":showOpponent?plenoCardImpossible(m):plenoPickImpossibleForUser(m,identityUserId))
+    plenoCard.classList.add("pleno-impossible-strong");
   $("#plenoHomeName").textContent=m.home;$("#plenoAwayName").textContent=m.away;
   $("#plenoHomeLabel").innerHTML=teamInlineHtml(m.home,m.home_logo_url,m.home_position);$("#plenoAwayLabel").innerHTML=teamInlineHtml(m.away,m.away_logo_url,m.away_position);
   $("#plenoKickoff").innerHTML=`${matchCompetitionBadgeHtml(m)}${matchExceptionBadgeHtml(m)}<span class="pleno-kickoff-time">◷ ${escapeHtml(formatKickoff(m.kickoff))}${!matchCalculated(m)&&!matchExceptionStatus(m)&&m.kickoff?` <small class="inline-countdown" data-countdown="${escapeHtml(m.kickoff)}">${escapeHtml(countdownText(m.kickoff))}</small>`:""}</span>`;$("#plenoKickoff").classList.toggle("pending-time",!m.kickoff);
@@ -2902,7 +2909,7 @@ function renderCompare(){
         ? `${m.live_home_score}-${m.live_away_score}`
         : official?"Signo validado":"—";
 
-    const p15=m.number===15,sharedP15=p15?(effectiveJointPlenoSelection(journey.id)||"—"):"—";
+    const p15=m.number===15,sharedP15=p15&&completedCountForUser(identityUserId,journey.id)===15?(effectiveJointPlenoSelection(journey.id)||"—"):"—";
     const stateA=p15?plenoPickVisualState(a,m):"",stateB=p15?plenoPickVisualState(b,m):"";
     const sharedState=p15?plenoPickVisualState(sharedP15,m):"";
     let aMark="",bMark="";
@@ -3609,6 +3616,11 @@ function decorateLivePleno(){
   el.innerHTML="";
   var box=document.createElement("div");
   var pickState=livePickState(m);
+  var sharedVisible=completedCountForUser(identityUserId,journey?.id)===15;
+  var chosen=sharedVisible?effectiveJointPlenoSelection(journey.id):"";
+  var jointLiveState=/^[012M]-[012M]$/.test(chosen)?plenoPickVisualState(chosen,m):null;
+  if(jointLiveState)
+    pickState=jointLiveState==="correct"||jointLiveState==="live"?"both":jointLiveState==="wrong"?"none":"neutral";
   var card=$("#plenoCard");
   if(card){
     card.classList.remove("result-state-both","result-state-player-one","result-state-player-two","result-state-none","result-state-neutral");
@@ -3625,7 +3637,8 @@ function decorateLivePleno(){
   var score=document.createElement("strong");
   score.textContent=String(m.live_home_score)+" – "+String(m.live_away_score);
   var note=document.createElement("em");
-  note.textContent=livePickState(m)==="neutral"?(m.live_status==="finished"?"Resultado final":"En directo"):livePickLabel(m);
+  note.textContent=jointLiveState?"Pleno conjunto · "+plenoPickVisualLabel(jointLiveState)
+    :livePickState(m)==="neutral"?(m.live_status==="finished"?"Resultado final":"En directo"):livePickLabel(m);
   box.appendChild(small);
   box.appendChild(score);
   box.appendChild(note);
