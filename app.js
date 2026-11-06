@@ -1094,6 +1094,33 @@ function autoJointPlenoSelection(jid=journey?.id){
 function effectiveJointPlenoSelection(jid=journey?.id){
   return jointOverrideFor(15,jid)?.selection||autoJointPlenoSelection(jid);
 }
+
+function plenoPickVisualState(value,m){
+  if(!/^[012M]-[012M]$/.test(String(value||"")))return "missing";
+  if(!m||matchExceptionStatus(m)&&!matchResolved(m))return "pending";
+  const result=projectedResultForMatch(m);
+  if(result==="—")return "pending";
+  if(matchResolved(m)||finalSportsResult(m)||m.live_status==="finished")
+    return value===result?"correct":"wrong";
+  if(value===result)return "live";
+  if(m.live_status==="inprogress"&&m.live_home_score!=null&&m.live_away_score!=null){
+    const sel=splitPlenoSelection(value);
+    if(!plenoGoalStillPossible(sel.home,m.live_home_score)||
+       !plenoGoalStillPossible(sel.away,m.live_away_score))return "wrong";
+  }
+  return "pending";
+}
+function plenoPickVisualLabel(state){
+  return ({correct:"Acierto",wrong:"Fallo",live:"Acertando · provisional",
+    pending:"Por decidir",missing:"Sin pronóstico"})[state]||"Por decidir";
+}
+function plenoPredictionCardHtml(name,value,m,owner,shared=false){
+  const state=plenoPickVisualState(value,m);
+  return `<div class="pleno-prediction ${owner} state-${state} ${shared?"shared":""}">
+    <div class="pleno-prediction-main"><span><i></i>${escapeHtml(name)}</span><strong>${escapeHtml(value||"—")}</strong></div>
+    <small>${shared?"Único marcador del boleto · ":""}${plenoPickVisualLabel(state)}</small>
+  </div>`;
+}
 function jointPlenoKind(jid=journey?.id){
   if(jointOverrideFor(15,jid))return "Manual";
   const rec=jointPlenoRecommendation(jid);
@@ -2635,9 +2662,23 @@ function renderPleno(){
   }
   plenoClear.innerHTML=mp&&journeyCanEdit(journey)?`<div class="clear-pick-row"><button class="clear-pick-btn clear-pleno-btn" type="button">Borrar Pleno al 15</button></div>`:"";
   plenoClear.querySelector(".clear-pleno-btn")?.addEventListener("click",()=>deletePick(15));
-  const opponent=members.find(x=>x.user_id!==identityUserId),opp=opponent?pickFor(opponent.user_id,15):null,oppEl=$("#plenoOpponent");
-  if(oppEl){const reveal=showOpponent&&Boolean(mp?.home_goals&&mp?.away_goals);oppEl.classList.toggle("hidden",!reveal);if(reveal)oppEl.innerHTML=`<span>${escapeHtml(opponent?.display_name||"Compañero")}</span><strong>${opp?.home_goals&&opp?.away_goals?`${opp.home_goals}-${opp.away_goals}`:"pendiente"}</strong>`}
-  const resultEl=$("#plenoResult"),resultHtml=resultBarHtml(m,mp);resultEl.className="match-result-bar";
+  const oppEl=$("#plenoOpponent");if(oppEl){oppEl.classList.add("hidden");oppEl.innerHTML=""}
+  const visual=$("#plenoPredictions");
+  const sharedPick=effectiveJointPlenoSelection(journey.id)||"—";
+  const p1=memberBySlot(1),p2=memberBySlot(2);
+  if(visual){
+    // La conjunta se puede inferir de los marcadores ajenos:
+    // no mostrarla hasta completar la apuesta propia.
+    visual.classList.toggle("hidden",!showOpponent);
+    visual.innerHTML=showOpponent
+      ? plenoPredictionCardHtml("Pleno conjunto",sharedPick,m,"joint",true)
+        +`<div class="pleno-personal-predictions">${plenoPredictionCardHtml(p1?.display_name||"Jugador 1",p1?displayPickForJourney(p1.user_id,journey.id,15):"—",m,"player-one")}${plenoPredictionCardHtml(p2?.display_name||"Jugador 2",p2?displayPickForJourney(p2.user_id,journey.id,15):"—",m,"player-two")}</div>`
+      :"";
+  }
+  // En un boleto de varias columnas, el Pleno sigue siendo una sola apuesta.
+  const sharedParts=showOpponent?splitPlenoSelection(sharedPick):null;
+  const playedPick=sharedParts?.home&&sharedParts?.away?{home_goals:sharedParts.home,away_goals:sharedParts.away}:mp;
+  const resultEl=$("#plenoResult"),resultHtml=resultBarHtml(m,playedPick);resultEl.className="match-result-bar";
   if(resultHtml){const wrapper=document.createElement("div");wrapper.innerHTML=resultHtml;resultEl.className=wrapper.firstElementChild.className;resultEl.innerHTML=wrapper.firstElementChild.innerHTML}else{resultEl.classList.add("hidden");resultEl.innerHTML=""}
   $$(".goal").forEach(b=>b.addEventListener("click",()=>savePleno(b.dataset.team,b.dataset.goal)));$$("#plenoTv [data-detail-match]").forEach(b=>b.addEventListener("click",()=>openMatchDetail(15)));updateCountdowns();
 }
