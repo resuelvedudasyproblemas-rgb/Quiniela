@@ -1769,6 +1769,10 @@ function setGame(g,persist=true){
 }
 function renderAll(){
   if(!journey)return;
+  const two=qgTwoColumns(journey);
+  $("#qgRoot")?.classList.toggle("qg-two-columns",two);
+  const historyIntro=$("#qgHistoryView .section-hero p");
+  if(historyIntro)historyIntro.textContent=two?"Pronósticos individuales y resultados oficiales de cada columna.":"Pronósticos, conjunta y resultados oficiales.";
   renderHero();renderSwitcher();renderDashboard();qgRenderStandings();renderPlay();renderJoint();renderCompare();renderStats();renderHistory();setView(activeView,false);
 }
 async function openQGView(v){
