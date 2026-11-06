@@ -1709,7 +1709,7 @@ function renderHistory(){
 function setView(v,persist=true){
   activeView=["play","joint","compare","stats","history"].includes(v)?v:"play";
   if(persist)savePref("quinigol-view",activeView);
-  $(".qg-tab").forEach(b=>{
+  $$(".qg-tab").forEach(b=>{
     if(b.dataset.qgView==="joint")b.textContent=qgTwoColumns(journey)?"Columnas":"Conjunta";
     b.classList.toggle("active",b.dataset.qgView===activeView);
   });
