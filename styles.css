@@ -10476,3 +10476,31 @@ html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.result-state-both 
 html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.result-state-both .qg-result.live {
   color:#79e7ad!important;
 }
+
+
+/* Quinigol · dos columnas: si ninguna acierta en directo pero al menos
+   una aún puede acertar, el aviso es rojo sin colorear el fondo.
+   Con ambas columnas imposibles/falladas sigue el rojo fuerte. */
+#qgRoot.qg-two-columns .qg-match-card.qg-two-column-possible-miss{
+  border:1px solid color-mix(in srgb,#cf3f49 75%,var(--border))!important;
+  background:var(--surface)!important;
+  box-shadow:inset 4px 0 0 #cf3f49,0 8px 20px rgba(166,52,58,.05)!important;
+}
+#qgRoot.qg-two-columns .qg-match-card.qg-two-column-possible-miss .qg-live-header-score:not(.official):not(.exception),
+#qgRoot.qg-two-columns .qg-match-card.qg-two-column-possible-miss .qg-result.live{
+  background:var(--surface-2)!important;
+  border-color:color-mix(in srgb,#cf3f49 48%,var(--border))!important;
+  color:#bb454d!important;
+}
+#qgRoot.qg-two-columns .qg-compare-card.qg-two-column-possible-miss{
+  border-color:color-mix(in srgb,#cf3f49 68%,var(--border))!important;
+  background:var(--surface)!important;
+  box-shadow:inset 4px 0 0 #cf3f49,0 7px 16px rgba(166,52,58,.04)!important;
+}
+#qgRoot.qg-two-columns .qg-compare-card.qg-two-status-none:not(.qg-two-column-possible-miss){
+  background:color-mix(in srgb,#cf3f49 11%,var(--surface))!important;
+}
+html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.qg-two-column-possible-miss .qg-live-header-score:not(.official):not(.exception),
+html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.qg-two-column-possible-miss .qg-result.live{
+  color:#ff9898!important;
+}
