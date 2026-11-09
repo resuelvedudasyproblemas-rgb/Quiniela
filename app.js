@@ -1252,11 +1252,15 @@ function renderFullWalletHistory(){
   }
   const all=walletFullHistory;
   const expenses=all.filter(t=>Number(t.amount)<0);
-  const incoming=all.filter(t=>Number(t.amount)>=0);
+  // Los premios se identifican por su tipo, no por ser un ingreso positivo.
+  // Así las devoluciones y recargas nunca se mezclan con los premios.
+  const prizes=all.filter(t=>Number(t.amount)>=0&&t.kind==="prize");
+  const incoming=all.filter(t=>Number(t.amount)>=0&&t.kind!=="prize");
   const expenseTotal=expenses.reduce((sum,t)=>sum+Math.abs(Number(t.amount||0)),0);
   const incomingTotal=incoming.reduce((sum,t)=>sum+Number(t.amount||0),0);
+  const prizeTotal=prizes.reduce((sum,t)=>sum+Number(t.amount||0),0);
   const section=(title,subtitle,items,total,kind)=>{
-    const empty=kind==="expense"?"No hay gastos registrados.":"No hay ingresos ni premios registrados.";
+    const empty=kind==="expense"?"No hay gastos registrados.":kind==="prize"?"No hay premios registrados.":"No hay ingresos registrados.";
     const rows=items.length?items.map(walletHistoryRowHtml).join(""):`<p class="wallet-empty">${empty}</p>`;
     return `<section class="wallet-history-group ${kind}" aria-label="${title}">
       <div class="wallet-history-group-head">
@@ -1269,7 +1273,8 @@ function renderFullWalletHistory(){
   panel.innerHTML=`<div class="global-wallet-history-head"><span>HISTORIAL COMPLETO</span><b>${all.length}</b></div>
     <div class="wallet-history-groups">
       ${section("Gastos","Apuestas y otros cargos",expenses,expenseTotal,"expense")}
-      ${section("Ingresos y premios","Fondos, premios y devoluciones",incoming,incomingTotal,"income")}
+      ${section("Ingresos","Fondos añadidos, saldo inicial y devoluciones",incoming,incomingTotal,"income")}
+      ${section("Premios","Premios recibidos",prizes,prizeTotal,"prize")}
     </div>
     ${walletFullHistoryLoading?'<p class="wallet-history-updating" role="status">Actualizando movimientos…</p>':""}`;
 }
