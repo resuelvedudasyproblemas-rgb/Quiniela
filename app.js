@@ -13,6 +13,8 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 
 let sb, user, identityUserId, roomId, roomCode, myMember, journey, matches = [], members = [], picks = [], journeys = [], allMatches = [], allPicks = [], allElige8 = [], allJointPicks = [], allJointElige8 = [];
 let walletBalance=0, walletTransactions=[], betConfirmations=[];
+// La app solo sincroniza movimientos recientes para ahorrar tráfico.
+let walletFullHistory=null,walletFullHistoryLoading=false,walletFullHistoryError="",walletFullHistoryRequest=0;
 let channel = null;
 let saving = false;
 let elige8Saving = false;
@@ -1212,6 +1214,7 @@ async function loadWalletData(){
   walletTransactions=tr.data||[];
   betConfirmations=cr.data||[];
   publishWalletState();
+  if($("#walletDialog")?.open)void loadFullWalletHistory();
 }
 function walletCanManage(){return Number(myMember?.slot)===1}
 function walletConfirmation(game="quiniela",jid=journey?.id){
@@ -1225,12 +1228,89 @@ function walletDate(v){
   if(!v)return "";
   return new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(v)).replace(","," ·");
 }
+function walletHistoryRowHtml(t){
+  const amount=Number(t.amount||0);
+  const labels={opening:"Saldo inicial",funds:"Fondos",prize:"Premio",bet:"Apuesta",bet_adjustment:"Ajuste",refund:"Devolución"};
+  const category=labels[String(t.kind||"")]||(amount<0?"Gasto":"Ingreso");
+  return `<div class="wallet-move">
+    <div><strong>${escapeHtml(String(walletMovementLabel(t)))}</strong>
+      <small>${escapeHtml(walletDate(t.created_at))}<span class="wallet-move-type">${escapeHtml(category)}</span></small>
+    </div>
+    <b class="${amount<0?"minus":"plus"}">${amount>=0?"+":""}${escapeHtml(euro(amount))}</b>
+  </div>`;
+}
+function renderFullWalletHistory(){
+  const panel=$("#walletHistoryPanel");
+  if(!panel)return;
+  if(walletFullHistory===null){
+    const message=walletFullHistoryError?"No se ha podido cargar todo el historial.":"Cargando todos los movimientos del monedero…";
+    panel.innerHTML=`<div class="wallet-history-status" role="status">${escapeHtml(message)}
+      ${walletFullHistoryError?'<button type="button" id="walletHistoryRetry" class="secondary-btn">Reintentar</button>':""}
+    </div>`;
+    $("#walletHistoryRetry")?.addEventListener("click",()=>{void loadFullWalletHistory()});
+    return;
+  }
+  const all=walletFullHistory;
+  const expenses=all.filter(t=>Number(t.amount)<0);
+  const incoming=all.filter(t=>Number(t.amount)>=0);
+  const expenseTotal=expenses.reduce((sum,t)=>sum+Math.abs(Number(t.amount||0)),0);
+  const incomingTotal=incoming.reduce((sum,t)=>sum+Number(t.amount||0),0);
+  const section=(title,subtitle,items,total,kind)=>{
+    const empty=kind==="expense"?"No hay gastos registrados.":"No hay ingresos ni premios registrados.";
+    const rows=items.length?items.map(walletHistoryRowHtml).join(""):`<p class="wallet-empty">${empty}</p>`;
+    return `<section class="wallet-history-group ${kind}" aria-label="${title}">
+      <div class="wallet-history-group-head">
+        <div><h3>${title}</h3><small>${subtitle} · ${items.length} ${items.length===1?"movimiento":"movimientos"}</small></div>
+        <strong class="${kind==="expense"?"minus":"plus"}">${kind==="expense"?"−":"+"}${escapeHtml(euro(total))}</strong>
+      </div>
+      <div class="wallet-moves">${rows}</div>
+    </section>`;
+  };
+  panel.innerHTML=`<div class="global-wallet-history-head"><span>HISTORIAL COMPLETO</span><b>${all.length}</b></div>
+    <div class="wallet-history-groups">
+      ${section("Gastos","Apuestas y otros cargos",expenses,expenseTotal,"expense")}
+      ${section("Ingresos y premios","Fondos, premios y devoluciones",incoming,incomingTotal,"income")}
+    </div>
+    ${walletFullHistoryLoading?'<p class="wallet-history-updating" role="status">Actualizando movimientos…</p>':""}`;
+}
+async function loadFullWalletHistory(){
+  if(!roomId||!sb)return;
+  const requestedRoom=roomId,request=++walletFullHistoryRequest;
+  walletFullHistoryLoading=true;
+  walletFullHistoryError="";
+  renderFullWalletHistory();
+  try{
+    const PAGE=400;
+    const list=[];
+    for(let offset=0;;offset+=PAGE){
+      const {data,error}=await sb.from("wallet_transactions").select("*")
+        .eq("room_id",requestedRoom)
+        .order("created_at",{ascending:false}).order("id",{ascending:false})
+        .range(offset,offset+PAGE-1);
+      if(error)throw error;
+      const rows=data||[];
+      list.push(...rows);
+      if(rows.length<PAGE)break;
+    }
+    if(request!==walletFullHistoryRequest||roomId!==requestedRoom)return;
+    walletFullHistory=list;
+  }catch(error){
+    if(request!==walletFullHistoryRequest)return;
+    console.error("Historial completo del monedero:",error);
+    walletFullHistory=null;
+    walletFullHistoryError="No se ha podido cargar todo el historial.";
+  }finally{
+    if(request===walletFullHistoryRequest){
+      walletFullHistoryLoading=false;
+      renderFullWalletHistory();
+    }
+  }
+}
 function renderGlobalWallet(){
   const balance=$("#walletHeaderBalance");
   if(balance)balance.textContent=euro(walletBalance);
   const el=$("#walletDialogContent");if(!el)return;
   const manager=walletCanManage();
-  const moves=walletTransactions.slice(0,12).map(t=>`<div class="wallet-move"><div><strong>${escapeHtml(walletMovementLabel(t))}</strong><small>${escapeHtml(walletDate(t.created_at))}</small></div><b class="${Number(t.amount)>=0?"plus":"minus"}">${Number(t.amount)>=0?"+":""}${escapeHtml(euro(Number(t.amount)))}</b></div>`).join("");
   const controls=manager?`
     <div class="global-wallet-add">
       <label><span>Importe</span><div><input id="globalWalletAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00"><b>€</b></div></label>
@@ -1241,15 +1321,19 @@ function renderGlobalWallet(){
   el.innerHTML=`
     <div class="global-wallet-balance"><span>SALDO DISPONIBLE</span><strong>${escapeHtml(euro(walletBalance))}</strong><small>Compartido entre La Quiniela y Quinigol</small></div>
     ${controls}
-    <div class="global-wallet-history"><div class="global-wallet-history-head"><span>ÚLTIMOS MOVIMIENTOS</span><b>${walletTransactions.length}</b></div><div class="wallet-moves">${moves||'<p class="wallet-empty">Sin movimientos todavía.</p>'}</div></div>`;
+    <div class="global-wallet-history" id="walletHistoryPanel" aria-live="polite"></div>`;
   if(manager){
     $("#globalWalletAddFunds")?.addEventListener("click",()=>addWalletCredit("funds"));
     $("#globalWalletAddPrize")?.addEventListener("click",()=>addWalletCredit("prize"));
   }
+  renderFullWalletHistory();
 }
 function openWalletDialog(){
+  walletFullHistory=null;
+  walletFullHistoryError="";
   renderGlobalWallet();
   $("#walletDialog")?.showModal();
+  void loadFullWalletHistory();
 }
 function estimatedQuinielaWalletCost(){
   const plan=jointBetRecommendation(journey);
@@ -1859,6 +1943,7 @@ window.addEventListener("wallet:refresh",async e=>{
       await loadWalletData();
     }
     renderGlobalWallet();renderJoint();
+    if($("#walletDialog")?.open)void loadFullWalletHistory();
   }catch(err){console.error("Monedero:",err)}
 });
 
@@ -3225,6 +3310,7 @@ async function applyRoomBroadcastChange(message){
   }
 
   if(["room_wallets","wallet_transactions","bet_confirmations"].includes(table))publishWalletState();
+  if(table==="wallet_transactions"&&$("#walletDialog")?.open)void loadFullWalletHistory();
   if(journey)picks=allPicks.filter(p=>p.journey_id===journey.id);
   renderAll();
   setSync("online","Sincronizado");

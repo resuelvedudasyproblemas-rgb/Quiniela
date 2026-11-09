@@ -10504,3 +10504,110 @@ html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.qg-two-column-poss
 html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.qg-two-column-possible-miss .qg-result.live{
   color:#ff9898!important;
 }
+
+/* Monedero conjunto: historial completo, separado en gastos e ingresos/premios. */
+#walletDialog .wallet-history-groups{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:11px;
+  margin-top:8px;
+}
+#walletDialog .wallet-history-group{
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  overflow:hidden;
+}
+#walletDialog .wallet-history-group-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px 12px 10px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface-2);
+}
+#walletDialog .wallet-history-group-head>div{min-width:0}
+#walletDialog .wallet-history-group-head h3{
+  margin:0;
+  color:var(--text);
+  font-size:.76rem;
+  font-weight:900;
+  letter-spacing:-.01em;
+}
+#walletDialog .wallet-history-group-head small{
+  display:block;
+  margin-top:3px;
+  font-size:.52rem;
+  color:var(--muted);
+  font-weight:700;
+}
+#walletDialog .wallet-history-group-head>strong{
+  flex:0 0 auto;
+  font-size:.94rem;
+  font-weight:950;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+#walletDialog .wallet-history-group-head .minus{color:#b7444d}
+#walletDialog .wallet-history-group-head .plus{color:#16845b}
+#walletDialog .wallet-history-group.expense{border-left:3px solid #cb6469}
+#walletDialog .wallet-history-group.income{border-left:3px solid #50ae82}
+#walletDialog .wallet-history-group .wallet-moves{padding:0 12px 9px}
+#walletDialog .wallet-history-group .wallet-move{padding:9px 0}
+#walletDialog .wallet-history-group .wallet-move strong{
+  font-size:.64rem;
+  white-space:normal;
+  overflow:visible;
+  overflow-wrap:anywhere;
+  line-height:1.35;
+}
+#walletDialog .wallet-history-group .wallet-move small{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:5px;
+  font-size:.51rem;
+}
+#walletDialog .wallet-move-type{
+  padding:2px 6px;
+  border-radius:99px;
+  background:var(--surface-3);
+  color:var(--muted);
+  font-weight:800;
+}
+#walletDialog .wallet-history-group .wallet-move>b{
+  font-size:.71rem;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+#walletDialog .wallet-history-status{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+  padding:15px 4px;
+  font-size:.65rem;
+  color:var(--muted);
+}
+#walletDialog .wallet-history-updating{
+  color:var(--muted);
+  font-size:.52rem;
+  text-align:center;
+}
+#walletDialog .wallet-history-group .wallet-empty{
+  font-size:.6rem;
+  padding:9px 0;
+}
+html[data-theme="dark"] #walletDialog .wallet-history-group-head .minus{color:#ff9ba1}
+html[data-theme="dark"] #walletDialog .wallet-history-group-head .plus{color:#83e2b3}
+@media(max-width:430px){
+ #walletDialog .wallet-history-group-head{padding:10px 9px}
+ #walletDialog .wallet-history-group-head h3{font-size:.68rem}
+ #walletDialog .wallet-history-group-head small{font-size:.46rem}
+ #walletDialog .wallet-history-group-head>strong{font-size:.8rem}
+ #walletDialog .wallet-history-group .wallet-moves{padding:0 9px 8px}
+ #walletDialog .wallet-history-group .wallet-move>b{font-size:.65rem}
+}
