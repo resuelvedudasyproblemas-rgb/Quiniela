@@ -10553,6 +10553,10 @@ html[data-theme="dark"] #qgRoot.qg-two-columns .qg-match-card.qg-two-column-poss
 #walletDialog .wallet-history-group-head .plus{color:#16845b}
 #walletDialog .wallet-history-group.expense{border-left:3px solid #cb6469}
 #walletDialog .wallet-history-group.income{border-left:3px solid #50ae82}
+#walletDialog .wallet-history-group.prize{border-left:3px solid #d2a350}
+#walletDialog .wallet-history-group.prize .wallet-history-group-head{background:color-mix(in srgb,#d2a350 7%,var(--surface-2))}
+#walletDialog .wallet-history-group.prize .wallet-history-group-head>strong{color:#94680e}
+html[data-theme="dark"] #walletDialog .wallet-history-group.prize .wallet-history-group-head>strong{color:#e9c579}
 #walletDialog .wallet-history-group .wallet-moves{padding:0 12px 9px}
 #walletDialog .wallet-history-group .wallet-move{padding:9px 0}
 #walletDialog .wallet-history-group .wallet-move strong{
