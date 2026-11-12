@@ -372,7 +372,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
-  <script type="module" src="app.js?v=236"></script>
+  <script type="module" src="app.js?v=237"></script>
   <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 import {renderJourneyArchive,renderHistoryBrowser} from "./journey-archive.js?v=2";
@@ -554,18 +554,24 @@ function state(j){
 }
 function qgBetConfirmed(j=journey){return Boolean(j&&qgWalletConfirmation(j.id))}
 function qgUnplayed(j){
- if(!j||qgBetConfirmed(j))return false;
- if(j.status==="finished"||state(j)==="finished")return true;
- const ms=msFor(j.id);
- if(ms.length===6&&ms.every(qgCalculated))return true;
- if(ms.some(m=>m.live_status==="inprogress"))return false;
- const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
- if(ks.length===6)return Date.now()>Math.max(...ks)+4*3600000;
- if(j.status!=="open"&&j.draw_date){
-   const d=new Date(String(j.draw_date).slice(0,10)+"T12:00:00Z").getTime();
-   if(Number.isFinite(d)&&Date.now()>d+72*3600000)return true;
- }
- return false;
+  // No depende de cuántos pronósticos estén rellenados. Al empezar el primer
+  // encuentro sin confirmación de apuesta, la jornada pasa a gris y no cuenta.
+  if(!j||qgBetConfirmed(j))return false;
+  if(j.status==="finished"||state(j)==="finished")return true;
+  const ms=msFor(j.id);
+  if(ms.some(m=>qgCalculated(m)||m.live_status==="inprogress"||m.live_status==="finished"))return true;
+  const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
+  if(ks.length)return Date.now()>=Math.min(...ks);
+  // Respaldo para jornadas antiguas sin horarios cargados.
+  if(j.status==="closed"&&j.close_at){
+    const close=new Date(j.close_at).getTime();
+    if(Number.isFinite(close)&&Date.now()>=close+15*60000)return true;
+  }
+  if(j.status!=="open"&&j.draw_date){
+    const d=new Date(String(j.draw_date).slice(0,10)+"T12:00:00Z").getTime();
+    if(Number.isFinite(d)&&Date.now()>d+72*3600000)return true;
+  }
+  return false;
 }
 function qgVisualState(j=journey){
   const st=state(j);
@@ -2096,7 +2102,21 @@ async function init(){
     qgStartCrossDeviceSync();
     setGame(activeGame,false);
     if(activeGame==="quinigol")await qgEnsureDataReady();
-    setInterval(()=>{if(qgDataReady&&journey&&state(journey)==="open"){const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;const d=$("#qgJourneyDate");if(d){d.classList.remove("hidden");d.textContent=qgCloseLabel(journey.close_at)}}},30000);
+    let previousQGJourneyStates=journeys.map(j=>j.id+":"+qgVisualState(j)).join("|");
+    setInterval(()=>{
+      if(!qgDataReady||!journey)return;
+      const visual=qgVisualState(journey);
+      const signature=journeys.map(j=>j.id+":"+qgVisualState(j)).join("|");
+      if(activeGame==="quinigol"){
+        if($("#qgJourneyCard")?.dataset.status!==visual)renderAll();
+        else if(signature!==previousQGJourneyStates)renderSwitcher();
+      }
+      previousQGJourneyStates=signature;
+      if(state(journey)==="open"){
+        const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;
+        const d=$("#qgJourneyDate");if(d){d.classList.remove("hidden");d.textContent=qgCloseLabel(journey.close_at)}
+      }
+    },30000);
   }catch(e){console.error("Quinigol:",e)}
 }
 init();
