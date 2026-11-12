@@ -436,8 +436,9 @@ function journeyUnplayed(j){
   if(ms.some(m=>matchCalculated(m)||m.live_status==="inprogress"||m.live_status==="finished"))return true;
   const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
   if(ks.length)return Date.now()>=Math.min(...ks);
-  // Respaldo para jornadas antiguas sin horarios disponibles.
-  if(j.status==="closed"&&j.close_at){
+  // En el selector de jornadas aún no descargadas, el cierre+15 minutos
+  // sirve de respaldo hasta disponer de la hora real del primer partido.
+  if(j.close_at){
     const close=new Date(j.close_at).getTime();
     if(Number.isFinite(close)&&Date.now()>=close+15*60000)return true;
   }
