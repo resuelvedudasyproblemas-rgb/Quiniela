@@ -427,18 +427,25 @@ function journeyBetConfirmed(j=journey){
   return Boolean(j&&walletConfirmation("quiniela",j.id));
 }
 function journeyUnplayed(j){
- if(!j||journeyBetConfirmed(j))return false;
- if(j.status==="finished"||journeyDisplayState(j)==="finished")return true;
- const ms=matchesForJourney(j.id);
- if(ms.length===15&&ms.every(matchCalculated))return true;
- if(ms.some(m=>m.live_status==="inprogress"))return false;
- const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
- if(ks.length===15)return Date.now()>Math.max(...ks)+4*3600000;
- if(j.status!=="open"&&j.draw_date){
-   const d=new Date(String(j.draw_date).slice(0,10)+"T12:00:00Z").getTime();
-   if(Number.isFinite(d)&&Date.now()>d+72*3600000)return true;
- }
- return false;
+  // Una apuesta no confirmada nunca participa, aunque los dos usuarios hayan
+  // completado sus pronósticos. La tarjeta se vuelve gris al empezar el primer
+  // encuentro, sin esperar a que se resuelvan los quince partidos.
+  if(!j||journeyBetConfirmed(j))return false;
+  if(j.status==="finished"||journeyDisplayState(j)==="finished")return true;
+  const ms=matchesForJourney(j.id);
+  if(ms.some(m=>matchCalculated(m)||m.live_status==="inprogress"||m.live_status==="finished"))return true;
+  const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
+  if(ks.length)return Date.now()>=Math.min(...ks);
+  // Respaldo para jornadas antiguas sin horarios disponibles.
+  if(j.status==="closed"&&j.close_at){
+    const close=new Date(j.close_at).getTime();
+    if(Number.isFinite(close)&&Date.now()>=close+15*60000)return true;
+  }
+  if(j.status!=="open"&&j.draw_date){
+    const d=new Date(String(j.draw_date).slice(0,10)+"T12:00:00Z").getTime();
+    if(Number.isFinite(d)&&Date.now()>d+72*3600000)return true;
+  }
+  return false;
 }
 function journeyCanEdit(j){
   if(!j || j.status!=="open" || journeyBetConfirmed(j)) return false;
@@ -565,9 +572,21 @@ function updateCountdowns(){
   updateLiveFreshness();
 }
 function startCountdownTimer(){
-  if(countdownTimer) clearInterval(countdownTimer);
+  if(countdownTimer)clearInterval(countdownTimer);
+  let previousJourneyStates=journeys.map(j=>j.id+":"+journeyVisualState(j)).join("|");
   updateCountdowns();
-  countdownTimer=setInterval(updateCountdowns,30000);
+  countdownTimer=setInterval(()=>{
+    updateCountdowns();
+    if(!journey||!journeys.length)return;
+    const stateNow=journeyVisualState(journey);
+    const signature=journeys.map(j=>j.id+":"+journeyVisualState(j)).join("|");
+    if($("#journeyCard")?.dataset.status!==stateNow){
+      renderAll();
+    }else if(signature!==previousJourneyStates){
+      renderJourneySwitcher();
+    }
+    previousJourneyStates=signature;
+  },30000);
 }
 function nextUnresolvedMatch(j=journey){
   return matchesForJourney(j.id).filter(m=>!matchResolved(m)).sort((a,b)=>{
