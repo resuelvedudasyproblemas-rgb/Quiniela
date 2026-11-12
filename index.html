@@ -562,8 +562,9 @@ function qgUnplayed(j){
   if(ms.some(m=>qgCalculated(m)||m.live_status==="inprogress"||m.live_status==="finished"))return true;
   const ks=ms.map(m=>m.kickoff?new Date(m.kickoff).getTime():NaN).filter(Number.isFinite);
   if(ks.length)return Date.now()>=Math.min(...ks);
-  // Respaldo para jornadas antiguas sin horarios cargados.
-  if(j.status==="closed"&&j.close_at){
+  // Para las jornadas del selector aún no descargadas, cierre+15 minutos
+  // es la referencia provisional hasta recibir la hora del primer partido.
+  if(j.close_at){
     const close=new Date(j.close_at).getTime();
     if(Number.isFinite(close)&&Date.now()>=close+15*60000)return true;
   }
@@ -2112,7 +2113,7 @@ async function init(){
         else if(signature!==previousQGJourneyStates)renderSwitcher();
       }
       previousQGJourneyStates=signature;
-      if(state(journey)==="open"){
+      if(visual==="open"){
         const e=$("#qgJourneyCountdown");if(e)e.textContent=`Cierra en ${timeLeft(journey.close_at)}`;
         const d=$("#qgJourneyDate");if(d){d.classList.remove("hidden");d.textContent=qgCloseLabel(journey.close_at)}
       }
